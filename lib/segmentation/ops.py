@@ -1,6 +1,6 @@
+import numpy as np
 from keras import backend as K
 from keras.losses import mean_squared_error
-import numpy as np
 
 
 def ramp_up_weight(ramp_period, weight_max):
@@ -96,9 +96,9 @@ def evaluate(model, num_class, num_test, test_x, test_y):
     test_unsupervised_weight_dummy = np.zeros((num_test, 32, 168, 168, 1))
 
     test_x_ap = [test_x, test_supervised_label_dummy, test_supervised_flag_dummy, test_unsupervised_weight_dummy]
-    p = model.predict(x=test_x_ap)
+    p = model.predict(x=test_x_ap, batch_size=1, verbose=1)
     pr = p[: ,:, :, :, 0:num_class]
     pr_arg_max = np.argmax(pr, axis=-1)
     tr_arg_max = np.argmax(test_y, axis=-1)
-    cnt = np.sum(pr_arg_max == tr_arg_max)
-    print('Test Accuracy: ', cnt / num_test, flush=True)
+    cnt = np.sum(pr_arg_max == tr_arg_max) / (num_test * 32 * 168 * 168)
+    print('Test Accuracy: ', cnt, flush=True)
