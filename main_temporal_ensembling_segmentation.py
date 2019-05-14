@@ -1,5 +1,6 @@
 import argparse
 
+import numpy.random as rn
 from keras import backend as K
 from keras.optimizers import Adam
 from sklearn.utils import shuffle
@@ -8,9 +9,9 @@ from lib.segmentation.ops import ramp_up_weight, semi_supervised_loss, update_un
     ramp_down_weight, update_weight
 from lib.segmentation.utils import split_supervised_train, make_train_test_dataset, whiten_zca, \
     data_augmentation_tempen
+from lib.segmentation.weight_norm import AdamWithWeightnorm
 from zonal_utils.AugmentationGenerator import *
 from zonal_utils.AugmentationTypes import AugmentTypes
-import numpy.random as rn
 
 
 def parse_args():
@@ -94,7 +95,13 @@ def main():
 
     # make the whole data and labels for training
     # x = [train_x, supervised_label, supervised_flag, unsupervised_weight]
-    y = np.concatenate((unsupervised_target, supervised_label, supervised_flag, unsupervised_weight), axis=-1)
+    y0 = np.concatenate((unsupervised_target[0], supervised_label[0], supervised_flag, unsupervised_weight[0]), axis=-1)
+    y1 = np.concatenate((unsupervised_target[1], supervised_label[1], supervised_flag, unsupervised_weight[1]), axis=-1)
+    y2 = np.concatenate((unsupervised_target[2], supervised_label[2], supervised_flag, unsupervised_weight[2]), axis=-1)
+    y3 = np.concatenate((unsupervised_target[3], supervised_label[3], supervised_flag, unsupervised_weight[3]), axis=-1)
+    y4 = np.concatenate((unsupervised_target[4], supervised_label[4], supervised_flag, unsupervised_weight[4]), axis=-1)
+    y = [y0, y1, y2, y3, y4]
+
 
     num_train_data = train_x.shape[0]
 
@@ -104,7 +111,7 @@ def main():
         #from lib.segmentation.weight_norm import AdamWithWeightnorm
         #optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
         from lib.segmentation.model_WN import build_model
-        optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999)
+        optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
     else:
         from lib.segmentation.model_BN import build_model
         optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999)
@@ -162,7 +169,7 @@ def main():
         # Evaluation
         if epoch % 5 == 0:
             print('Evaluate epoch :  ', epoch, flush=True)
-            evaluate(model, num_class, num_test, test_x, test_y)
+            evaluate(model, num_class, 20, test_x, test_y)
 
 
 if __name__ == '__main__':
