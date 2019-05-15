@@ -40,14 +40,14 @@ def make_train_test_dataset(inp_dic, num_class):
     train_x = np.concatenate((inp_dic['labeled_x'], inp_dic['unlabeled_x']), axis=0)
 
     # transform categorical labels to one-hot vectors
-    # supervised_label = inp_dic['labeled_y']
+    supervised_label = inp_dic['labeled_y']
     supervised_label_pz = inp_dic['labeled_y'][:, :, :, :, 0, np.newaxis]
     supervised_label_cz = inp_dic['labeled_y'][:, :, :, :, 1, np.newaxis]
     supervised_label_us = inp_dic['labeled_y'][:, :, :, :, 2, np.newaxis]
     supervised_label_afs = inp_dic['labeled_y'][:, :, :, :, 3, np.newaxis]
     supervised_label_bg = inp_dic['labeled_y'][:, :, :, :, 4, np.newaxis]
 
-    # test_y = inp_dic['test_y']
+    test_y = inp_dic['test_y']
     test_y_pz = inp_dic['test_y'][:, :, :, :, 0, np.newaxis]
     test_y_cz = inp_dic['test_y'][:, :, :, :, 1, np.newaxis]
     test_y_us = inp_dic['test_y'][:, :, :, :, 2, np.newaxis]
@@ -58,14 +58,14 @@ def make_train_test_dataset(inp_dic, num_class):
     num_train_unlabeled = inp_dic['unlabeled_x'].shape[0]
 
     # fill dummy 0 array and the size will corresponds to train dataset at axis 0
-    # unlabeled_data_label = np.zeros((num_train_unlabeled, 32, 168, 168, num_class))
+    unlabeled_data_label = np.zeros((num_train_unlabeled, 32, 168, 168, num_class))
     unlabeled_data_label_pz = np.zeros((num_train_unlabeled, 32, 168, 168, 1))
     unlabeled_data_label_cz = np.zeros((num_train_unlabeled, 32, 168, 168, 1))
     unlabeled_data_label_us = np.zeros((num_train_unlabeled, 32, 168, 168, 1))
     unlabeled_data_label_afs = np.zeros((num_train_unlabeled, 32, 168, 168, 1))
     unlabeled_data_label_bg = np.zeros((num_train_unlabeled, 32, 168, 168, 1))
 
-    # supervised_label = np.concatenate((supervised_label, unlabeled_data_label), axis=0)
+    supervised_label = np.concatenate((supervised_label, unlabeled_data_label), axis=0)
     supervised_label_pz = np.concatenate((supervised_label_pz, unlabeled_data_label_pz), axis=0)
     supervised_label_cz = np.concatenate((supervised_label_cz, unlabeled_data_label_cz), axis=0)
     supervised_label_us = np.concatenate((supervised_label_us, unlabeled_data_label_us), axis=0)
@@ -77,7 +77,7 @@ def make_train_test_dataset(inp_dic, num_class):
 
     supervised_flag = np.concatenate( (np.ones((num_train_data - num_train_unlabeled, 32, 168, 168,1)), np.zeros((num_train_unlabeled, 32, 168, 168,1))))
     # initialize ensemble prediction label for unsupervised component. It corresponds to matrix Z
-    # unsupervised_target = np.zeros((num_train_data, 32, 168, 168, num_class))
+    unsupervised_target = np.zeros((num_train_data, 32, 168, 168, num_class))
     unsupervised_target_pz = np.zeros((num_train_data, 32, 168, 168, 1))
     unsupervised_target_cz = np.zeros((num_train_data, 32, 168, 168, 1))
     unsupervised_target_us = np.zeros((num_train_data, 32, 168, 168, 1))
@@ -85,7 +85,7 @@ def make_train_test_dataset(inp_dic, num_class):
     unsupervised_target_bg = np.zeros((num_train_data, 32, 168, 168, 1))
 
     # initialize weight of unsupervised loss component
-    # unsupervised_weight = np.zeros((num_train_data, 32, 168, 168, num_class))
+    unsupervised_weight = np.zeros((num_train_data, 32, 168, 168, num_class))
     unsupervised_weight_pz = np.zeros((num_train_data, 32, 168, 168, 1))
     unsupervised_weight_cz = np.zeros((num_train_data, 32, 168, 168, 1))
     unsupervised_weight_us = np.zeros((num_train_data, 32, 168, 168, 1))
@@ -94,13 +94,21 @@ def make_train_test_dataset(inp_dic, num_class):
 
     del inp_dic['labeled_x'], inp_dic['labeled_y'], inp_dic['unlabeled_x']
     inp_dic['train_x'] = train_x
-    inp_dic['supervised_label'] = [supervised_label_pz, supervised_label_cz, supervised_label_us, supervised_label_afs,
-                                   supervised_label_bg]
-    inp_dic['unsupervised_target'] = [unsupervised_target_pz, unsupervised_target_cz, unsupervised_target_us,
+    inp_dic['supervised_label_y'] = [supervised_label_pz, supervised_label_cz, supervised_label_us,
+                                     supervised_label_afs,
+                                     supervised_label_bg]
+    inp_dic['supervised_label_x'] = supervised_label
+
+    inp_dic['unsupervised_target_y'] = [unsupervised_target_pz, unsupervised_target_cz, unsupervised_target_us,
                                       unsupervised_target_afs, unsupervised_target_bg]
+    inp_dic['unsupervised_target_x'] = unsupervised_target
+
     inp_dic['train_sup_flag'] = supervised_flag
-    inp_dic['unsupervised_weight'] = [unsupervised_weight_pz, unsupervised_weight_cz, unsupervised_weight_us,
+
+    inp_dic['unsupervised_weight_y'] = [unsupervised_weight_pz, unsupervised_weight_cz, unsupervised_weight_us,
                                       unsupervised_weight_afs, unsupervised_weight_bg]
+    inp_dic['unsupervised_weight_x'] = unsupervised_weight
+
     inp_dic['test_y'] = [test_y_pz, test_y_cz, test_y_us, test_y_afs, test_y_bg]
 
     return inp_dic

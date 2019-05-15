@@ -260,11 +260,11 @@ def build_model(img_shape=(32, 168, 168), num_class=5):
 
     flag = Lambda(lambda x: x[:, :, :, :, 0], name='sup_flag')(supervised_flag)
     # concatenate label
-    pz = concatenate([pz_out, pz_gt, supervised_flag, pz_wt])
-    cz = concatenate([cz_out, cz_gt, supervised_flag, cz_wt])
-    us = concatenate([us_out, us_gt, supervised_flag, us_wt])
-    afs = concatenate([afs_out, afs_gt, supervised_flag, afs_wt])
-    bg = concatenate([bg_out, bg_gt, supervised_flag, bg_wt])
+    pz = concatenate([pz_out, pz_gt, supervised_flag, pz_wt], name='pz')
+    cz = concatenate([cz_out, cz_gt, supervised_flag, cz_wt], name='cz')
+    us = concatenate([us_out, us_gt, supervised_flag, us_wt], name='us')
+    afs = concatenate([afs_out, afs_gt, supervised_flag, afs_wt], name='afs')
+    bg = concatenate([bg_out, bg_gt, supervised_flag, bg_wt], name='bg')
 
     # pred(num_class), unsupervised_target(num_class), supervised_label(num_class), supervised_flag(1), unsupervised_weight(1)
     # return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], net)

@@ -87,11 +87,15 @@ def main():
     ret_dic['test_y'] = test_y
     ret_dic = make_train_test_dataset(ret_dic, num_class)
 
-    unsupervised_target = ret_dic['unsupervised_target']
-    supervised_label = ret_dic['supervised_label']
+    unsupervised_target = ret_dic['unsupervised_target_y']
+    supervised_label = ret_dic['supervised_label_y']
     supervised_flag = ret_dic['train_sup_flag']
-    unsupervised_weight = ret_dic['unsupervised_weight']
-    test_y = ret_dic['test_y']
+    unsupervised_weight = ret_dic['unsupervised_weight_y']
+    test = ret_dic['test_y']
+
+    unsupervised_target_x = ret_dic['unsupervised_target_x']
+    supervised_label_x = ret_dic['supervised_label_x']
+    unsupervised_weight_x = ret_dic['unsupervised_weight_x']
 
     # make the whole data and labels for training
     # x = [train_x, supervised_label, supervised_flag, unsupervised_weight]
@@ -100,8 +104,7 @@ def main():
     y2 = np.concatenate((unsupervised_target[2], supervised_label[2], supervised_flag, unsupervised_weight[2]), axis=-1)
     y3 = np.concatenate((unsupervised_target[3], supervised_label[3], supervised_flag, unsupervised_weight[3]), axis=-1)
     y4 = np.concatenate((unsupervised_target[4], supervised_label[4], supervised_flag, unsupervised_weight[4]), axis=-1)
-    y = [y0, y1, y2, y3, y4]
-
+    # y = [y0, y1, y2, y3, y4]
 
     num_train_data = train_x.shape[0]
 
@@ -149,17 +152,26 @@ def main():
             else:
                 x1 = train_x[target_idx]
 
-            x2 = supervised_label[target_idx]
+            x2 = supervised_label_x[target_idx]
             x3 = supervised_flag[target_idx]
-            x4 = unsupervised_weight[target_idx]
-            y_t = y[target_idx]
+            x4 = unsupervised_weight_x[target_idx]
+            # y_t = y[target_idx]
+            y_t = [y0[target_idx], y1[target_idx], y2[target_idx], y3[target_idx], y4[target_idx]]
 
             x_t = [x1, x2, x3, x4]
-            tr_loss, output = model.train_on_batch(x=x_t, y=y_t)
-            cur_pred[idx_list[i:i + batch_size]] = output[:, :, :, :,0:num_class]
-            ave_loss += tr_loss
+            loss, pz_loss, cz_loss, us_loss, afs_loss, bg_loss, output_0, output_1, output_2, output_3, output_4 = model.train_on_batch(
+                x=x_t, y=y_t)
+            print(model.metrics_names)
 
-        print('Training Loss: ', (ave_loss * batch_size) / num_train_data, flush=True)
+            cur_pred[idx_list[i:i + batch_size], :, :, :, 0] = output_0[:, :, :, :, 0]
+            cur_pred[idx_list[i:i + batch_size], :, :, :, 1] = output_1[:, :, :, :, 0]
+            cur_pred[idx_list[i:i + batch_size], :, :, :, 2] = output_2[:, :, :, :, 0]
+            cur_pred[idx_list[i:i + batch_size], :, :, :, 3] = output_3[:, :, :, :, 0]
+            cur_pred[idx_list[i:i + batch_size], :, :, :, 4] = output_4[:, :, :, :, 0]
+
+            ave_loss += loss
+
+        print('Training Loss: ', (ave_loss * batch_size) / (num_train_data), flush=True)
 
         # Update phase
         next_weight = next(gen_weight)
