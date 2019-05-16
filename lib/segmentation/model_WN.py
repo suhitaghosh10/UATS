@@ -154,12 +154,13 @@ def upLayer(inputLayer, concatLayer, filterSize, i, bn=False, do= False):
         return conv
 
 
-def build_model(img_shape=(32, 168, 168), num_class=5):
+def build_model(img_shape=(32, 168, 168), num_class=5, batch_num=2):
     #input_img = Input(shape=(32, 32, 3))
     input_img = Input((*img_shape, 1))
     supervised_label = Input(shape=(*img_shape, num_class))
     supervised_flag = Input(shape=(*img_shape, 1))
     unsupervised_weight = Input(shape=(*img_shape, num_class))
+    # input_idx = Input(shape=(batch_num))
 
     kernel_init = 'he_normal'
     sfs = 16  # start filter size
@@ -266,6 +267,5 @@ def build_model(img_shape=(32, 168, 168), num_class=5):
     afs = concatenate([afs_out, afs_gt, supervised_flag, afs_wt], name='afs')
     bg = concatenate([bg_out, bg_gt, supervised_flag, bg_wt], name='bg')
 
-    # pred(num_class), unsupervised_target(num_class), supervised_label(num_class), supervised_flag(1), unsupervised_weight(1)
-    # return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], net)
     return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg])
+    #return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg, input_idx])

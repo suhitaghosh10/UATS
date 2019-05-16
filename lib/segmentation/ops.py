@@ -2,6 +2,7 @@ import numpy as np
 from keras import backend as K
 from keras.losses import mean_squared_error
 
+ZONE = {0: 'pz', 1: 'cz', 2: 'us', 3: 'afs', 4: 'bg'}
 
 def ramp_up_weight(ramp_period, weight_max):
     """Ramp-Up weight generator.
@@ -115,16 +116,21 @@ def evaluate(model, num_class, num_test, test_x, test_y):
     test_y_ap = np.concatenate(
         [test_y, test_supervised_label_dummy, test_supervised_flag_dummy, test_unsupervised_weight_dummy], axis=-1)
     p = model.predict(x=test_x_ap, batch_size=1, verbose=1)
-    print(p.shape)
-    # test_x_c = np.concatenate((test_x, test_supervised_label_dummy, test_supervised_flag_dummy, test_unsupervised_weight_dummy), axis=-1)
-    # print(model.evaluate(test_x_ap, test_y_ap, batch_size=1, verbose=1))
-    pr = p[: ,:, :, :, 0:num_class]
-    pr_arg_max = np.argmax(pr, axis=-1)
-    tr_arg_max = np.argmax(test_y, axis=-1)
-    cnt = np.sum(pr_arg_max == tr_arg_max) / (num_test * 32 * 168 * 168)
-    print('Test Accuracy: ', cnt, flush=True)
-    axis = (-4, -3, -2, -1)
-    intersection = np.sum(test_y * pr, axis=axis)
+    # predicted = np.zeros((num_test, 32, 168, 168, num_class))
+    # for index in np.arange(0,5):
+    #   predicted[:, :, :, :, index] = p[index]
+    dice = np.zeros(5)
+    for index in np.arange(0, 5):
+        pr = p[index][:, :, :, :, 0]
+        gt = test_y[:, :, :, :, index]
+        # pr_arg_max = np.argmax(pr, axis=-1)
+        # tr_arg_max = np.argmax(gt, axis=-1)
+        # cnt = np.sum(pr_arg_max == tr_arg_max) / (num_test * 32 * 168 * 168)
+        # print('Validation Accuracy: ', cnt, flush=True)
+        axis = (-3, -2, -1)
+        intersection = np.sum(gt * pr, axis=axis)
     # return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
-    dice = (2. * intersection + 1.) / (np.sum(test_y, axis=axis) + np.sum(pr, axis=axis) + 1.)
-    print('Test DSC: ', np.mean(dice), flush=True)
+        dice[index] = np.mean((2. * intersection + 1.) / (np.sum(gt, axis=axis) + np.sum(pr, axis=axis) + 1.))
+
+    print('Validation DSC: ', ZONE[0], ': ', dice[0], ZONE[1], ': ', dice[1], ZONE[2], ': ', dice[2], ZONE[3], ': ',
+          dice[3], ZONE[4], ': ', dice[4], flush=True)

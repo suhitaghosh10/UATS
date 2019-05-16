@@ -53,7 +53,7 @@ def main():
     num_epoch = 351
     batch_size = 2
     weight_max = 30
-    learning_rate = 0.001
+    learning_rate = 5e-5
     alpha = 0.6
     weight_norm_flag = True
     augmentation_flag = False
@@ -87,24 +87,14 @@ def main():
     ret_dic['test_y'] = test_y
     ret_dic = make_train_test_dataset(ret_dic, num_class)
 
-    unsupervised_target = ret_dic['unsupervised_target_y']
-    supervised_label = ret_dic['supervised_label_y']
+    unsupervised_target = ret_dic['unsupervised_target']
+    supervised_label = ret_dic['supervised_label']
     supervised_flag = ret_dic['train_sup_flag']
-    unsupervised_weight = ret_dic['unsupervised_weight_y']
+    unsupervised_weight = ret_dic['unsupervised_weight']
     test = ret_dic['test_y']
 
-    unsupervised_target_x = ret_dic['unsupervised_target_x']
-    supervised_label_x = ret_dic['supervised_label_x']
-    unsupervised_weight_x = ret_dic['unsupervised_weight_x']
-
     # make the whole data and labels for training
-    # x = [train_x, supervised_label, supervised_flag, unsupervised_weight]
-    y0 = np.concatenate((unsupervised_target[0], supervised_label[0], supervised_flag, unsupervised_weight[0]), axis=-1)
-    y1 = np.concatenate((unsupervised_target[1], supervised_label[1], supervised_flag, unsupervised_weight[1]), axis=-1)
-    y2 = np.concatenate((unsupervised_target[2], supervised_label[2], supervised_flag, unsupervised_weight[2]), axis=-1)
-    y3 = np.concatenate((unsupervised_target[3], supervised_label[3], supervised_flag, unsupervised_weight[3]), axis=-1)
-    y4 = np.concatenate((unsupervised_target[4], supervised_label[4], supervised_flag, unsupervised_weight[4]), axis=-1)
-    # y = [y0, y1, y2, y3, y4]
+    y = np.concatenate((unsupervised_target, supervised_label, supervised_flag, unsupervised_weight), axis=-1)
 
     num_train_data = train_x.shape[0]
 
@@ -134,6 +124,7 @@ def main():
     cur_pred = np.zeros((num_train_data, 32, 168, 168, num_class))
 
     # Training
+
     for epoch in range(num_epoch):
         print('epoch: ', epoch)
         idx_list = shuffle(idx_list)
@@ -152,16 +143,31 @@ def main():
             else:
                 x1 = train_x[target_idx]
 
-            x2 = supervised_label_x[target_idx]
+            x2 = supervised_label[target_idx]
             x3 = supervised_flag[target_idx]
-            x4 = unsupervised_weight_x[target_idx]
+            x4 = unsupervised_weight[target_idx]
             # y_t = y[target_idx]
-            y_t = [y0[target_idx], y1[target_idx], y2[target_idx], y3[target_idx], y4[target_idx]]
+            # mess starts here
+            predicted_index = 0
+            label_index = 5
+            flag_index = 10
+            wt_index = 11
+            pz = np.stack((y[target_idx, :, :, :, predicted_index], y[target_idx, :, :, :, label_index],
+                           y[target_idx, :, :, :, flag_index], y[target_idx, :, :, :, wt_index]), axis=-1)
+            cz = np.stack((y[target_idx, :, :, :, predicted_index + 1], y[target_idx, :, :, :, label_index + 1],
+                           y[target_idx, :, :, :, flag_index], y[target_idx, :, :, :, wt_index + 1]), axis=-1)
+            us = np.stack((y[target_idx, :, :, :, predicted_index + 2], y[target_idx, :, :, :, label_index + 2],
+                           y[target_idx, :, :, :, flag_index], y[target_idx, :, :, :, wt_index + 2]), axis=-1)
+            afs = np.stack((y[target_idx, :, :, :, predicted_index + 3], y[target_idx, :, :, :, label_index + 3],
+                            y[target_idx, :, :, :, flag_index], y[target_idx, :, :, :, wt_index + 3]), axis=-1)
+            bg = np.stack((y[target_idx, :, :, :, predicted_index + 4], y[target_idx, :, :, :, label_index + 4],
+                           y[target_idx, :, :, :, flag_index], y[target_idx, :, :, :, wt_index + 4]), axis=-1)
 
+            y_t = [pz, cz, us, afs, bg]
             x_t = [x1, x2, x3, x4]
+
             loss, pz_loss, cz_loss, us_loss, afs_loss, bg_loss, output_0, output_1, output_2, output_3, output_4 = model.train_on_batch(
                 x=x_t, y=y_t)
-            print(model.metrics_names)
 
             cur_pred[idx_list[i:i + batch_size], :, :, :, 0] = output_0[:, :, :, :, 0]
             cur_pred[idx_list[i:i + batch_size], :, :, :, 1] = output_1[:, :, :, :, 0]
@@ -179,10 +185,9 @@ def main():
         ensemble_prediction, y = update_unsupervised_target(ensemble_prediction, y, num_class, alpha, cur_pred, epoch)
 
         # Evaluation
-        if epoch % 5 == 0:
-            print('Evaluate epoch :  ', epoch, flush=True)
-            evaluate(model, num_class, 20, test_x, test_y)
-
+        # if epoch % 5 == 0:
+        print('Evaluate epoch :  ', epoch, flush=True)
+        evaluate(model, num_class, 20, test_x, test_y)
 
 if __name__ == '__main__':
     main()
