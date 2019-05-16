@@ -156,10 +156,10 @@ def upLayer(inputLayer, concatLayer, filterSize, i, bn=False, do= False):
 
 def build_model(img_shape=(32, 168, 168), num_class=5, batch_num=2):
     #input_img = Input(shape=(32, 32, 3))
-    input_img = Input((*img_shape, 1))
-    supervised_label = Input(shape=(*img_shape, num_class))
-    supervised_flag = Input(shape=(*img_shape, 1))
-    unsupervised_weight = Input(shape=(*img_shape, num_class))
+    input_img = Input((*img_shape, 1), name='img_inp')
+    supervised_label = Input(shape=(*img_shape, num_class), name='sup_label_inp')
+    supervised_flag = Input(shape=(*img_shape, 1), name='sup_flag_inp')
+    unsupervised_weight = Input(shape=(*img_shape, num_class), name='unsup_wt_inp')
     # input_idx = Input(shape=(batch_num))
 
     kernel_init = 'he_normal'

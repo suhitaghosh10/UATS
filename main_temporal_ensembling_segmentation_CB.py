@@ -42,10 +42,9 @@ class MainClass:
     ensemble_prediction = np.zeros((num_labeled_train + num_test, 32, 168, 168, num_class))
 
     class NewCallback(Callback):
-        def __init__(self, bs, ramp_down_period, model, learning_rate):
+        def __init__(self, ramp_down_period, model, learning_rate):
             self.ramp_down_period = ramp_down_period
             self.model = model
-            self.bs = bs
             self.learning_rate = learning_rate
 
         def ramp_down_weight(self, ramp_period):
@@ -66,6 +65,7 @@ class MainClass:
 
             print('gandu', i)
             MainClass.cur_pred[MainClass.train_id_list[i:i + self.bs], :, :, :, 0]
+        #model.outputs -> maybe useful
 
         # cur_pred[idx_list[i:i + batch_size], :, :, :, 1] = output_1[:, :, :, :, 0]
         # cur_pred[idx_list[i:i + batch_size], :, :, :, 2] = output_2[:, :, :, :, 0]
@@ -73,7 +73,7 @@ class MainClass:
         # cur_pred[idx_list[i:i + batch_size], :, :, :, 4] = output_4[:, :, :, :, 0]
 
         def on_epoch_begin(self, epoch, logs=None):
-            if K.greater(epoch, self.epochs_num - self.ramp_down_period):
+            if K.greater(epoch, MainClass.num_epoch - self.ramp_down_period) is not None:
                 weight_down = next(self.ramp_down_weight(self.ramp_down_period))
                 K.set_value(self.model.optimizer.lr, weight_down * self.learning_rate)
                 K.set_value(self.model.optimizer.beta_1, 0.4 * weight_down + 0.5)
@@ -101,13 +101,21 @@ class MainClass:
         return MainClass.ensemble_prediction
 
     def train(self):
-        os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+        #os.environ["CUDA_VISIBLE_DEVICES"] = '1'
         # Data Preparation
+        '''
         train_x = np.load('/home/suhita/zonals/data/training/trainArray_imgs_fold1.npy')
         train_y = np.load('/home/suhita/zonals/data/training/trainArray_GT_fold1.npy')
 
         val_x = np.load('/home/suhita/zonals/data/validation/valArray_imgs_fold1.npy')
         val_y = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy')
+        '''
+
+        train_x = np.load('C:/Users/kukul/PycharmProjects/Zonal_Segmentation/data/trainArray_imgs_fold1.npy')
+        train_y = np.load('C:/Users/kukul/PycharmProjects/Zonal_Segmentation/data/trainArray_GT_fold1.npy')
+
+        val_x = np.load('C:/Users/kukul/PycharmProjects/Zonal_Segmentation/data/valArray_imgs_fold1.npy')
+        val_y = np.load('C:/Users/kukul/PycharmProjects/Zonal_Segmentation/data/valArray_GT_fold1.npy')
 
         ret_dic = split_supervised_train(train_x, train_y, MainClass.num_labeled_train)
 
@@ -168,8 +176,8 @@ class MainClass:
         print('-' * 30)
         print('Fitting model...')
         print('-' * 30)
-
-        cb = [csv_logger, model_checkpoint]
+        ncb = MainClass.NewCallback(MainClass.ramp_down_period, model, MainClass.learning_rate)
+        cb = [csv_logger, model_checkpoint, ncb]
         if MainClass.EarlyStop:
             cb.append(earlyStopImprovement)
         if MainClass.LRScheduling:
