@@ -111,7 +111,7 @@ def main():
 
     model = build_model(num_class=num_class)
     model.compile(optimizer=optimizer,
-                  loss=semi_supervised_loss(num_class))
+                  loss=semi_supervised_loss())
 
     model.metrics_tensors += model.outputs
     model.summary()

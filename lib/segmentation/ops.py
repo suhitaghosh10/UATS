@@ -45,7 +45,7 @@ def dice_coef(y_true, y_pred, smooth=1., axis=(-3, -2, -1)):
     return (2. * intersection + smooth) / (K.sum(y_true, axis=axis) + K.sum(y_pred, axis=axis) + smooth)
 
 
-def semi_supervised_loss(num_class):
+def semi_supervised_loss():
     """custom loss function"""
     epsilon = 1e-08
     smooth = 1.

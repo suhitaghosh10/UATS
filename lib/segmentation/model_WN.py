@@ -154,7 +154,7 @@ def upLayer(inputLayer, concatLayer, filterSize, i, bn=False, do= False):
         return conv
 
 
-def build_model(img_shape=(32, 168, 168), num_class=5, batch_num=2):
+def build_model(img_shape=(32, 168, 168), num_class=5, batch_num=2, learning_rate=5e-5):
     #input_img = Input(shape=(32, 32, 3))
     input_img = Input((*img_shape, 1), name='img_inp')
     supervised_label = Input(shape=(*img_shape, num_class), name='sup_label_inp')
@@ -266,6 +266,11 @@ def build_model(img_shape=(32, 168, 168), num_class=5, batch_num=2):
     us = concatenate([us_out, us_gt, supervised_flag, us_wt], name='us')
     afs = concatenate([afs_out, afs_gt, supervised_flag, afs_wt], name='afs')
     bg = concatenate([bg_out, bg_gt, supervised_flag, bg_wt], name='bg')
+
+    model = Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg])
+
+
+
 
     return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg])
     #return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg, input_idx])
