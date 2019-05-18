@@ -1,22 +1,19 @@
 from keras import backend as K
-
 from keras.callbacks import Callback
 from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, EarlyStopping, TensorBoard, CSVLogger
 
 from generator.data_gen import DataGenerator
-from lib.segmentation.ops import ramp_up_weight, semi_supervised_loss, ramp_down_weight, dice_coef
+from lib.segmentation.model_WN import build_model
+from lib.segmentation.ops import ramp_up_weight, ramp_down_weight
 from lib.segmentation.utils import split_supervised_train, make_train_test_dataset
-from lib.segmentation.weight_norm import AdamWithWeightnorm
 from zonal_utils.AugmentationGenerator import *
 
 
 def main():
-    # 50,000 Training -> 4000 supervised data(400 per class) and 46,000 unsupervised data.
-    # Prepare args
-    # args = parse_args()
+    # 38 Training 20 unsupervised data.
     os.environ["CUDA_VISIBLE_DEVICES"] = '1'
     num_labeled_train = 38
-    num_test = 28
+    num_test = 20
     ramp_up_period = 80
     ramp_down_period = 50
     num_class = 5
@@ -25,10 +22,6 @@ def main():
     weight_max = 30
     learning_rate = 5e-5
     alpha = 0.6
-    weight_norm_flag = True
-    augmentation_flag = False
-    whitening_flag = False
-    trans_range = 2
     EarlyStop = False
     LRScheduling = True
 
@@ -51,7 +44,9 @@ def main():
     # idx_list = [v for v in range(num_train_data)]
 
     class TemporalCallback(Callback):
-        def __init__(self, train_idx_list, unsupervised_target, supervised_label, supervised_flag, unsupervised_weight):
+        def __init__(self, img, train_idx_list, unsupervised_target, supervised_label, supervised_flag,
+                     unsupervised_weight):
+            self.img = img
             self.train_idx_list = train_idx_list  # list of indexes of training eg
             self.unsupervised_target = unsupervised_target
             self.supervised_label = supervised_label
@@ -60,24 +55,31 @@ def main():
 
             # initial epoch
             self.ensemble_prediction = np.zeros((num_train_data, 32, 168, 168, num_class))
-            self.cur_pred = K.zeros((num_train_data, 32, 168, 168, num_class))
+            self.cur_pred = np.zeros((num_train_data, 32, 168, 168, num_class))
 
         def on_batch_begin(self, batch, logs=None):
             start = batch * batch_size
             self.batch_idx_list = self.train_idx_list[start: start + batch_size]
+            print(self.batch_idx_list)
 
 
         def on_batch_end(self, batch, logs=None):
+            pass
+            '''
             i = batch * batch_size
             idx_list = np.int_(self.train_idx_list[i:i + batch_size])
+            print(idx_list)
             for i, idx in enumerate(idx_list):
-                out = K.stack((model.outputs[0][:, :, :, :, 0],
-                               model.outputs[1][:, :, :, :, 0],
-                               model.outputs[2][:, :, :, :, 0],
-                               model.outputs[3][:, :, :, :, 0],
-                               model.outputs[4][:, :, :, :, 0]), axis=-1)
+                out = K.stack((model.outputs[0][:, :, :, :],
+                               model.outputs[1][:, :, :, :],
+                               model.outputs[2][:, :, :, :],
+                               model.outputs[3][:, :, :, :],
+                               model.outputs[4][:, :, :, :]), axis=-1)
 
-                self.cur_pred[idx].assign(out)
+                #self.cur_pred[idx].assign(out)
+                tf.assign(self.cur_pred, out)
+                '''
+
 
 
 
@@ -87,6 +89,7 @@ def main():
             # shuffle examples
             np.random.shuffle(self.train_idx_list)
             np.random.shuffle(val_id_list)
+            print(self.train_idx_list)
 
             if epoch > num_epoch - ramp_down_period:
                 weight_down = next(gen_lr_weight)
@@ -94,9 +97,18 @@ def main():
                 K.set_value(model.optimizer.beta_1, 0.4 * weight_down + 0.5)
 
         def on_epoch_end(self, epoch, logs={}):
+            inp = [self.img, self.unsupervised_target, self.supervised_label, self.supervised_flag,
+                   self.unsupervised_weight]
+            model_out = model.predict(inp, batch_size=2)
+            self.cur_pred[:, :, :, :, 0] = model_out[0]
+            self.cur_pred[:, :, :, :, 1] = model_out[1]
+            self.cur_pred[:, :, :, :, 2] = model_out[2]
+            self.cur_pred[:, :, :, :, 3] = model_out[3]
+            self.cur_pred[:, :, :, :, 4] = model_out[4]
+            print('moel out', self.cur_pred[0, 0, 0, 0, :])
             next_weight = next(gen_weight)
             # update ensemble_prediction and unsupervised weight when an epoch ends
-            unsupervised_weight[:, :, :, :, :] = next_weight
+            self.unsupervised_weight[:, :, :, :, :] = next_weight
             # Z = αZ + (1 - α)z
             self.ensemble_prediction = alpha * self.ensemble_prediction + (1 - alpha) * self.cur_pred
             self.unsupervised_target = self.ensemble_prediction / (1 - alpha ** (epoch + 1))
@@ -110,8 +122,8 @@ def main():
 
     ret_dic = split_supervised_train(train_x, train_y, num_labeled_train)
 
-    ret_dic['test_x'] = val_x
-    ret_dic['test_y'] = val_y
+    ret_dic['val_x'] = val_x
+    ret_dic['val_y'] = val_y
     ret_dic = make_train_test_dataset(ret_dic, num_class)
 
     unsupervised_target = ret_dic['unsupervised_target']
@@ -123,17 +135,12 @@ def main():
     # y = np.concatenate((unsupervised_target, supervised_label, supervised_flag, unsupervised_weight), axis=-1)
 
     # Build Model
-    from lib.segmentation.model_WN import build_model
+
     # optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
 
     model = build_model(num_class=num_class, learning_rate=learning_rate)
 
-    optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
-    model.compile(optimizer=optimizer,
-                  loss=semi_supervised_loss(),
-                  metrics={'pz': dice_coef, 'cz': dice_coef, 'us': dice_coef,
-                           'afs': dice_coef, 'bg': dice_coef}
-                  )
+
 
     # model.metrics_tensors += model.outputs
     model.summary()
@@ -163,7 +170,8 @@ def main():
     print('-' * 30)
     print('Fitting model...')
     print('-' * 30)
-    tcb = TemporalCallback(train_id_list, unsupervised_target, supervised_label, supervised_flag, unsupervised_weight)
+    tcb = TemporalCallback(train_x, train_id_list, unsupervised_target, supervised_label, supervised_flag,
+                           unsupervised_weight)
     cb = [csv_logger, model_checkpoint, tcb]
     if EarlyStop:
         cb.append(earlyStopImprovement)
@@ -189,35 +197,22 @@ def main():
     val_supervised_flag = np.ones((val_x.shape[0], 32, 168, 168, 1))
     val_unsupervised_weight = np.zeros((val_x.shape[0], 32, 168, 168, 5))
 
-    pz = np.stack((val_unsupervised_target[:, :, :, :, 0], val_y[:, :, :, :, 0],
-                   val_supervised_flag[:, :, :, :, 0], val_unsupervised_weight[:, :, :, :, 0]),
-                  axis=-1)
-
-    cz = np.stack((val_unsupervised_target[:, :, :, :, 1], val_y[:, :, :, :, 1],
-                   val_supervised_flag[:, :, :, :, 0], val_unsupervised_weight[:, :, :, :, 1]),
-                  axis=-1)
-
-    us = np.stack((val_unsupervised_target[:, :, :, :, 2], val_y[:, :, :, :, 2],
-                   val_supervised_flag[:, :, :, :, 0], val_unsupervised_weight[:, :, :, :, 2]),
-                  axis=-1)
-
-    afs = np.stack((val_unsupervised_target[:, :, :, :, 3], val_y[:, :, :, :, 3],
-                    val_supervised_flag[:, :, :, :, 0], val_unsupervised_weight[:, :, :, :, 3]),
-                   axis=-1)
-
-    bg = np.stack((val_unsupervised_target[:, :, :, :, 4], val_y[:, :, :, :, 0],
-                   val_supervised_flag[:, :, :, :, 0], val_unsupervised_weight[:, :, :, :, 4]),
-                  axis=-1)
+    pz = val_y[:, :, :, :, 0]
+    cz = val_y[:, :, :, :, 1]
+    us = val_y[:, :, :, :, 2]
+    afs = val_y[:, :, :, :, 3]
+    bg = val_y[:, :, :, :, 4]
 
     y_val = [pz, cz, us, afs, bg]
-    x_val = [val_x, val_y, val_supervised_flag, val_unsupervised_weight]
+    x_val = [val_x, val_unsupervised_target, val_y, val_supervised_flag, val_unsupervised_weight]
 
     history = model.fit_generator(generator=training_generator,
                                   steps_per_epoch=steps,
                                   validation_data=[x_val, y_val],
-                                  use_multiprocessing=False,
+                                  use_multiprocessing=True,
                                   epochs=num_epoch,
-                                  callbacks=cb)
+                                  callbacks=cb
+                                  )
     # workers=4)
     model.save('temporal_final.h5')
 
@@ -289,5 +284,52 @@ def main():
     #evaluate(model, num_class, 20, test_x, test_y)
 
 
+def predict(val_x, val_y):
+    nrChanels = 1
+
+    name = 'augmented_x20_sfs16_dataGeneration_LR_'
+    val_unsupervised_target = np.zeros((val_x.shape[0], 32, 168, 168, 5))
+    val_supervised_flag = np.ones((val_x.shape[0], 32, 168, 168, 1))
+    val_unsupervised_weight = np.zeros((val_x.shape[0], 32, 168, 168, 5))
+
+    pz = np.stack((val_unsupervised_target[:, :, :, :, 0], val_y[:, :, :, :, 0],
+                   val_supervised_flag[:, :, :, :, 0], val_unsupervised_weight[:, :, :, :, 0]),
+                  axis=-1)
+
+    cz = np.stack((val_unsupervised_target[:, :, :, :, 1], val_y[:, :, :, :, 1],
+                   val_supervised_flag[:, :, :, :, 0], val_unsupervised_weight[:, :, :, :, 1]),
+                  axis=-1)
+
+    us = np.stack((val_unsupervised_target[:, :, :, :, 2], val_y[:, :, :, :, 2],
+                   val_supervised_flag[:, :, :, :, 0], val_unsupervised_weight[:, :, :, :, 2]),
+                  axis=-1)
+
+    afs = np.stack((val_unsupervised_target[:, :, :, :, 3], val_y[:, :, :, :, 3],
+                    val_supervised_flag[:, :, :, :, 0], val_unsupervised_weight[:, :, :, :, 3]),
+                   axis=-1)
+
+    bg = np.stack((val_unsupervised_target[:, :, :, :, 4], val_y[:, :, :, :, 4],
+                   val_supervised_flag[:, :, :, :, 0], val_unsupervised_weight[:, :, :, :, 4]),
+                  axis=-1)
+
+    x_val = [val_x, val_y, val_supervised_flag, val_unsupervised_weight]
+    y_val = [pz, cz, us, afs, bg]
+
+    print(name)
+    model = build_model(num_class=5)
+    print('load_weights')
+    model.load_weights('./temporal.h5')
+    print('predict')
+    out = model.predict(x_val, batch_size=1, verbose=1)
+
+    print(model.evaluate(x_val, y_val, batch_size=1, verbose=1))
+    print(name)
+
+    np.save(name + '.npy', out)
+
 if __name__ == '__main__':
     main()
+    # val_x = np.load('/home/suhita/zonals/data/validation/valArray_imgs_fold1.npy')
+    # val_y = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy')
+
+    # predict(val_x, val_y)

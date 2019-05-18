@@ -10,6 +10,9 @@ from keras.layers import concatenate, Input, Conv3D, MaxPooling3D, Conv3DTranspo
 from keras.layers.core import Activation
 from keras.models import Model
 
+from lib.segmentation.ops import semi_supervised_loss, dice_coef
+from lib.segmentation.weight_norm import AdamWithWeightnorm
+
 
 class MeanOnlyBatchNormalization(Layer):
     def __init__(self,
@@ -154,12 +157,13 @@ def upLayer(inputLayer, concatLayer, filterSize, i, bn=False, do= False):
         return conv
 
 
-def build_model(img_shape=(32, 168, 168), num_class=5, batch_num=2, learning_rate=5e-5):
-    #input_img = Input(shape=(32, 32, 3))
+def build_model(img_shape=(32, 168, 168), num_class=5, learning_rate=5e-5):
+
     input_img = Input((*img_shape, 1), name='img_inp')
-    supervised_label = Input(shape=(*img_shape, num_class), name='sup_label_inp')
-    supervised_flag = Input(shape=(*img_shape, 1), name='sup_flag_inp')
-    unsupervised_weight = Input(shape=(*img_shape, num_class), name='unsup_wt_inp')
+    unsupervised_label = Input((*img_shape, 5), name='unsup_label_inp')
+    gt = Input(shape=(*img_shape, num_class), name='gt_inp')
+    supervised_flag = Input(shape=(*img_shape, 1), name='flag_inp')
+    unsupervised_weight = Input(shape=(*img_shape, num_class), name='wt_inp')
     # input_idx = Input(shape=(batch_num))
 
     kernel_init = 'he_normal'
@@ -204,49 +208,48 @@ def build_model(img_shape=(32, 168, 168), num_class=5, batch_num=2, learning_rat
     conv7 = upLayer(conv6, conv1_b_m, sfs * 4, 7, bn, do)
 
     conv_out = Conv3D(5, (1, 1, 1), activation='softmax', name='conv_final_softmax', kernel_initializer=kernel_init)(conv7)
+
     '''
-    net = GaussianNoise(stddev=0.15)(input_img)
-
-    net = WN_Conv2D(net, 128, (3, 3), padding='same', kernel_initializer=kernel_init)
-    net = WN_Conv2D(net, 128, (3, 3), padding='same', kernel_initializer=kernel_init)
-    net = WN_Conv2D(net, 128, (3, 3), padding='same', kernel_initializer=kernel_init)
-    net = MaxPooling2D((2, 2), padding='same')(net)
-    net = Dropout(rate=0.5)(net)
-
-    net = WN_Conv2D(net, 256, (3, 3), padding='same', kernel_initializer=kernel_init)
-    net = WN_Conv2D(net, 256, (3, 3), padding='same', kernel_initializer=kernel_init)
-    net = WN_Conv2D(net, 256, (3, 3), padding='same', kernel_initializer=kernel_init)
-    net = MaxPooling2D((2, 2), padding='same')(net)
-    net = Dropout(rate=0.5)(net)
-
-    net = WN_Conv2D(net, 512, (3, 3), padding='valid', kernel_initializer=kernel_init)
-    net = WN_Conv2D(net, 256, (1, 1), padding='valid', kernel_initializer=kernel_init)
-    net = WN_Conv2D(net, 128, (1, 1), padding='valid', kernel_initializer=kernel_init)
-    net = GlobalAveragePooling2D()(net)
-    net = WN_Dense(net, units=num_class, kernel_initializer=kernel_init)
+    pz_out = Lambda(lambda x: K.reshape(x[:, :, :, :, 0], tf.convert_to_tensor([-1, *img_shape, 1])), name='pz')(
+        conv_out)
+    cz_out = Lambda(lambda x: K.reshape(x[:, :, :, :, 1], tf.convert_to_tensor([-1, *img_shape, 1])), name='cz')(
+        conv_out)
+    us_out = Lambda(lambda x: K.reshape(x[:, :, :, :, 2], tf.convert_to_tensor([-1, *img_shape, 1])), name='us')(
+        conv_out)
+    afs_out = Lambda(lambda x: K.reshape(x[:, :, :, :, 3], tf.convert_to_tensor([-1, *img_shape, 1])), name='afs')(
+        conv_out)
+    bg_out = Lambda(lambda x: K.reshape(x[:, :, :, :, 4], tf.convert_to_tensor([-1, *img_shape, 1])), name='bg')(
+        conv_out)
     '''
 
-    pz_out = Lambda(lambda x: K.reshape(x[:, :, :, :, 0], tf.convert_to_tensor([-1, *img_shape, 1])), name='pz_out')(
-        conv_out)
-    cz_out = Lambda(lambda x: K.reshape(x[:, :, :, :, 1], tf.convert_to_tensor([-1, *img_shape, 1])), name='cz_out')(
-        conv_out)
-    us_out = Lambda(lambda x: K.reshape(x[:, :, :, :, 2], tf.convert_to_tensor([-1, *img_shape, 1])), name='us_out')(
-        conv_out)
-    afs_out = Lambda(lambda x: K.reshape(x[:, :, :, :, 3], tf.convert_to_tensor([-1, *img_shape, 1])), name='afs_out')(
-        conv_out)
-    bg_out = Lambda(lambda x: K.reshape(x[:, :, :, :, 4], tf.convert_to_tensor([-1, *img_shape, 1])), name='bg_out')(
-        conv_out)
+    pz_out = Lambda(lambda x: x[:, :, :, :, 0], name='pz')(conv_out)
+    cz_out = Lambda(lambda x: x[:, :, :, :, 1], name='cz')(conv_out)
+    us_out = Lambda(lambda x: x[:, :, :, :, 2], name='us')(conv_out)
+    afs_out = Lambda(lambda x: x[:, :, :, :, 3], name='afs')(conv_out)
+    bg_out = Lambda(lambda x: x[:, :, :, :, 4], name='bg')(conv_out)
 
-    pz_gt = Lambda(lambda x: K.reshape(x[:, :, :, :, 0], tf.convert_to_tensor([-1, *img_shape, 1])), name='pz_gt')(
-        supervised_label)
-    cz_gt = Lambda(lambda x: K.reshape(x[:, :, :, :, 1], tf.convert_to_tensor([-1, *img_shape, 1])), name='cz_gt')(
-        supervised_label)
-    us_gt = Lambda(lambda x: K.reshape(x[:, :, :, :, 2], tf.convert_to_tensor([-1, *img_shape, 1])), name='us_gt')(
-        supervised_label)
-    afs_gt = Lambda(lambda x: K.reshape(x[:, :, :, :, 3], tf.convert_to_tensor([-1, *img_shape, 1])), name='afs_gt')(
-        supervised_label)
-    bg_gt = Lambda(lambda x: K.reshape(x[:, :, :, :, 4], tf.convert_to_tensor([-1, *img_shape, 1])), name='bg_gt')(
-        supervised_label)
+    # for loss func
+    pz_unsup = Lambda(lambda x: K.reshape(x[:, :, :, :, 0], tf.convert_to_tensor([-1, *img_shape, 1])),
+                      name='pz_unsup')(
+        unsupervised_label)
+    cz_unsup = Lambda(lambda x: K.reshape(x[:, :, :, :, 1], tf.convert_to_tensor([-1, *img_shape, 1])),
+                      name='cz_unsup')(
+        unsupervised_label)
+    us_unsup = Lambda(lambda x: K.reshape(x[:, :, :, :, 2], tf.convert_to_tensor([-1, *img_shape, 1])),
+                      name='us_unsup')(
+        unsupervised_label)
+    afs_unsup = Lambda(lambda x: K.reshape(x[:, :, :, :, 3], tf.convert_to_tensor([-1, *img_shape, 1])),
+                       name='afs_unsup')(
+        unsupervised_label)
+    bg_unsup = Lambda(lambda x: K.reshape(x[:, :, :, :, 4], tf.convert_to_tensor([-1, *img_shape, 1])),
+                      name='bg_unsup')(
+        unsupervised_label)
+
+    pz_gt = Lambda(lambda x: K.reshape(x[:, :, :, :, 0], tf.convert_to_tensor([-1, *img_shape, 1])), name='pz_gt')(gt)
+    cz_gt = Lambda(lambda x: K.reshape(x[:, :, :, :, 1], tf.convert_to_tensor([-1, *img_shape, 1])), name='cz_gt')(gt)
+    us_gt = Lambda(lambda x: K.reshape(x[:, :, :, :, 2], tf.convert_to_tensor([-1, *img_shape, 1])), name='us_gt')(gt)
+    afs_gt = Lambda(lambda x: K.reshape(x[:, :, :, :, 3], tf.convert_to_tensor([-1, *img_shape, 1])), name='afs_gt')(gt)
+    bg_gt = Lambda(lambda x: K.reshape(x[:, :, :, :, 4], tf.convert_to_tensor([-1, *img_shape, 1])), name='bg_gt')(gt)
 
     pz_wt = Lambda(lambda x: K.reshape(x[:, :, :, :, 0], tf.convert_to_tensor([-1, *img_shape, 1])), name='pz_wt')(
         unsupervised_weight)
@@ -259,18 +262,30 @@ def build_model(img_shape=(32, 168, 168), num_class=5, batch_num=2, learning_rat
     bg_wt = Lambda(lambda x: K.reshape(x[:, :, :, :, 4], tf.convert_to_tensor([-1, *img_shape, 1])), name='bg_wt')(
         unsupervised_weight)
 
-    flag = Lambda(lambda x: x[:, :, :, :, 0], name='sup_flag')(supervised_flag)
+
     # concatenate label
-    pz = concatenate([pz_out, pz_gt, supervised_flag, pz_wt], name='pz')
-    cz = concatenate([cz_out, cz_gt, supervised_flag, cz_wt], name='cz')
-    us = concatenate([us_out, us_gt, supervised_flag, us_wt], name='us')
-    afs = concatenate([afs_out, afs_gt, supervised_flag, afs_wt], name='afs')
-    bg = concatenate([bg_out, bg_gt, supervised_flag, bg_wt], name='bg')
+    # pz = concatenate([pz_out, pz_gt, supervised_flag, pz_wt], name='pz')
+    # cz = concatenate([cz_out, cz_gt, supervised_flag, cz_wt], name='cz')
+    # us = concatenate([us_out, us_gt, supervised_flag, us_wt], name='us')
+    # afs = concatenate([afs_out, afs_gt, supervised_flag, afs_wt], name='afs')
+    # bg = concatenate([bg_out, bg_gt, supervised_flag, bg_wt], name='bg')
 
-    model = Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg])
+    pz = concatenate([pz_unsup, pz_gt, supervised_flag, pz_wt], name='pz_c')
+    cz = concatenate([cz_unsup, cz_gt, supervised_flag, cz_wt], name='cz_c')
+    us = concatenate([us_unsup, us_gt, supervised_flag, us_wt], name='us_c')
+    afs = concatenate([afs_unsup, afs_gt, supervised_flag, afs_wt], name='afs_c')
+    bg = concatenate([bg_unsup, bg_gt, supervised_flag, bg_wt], name='bg_c')
 
+    model = Model([input_img, unsupervised_label, gt, supervised_flag, unsupervised_weight],
+                  [pz_out, cz_out, us_out, afs_out, bg_out])
+    optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
+    model.compile(optimizer=optimizer,
+                  loss={'pz': semi_supervised_loss(pz), 'cz': semi_supervised_loss(cz), 'us': semi_supervised_loss(us),
+                        'afs': semi_supervised_loss(afs), 'bg': semi_supervised_loss(bg)},
+                  metrics={'pz': dice_coef, 'cz': dice_coef, 'us': dice_coef,
+                           'afs': dice_coef, 'bg': dice_coef}
+                  )
 
-
-
-    return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg])
+    return model
+    # return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg])
     #return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg, input_idx])

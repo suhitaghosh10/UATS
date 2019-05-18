@@ -45,7 +45,7 @@ def dice_coef(y_true, y_pred, smooth=1., axis=(-3, -2, -1)):
     return (2. * intersection + smooth) / (K.sum(y_true, axis=axis) + K.sum(y_pred, axis=axis) + smooth)
 
 
-def semi_supervised_loss():
+def semi_supervised_loss(input):
     """custom loss function"""
     epsilon = 1e-08
     smooth = 1.
@@ -55,19 +55,13 @@ def semi_supervised_loss():
         the order of y_true:
         unsupervised_target(num_class), supervised_label(num_class), supervised_flag(1), unsupervised weight(1)
         """
-        #y_true -> 1st part is unsuper label(0->9) since num_cl=10, 2nd part is supervised label (10->19), 20th is flag, 21st/last one is weight
-        unsupervised_target = y_true[:, :, :, :, 0]
-        print('unsupervised_target', K.int_shape(unsupervised_target))
-        supervised_label = y_true[:, :, :, :, 1]
-        print('supervised_target', K.int_shape(supervised_label))
-        supervised_flag = y_true[:, :, :, :, 2]
-        print('supervised_flag', K.int_shape(supervised_flag))
-        weight = y_true[:, :, :, :, -1]  # last elem are weights
-        print('wt', K.int_shape(weight), 'value', weight)
+        unsupervised_target = input[:, :, :, :, 0]
+        gt = input[:, :, :, :, 1]
+        supervised_flag = input[:, :, :, :, 2]
+        weight = input[:, :, :, :, 3]  # last elem are weights
 
-        model_pred = y_pred[:, :, :, :, 0]
+        model_pred = y_pred
         print(K.int_shape(y_pred))
-
 
         # weighted unsupervised loss over batchsize
         unsupervised_loss = weight * K.mean(mean_squared_error(unsupervised_target, model_pred))
@@ -75,10 +69,10 @@ def semi_supervised_loss():
 
         # To sum over only supervised data on categorical_crossentropy, supervised_flag(1/0) is used
 
-        supervised_loss = - K.mean(
-            K.sum(supervised_label * K.log(K.clip(model_pred, epsilon, 1.0 - epsilon)), axis=1) * supervised_flag)
+        # supervised_loss = - K.mean(
+        #    K.sum(supervised_label * K.log(K.clip(model_pred, epsilon, 1.0 - epsilon)), axis=1) * supervised_flag)
 
-        supervised_loss = - K.mean(dice_coef(supervised_label, model_pred) * supervised_flag[:, 0, 0, 0])
+        supervised_loss = - K.mean(dice_coef(gt, model_pred) * supervised_flag[:, 0, 0, 0])
 
         return supervised_loss + unsupervised_loss
 
@@ -107,21 +101,23 @@ def update_unsupervised_target(ensemble_prediction, y, num_class, alpha, cur_pre
 def evaluate(model, num_class, num_test, test_x, test_y):
     """evaluate"""
     test_supervised_label_dummy = np.zeros((num_test, 32, 168, 168, num_class))
-    test_supervised_flag_dummy = np.zeros((num_test, 32, 168, 168, 1))
+    test_supervised_flag_dummy = np.ones((num_test, 32, 168, 168, 1))
     test_unsupervised_weight_dummy = np.zeros((num_test, 32, 168, 168, num_class))
 
-    test_x_ap = [test_x, test_supervised_label_dummy, test_supervised_flag_dummy, test_unsupervised_weight_dummy]
+    # test_x_ap = [test_x, test_supervised_label_dummy, test_supervised_flag_dummy, test_unsupervised_weight_dummy]
+    test_x_ap = [test_x, test_unsupervised_weight_dummy, test_y, test_supervised_flag_dummy,
+                 test_unsupervised_weight_dummy]
     print(test_y.shape, test_supervised_label_dummy.shape, test_supervised_flag_dummy.shape,
           test_unsupervised_weight_dummy.shape)
     test_y_ap = np.concatenate(
-        [test_y, test_supervised_label_dummy, test_supervised_flag_dummy, test_unsupervised_weight_dummy], axis=-1)
+        [test_supervised_label_dummy, test_y, test_supervised_flag_dummy, test_unsupervised_weight_dummy], axis=-1)
     p = model.predict(x=test_x_ap, batch_size=1, verbose=1)
     # predicted = np.zeros((num_test, 32, 168, 168, num_class))
     # for index in np.arange(0,5):
     #   predicted[:, :, :, :, index] = p[index]
     dice = np.zeros(5)
     for index in np.arange(0, 5):
-        pr = p[index][:, :, :, :, 0]
+        pr = p[index][:, :, :, :]
         gt = test_y[:, :, :, :, index]
         # pr_arg_max = np.argmax(pr, axis=-1)
         # tr_arg_max = np.argmax(gt, axis=-1)

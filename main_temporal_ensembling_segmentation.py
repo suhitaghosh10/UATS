@@ -5,7 +5,7 @@ from keras import backend as K
 from keras.optimizers import Adam
 from sklearn.utils import shuffle
 
-from lib.segmentation.ops import ramp_up_weight, semi_supervised_loss, update_unsupervised_target, evaluate, \
+from lib.segmentation.ops import ramp_up_weight, update_unsupervised_target, evaluate, \
     ramp_down_weight, update_weight
 from lib.segmentation.utils import split_supervised_train, make_train_test_dataset, whiten_zca, \
     data_augmentation_tempen
@@ -46,13 +46,13 @@ def main():
     #args = parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = '0'
     num_labeled_train = 38
-    num_test = 28
-    ramp_up_period = 80
+    num_test = 20
+    ramp_up_period = 100
     ramp_down_period = 50
     num_class = 5
-    num_epoch = 351
+    num_epoch = 400
     batch_size = 2
-    weight_max = 30
+    weight_max = 20
     learning_rate = 5e-5
     alpha = 0.6
     weight_norm_flag = True
@@ -83,15 +83,14 @@ def main():
     #ret_dic{labeled_x(4000,32,32,3), labeled_y(4000,),  unlabeled_x(46000,32,32,3)}
     ret_dic = split_supervised_train(train_x, train_y, num_labeled_train)
 
-    ret_dic['test_x'] = test_x
-    ret_dic['test_y'] = test_y
+    ret_dic['val_x'] = test_x
+    ret_dic['val_y'] = test_y
     ret_dic = make_train_test_dataset(ret_dic, num_class)
 
     unsupervised_target = ret_dic['unsupervised_target']
     supervised_label = ret_dic['supervised_label']
     supervised_flag = ret_dic['train_sup_flag']
     unsupervised_weight = ret_dic['unsupervised_weight']
-    test = ret_dic['test_y']
 
     # make the whole data and labels for training
     y = np.concatenate((unsupervised_target, supervised_label, supervised_flag, unsupervised_weight), axis=-1)
@@ -110,8 +109,6 @@ def main():
         optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999)
 
     model = build_model(num_class=num_class)
-    model.compile(optimizer=optimizer,
-                  loss=semi_supervised_loss())
 
     model.metrics_tensors += model.outputs
     model.summary()
@@ -143,37 +140,33 @@ def main():
             else:
                 x1 = train_x[target_idx]
 
-            x2 = supervised_label[target_idx]
-            x3 = supervised_flag[target_idx]
-            x4 = unsupervised_weight[target_idx]
+            x2 = unsupervised_target[target_idx]
+            x3 = supervised_label[target_idx]
+            x4 = supervised_flag[target_idx]
+            x5 = unsupervised_weight[target_idx]
             # y_t = y[target_idx]
             # mess starts here
             predicted_index = 0
             label_index = 5
             flag_index = 10
             wt_index = 11
-            pz = np.stack((y[target_idx, :, :, :, predicted_index], y[target_idx, :, :, :, label_index],
-                           y[target_idx, :, :, :, flag_index], y[target_idx, :, :, :, wt_index]), axis=-1)
-            cz = np.stack((y[target_idx, :, :, :, predicted_index + 1], y[target_idx, :, :, :, label_index + 1],
-                           y[target_idx, :, :, :, flag_index], y[target_idx, :, :, :, wt_index + 1]), axis=-1)
-            us = np.stack((y[target_idx, :, :, :, predicted_index + 2], y[target_idx, :, :, :, label_index + 2],
-                           y[target_idx, :, :, :, flag_index], y[target_idx, :, :, :, wt_index + 2]), axis=-1)
-            afs = np.stack((y[target_idx, :, :, :, predicted_index + 3], y[target_idx, :, :, :, label_index + 3],
-                            y[target_idx, :, :, :, flag_index], y[target_idx, :, :, :, wt_index + 3]), axis=-1)
-            bg = np.stack((y[target_idx, :, :, :, predicted_index + 4], y[target_idx, :, :, :, label_index + 4],
-                           y[target_idx, :, :, :, flag_index], y[target_idx, :, :, :, wt_index + 4]), axis=-1)
+            pz = y[target_idx, :, :, :, label_index]
+            cz = y[target_idx, :, :, :, label_index + 1]
+            us = y[target_idx, :, :, :, label_index + 2]
+            afs = y[target_idx, :, :, :, label_index + 3]
+            bg = y[target_idx, :, :, :, label_index + 4]
 
             y_t = [pz, cz, us, afs, bg]
-            x_t = [x1, x2, x3, x4]
+            x_t = [x1, x2, x3, x4, x5]
 
-            loss, pz_loss, cz_loss, us_loss, afs_loss, bg_loss, output_0, output_1, output_2, output_3, output_4 = model.train_on_batch(
+            loss, pz_loss, cz_loss, us_loss, afs_loss, bg_loss, dice_pz, dice_cz, dice_us, dice_afs, dice_bg, output_0, output_1, output_2, output_3, output_4 = model.train_on_batch(
                 x=x_t, y=y_t)
 
-            cur_pred[idx_list[i:i + batch_size], :, :, :, 0] = output_0[:, :, :, :, 0]
-            cur_pred[idx_list[i:i + batch_size], :, :, :, 1] = output_1[:, :, :, :, 0]
-            cur_pred[idx_list[i:i + batch_size], :, :, :, 2] = output_2[:, :, :, :, 0]
-            cur_pred[idx_list[i:i + batch_size], :, :, :, 3] = output_3[:, :, :, :, 0]
-            cur_pred[idx_list[i:i + batch_size], :, :, :, 4] = output_4[:, :, :, :, 0]
+            cur_pred[idx_list[i:i + batch_size], :, :, :, 0] = output_0[:, :, :, :]
+            cur_pred[idx_list[i:i + batch_size], :, :, :, 1] = output_1[:, :, :, :]
+            cur_pred[idx_list[i:i + batch_size], :, :, :, 2] = output_2[:, :, :, :]
+            cur_pred[idx_list[i:i + batch_size], :, :, :, 3] = output_3[:, :, :, :]
+            cur_pred[idx_list[i:i + batch_size], :, :, :, 4] = output_4[:, :, :, :]
 
             ave_loss += loss
 
