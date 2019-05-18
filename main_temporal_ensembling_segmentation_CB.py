@@ -19,8 +19,8 @@ def main():
     num_class = 5
     num_epoch = 351
     batch_size = 2
-    weight_max = 30
-    learning_rate = 5e-5
+    weight_max = 40
+    learning_rate = 5e-4
     alpha = 0.6
     EarlyStop = False
     LRScheduling = True
