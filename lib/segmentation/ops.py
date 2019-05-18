@@ -1,6 +1,5 @@
 import numpy as np
 from keras import backend as K
-from keras.losses import mean_squared_error
 
 ZONE = {0: 'pz', 1: 'cz', 2: 'us', 3: 'afs', 4: 'bg'}
 
@@ -64,7 +63,8 @@ def semi_supervised_loss(input):
         print(K.int_shape(y_pred))
 
         # weighted unsupervised loss over batchsize
-        unsupervised_loss = weight * K.mean(mean_squared_error(unsupervised_target, model_pred))
+        # unsupervised_loss = weight * K.mean(mean_squared_error(unsupervised_target, model_pred))
+        unsupervised_loss = weight * - K.mean(dice_coef(unsupervised_target, model_pred))
         print('unsupervised_loss', unsupervised_loss)
 
         # To sum over only supervised data on categorical_crossentropy, supervised_flag(1/0) is used

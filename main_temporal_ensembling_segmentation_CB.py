@@ -58,32 +58,14 @@ def main():
             self.cur_pred = np.zeros((num_train_data, 32, 168, 168, num_class))
 
         def on_batch_begin(self, batch, logs=None):
-            start = batch * batch_size
-            self.batch_idx_list = self.train_idx_list[start: start + batch_size]
-            print(self.batch_idx_list)
+            # start = batch * batch_size
+            # self.batch_idx_list = self.train_idx_list[start: start + batch_size]
+            # print(self.batch_idx_list)
+            pass
 
 
         def on_batch_end(self, batch, logs=None):
             pass
-            '''
-            i = batch * batch_size
-            idx_list = np.int_(self.train_idx_list[i:i + batch_size])
-            print(idx_list)
-            for i, idx in enumerate(idx_list):
-                out = K.stack((model.outputs[0][:, :, :, :],
-                               model.outputs[1][:, :, :, :],
-                               model.outputs[2][:, :, :, :],
-                               model.outputs[3][:, :, :, :],
-                               model.outputs[4][:, :, :, :]), axis=-1)
-
-                #self.cur_pred[idx].assign(out)
-                tf.assign(self.cur_pred, out)
-                '''
-
-
-
-
-
 
         def on_epoch_begin(self, epoch, logs=None):
             # shuffle examples
