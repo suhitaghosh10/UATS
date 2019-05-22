@@ -8,7 +8,8 @@ from lib.segmentation.ops import ramp_up_weight, ramp_down_weight
 from lib.segmentation.utils import make_train_test_dataset
 from zonal_utils.AugmentationGenerator import *
 
-TB_LOG_DIR = './tb/cb/'
+TB_LOG_DIR = './tensor_temporal_22'
+MODEL_NAME = './temporal2.h5'
 
 
 def train(train_x, train_y, val_x, val_y):
@@ -17,18 +18,16 @@ def train(train_x, train_y, val_x, val_y):
     num_train_data = train_x.shape[0]
     num_labeled_train = 38
     num_unlabeled_train = num_train_data - num_labeled_train
-    ramp_up_period = 100
-    ramp_down_period = 100
+    ramp_up_period = 80
+    ramp_down_period = 50
     num_class = 5
     num_epoch = 351
     batch_size = 2
     weight_max = 40
-    learning_rate = 5e-4
+    learning_rate = 5e-5
     alpha = 0.6
     EarlyStop = False
     LRScheduling = False
-
-
 
     # datagen list
     train_id_list = [str(i) for i in np.arange(0, train_x.shape[0])]
@@ -76,14 +75,11 @@ def train(train_x, train_y, val_x, val_y):
 
             # initial epoch
             self.ensemble_prediction = np.zeros((num_train_data, 32, 168, 168, num_class))
-            #self.cur_pred = np.zeros((num_train_data, 32, 168, 168, num_class))
 
         def on_batch_begin(self, batch, logs=None):
             pass
 
-
         def on_batch_end(self, batch, logs=None):
-
             if batch == self.last_batch_no:
                 inp = [self.img, self.unsupervised_target, self.supervised_label, self.supervised_flag,
                        self.unsupervised_weight]
@@ -96,19 +92,17 @@ def train(train_x, train_y, val_x, val_y):
                 cur_pred[:, :, :, :, 2] = model_out[2]
                 cur_pred[:, :, :, :, 3] = model_out[3]
                 cur_pred[:, :, :, :, 4] = model_out[4]
-
+                # print('model out', self.cur_pred[0, 0, 0, 0, :])
                 next_weight = next(gen_weight)
                 # update ensemble_prediction and unsupervised weight when an epoch ends
-                self.unsupervised_weight[:, :, :, :, :] = next_weight
+                self.unsupervised_weight = next_weight * self.ensemble_prediction
                 # Z = αZ + (1 - α)z
                 self.ensemble_prediction = alpha * self.ensemble_prediction + (1 - alpha) * cur_pred
                 self.unsupervised_target = self.ensemble_prediction / (1 - alpha ** (self.epoch + 1))
 
         def on_epoch_begin(self, epoch, logs=None):
             self.epoch = epoch
-            print('train eg on epoch begin-', self.train_idx_list[0:num_labeled_train], 'unlabeled-',
-                  self.train_idx_list[num_labeled_train: num_train_data])
-
+            # print('train eg on epoch begin-',self.train_idx_list[0:num_labeled_train], 'unlabeled-',self.train_idx_list[num_labeled_train: num_train_data])
             if epoch > num_epoch - ramp_down_period:
                 weight_down = next(gen_lr_weight)
                 K.set_value(model.optimizer.lr, weight_down * learning_rate)
@@ -116,7 +110,6 @@ def train(train_x, train_y, val_x, val_y):
                 print('LR: alpha-', K.eval(model.optimizer.lr), K.eval(model.optimizer.beta_1))
 
         def on_epoch_end(self, epoch, logs={}):
-
             # shuffle examples
             np.random.shuffle(self.train_idx_list)
             np.random.shuffle(val_id_list)
@@ -135,7 +128,7 @@ def train(train_x, train_y, val_x, val_y):
     print('Creating callbacks...')
     print('-' * 30)
     csv_logger = CSVLogger('validation.csv', append=True, separator=';')
-    model_checkpoint = ModelCheckpoint('./temporal_orig.h5', monitor='val_loss', save_best_only=True, verbose=1,
+    model_checkpoint = ModelCheckpoint(MODEL_NAME, monitor='val_loss', save_best_only=True, verbose=1,
                                        mode='min')
     tensorboard = TensorBoard(log_dir=TB_LOG_DIR, write_graph=False, write_grads=True, histogram_freq=0,
                               batch_size=5,
@@ -146,7 +139,7 @@ def train(train_x, train_y, val_x, val_y):
 
     tcb = TemporalCallback(train_x, train_id_list, unsupervised_target, supervised_label, supervised_flag,
                            unsupervised_weight)
-    cb = [model_checkpoint, tcb]
+    cb = [csv_logger, model_checkpoint, tcb]
     if EarlyStop:
         cb.append(earlyStopImprovement)
     if LRScheduling:
@@ -169,6 +162,7 @@ def train(train_x, train_y, val_x, val_y):
                                        unsupervised_weight, tcb.get_training_list(), **params)
 
     steps = num_train_data / 2
+
     val_unsupervised_target = np.empty_like(val_y)
     val_unsupervised_target[:] = np.mean(val_y, axis=0)
     val_supervised_flag = np.ones((val_x.shape[0], 32, 168, 168, 1))
@@ -186,28 +180,28 @@ def train(train_x, train_y, val_x, val_y):
     history = model.fit_generator(generator=training_generator,
                                   steps_per_epoch=steps,
                                   validation_data=[x_val, y_val],
+                                  use_multiprocessing=True,
                                   epochs=num_epoch,
                                   callbacks=cb
                                   )
     # workers=4)
-    model.save('temporal_final_orig.h5')
+    model.save('temporal_final2.h5')
 
 
 def predict(val_x, val_y):
-    nrChanels = 1
-
     name = 'augmented_x20_sfs16_dataGeneration_LR_'
-    #val_unsupervised_target = np.zeros((val_x.shape[0], 32, 168, 168, 5))
+    val_unsupervised_target = np.zeros((val_x.shape[0], 32, 168, 168, 5))
     val_supervised_flag = np.ones((val_x.shape[0], 32, 168, 168, 1))
     val_unsupervised_weight = np.zeros((val_x.shape[0], 32, 168, 168, 5))
 
-    x_val = [val_x, val_y, val_y, val_supervised_flag, val_unsupervised_weight]
-    y_val = [val_y[:, :, :, :, 0], val_y[:, :, :, :, 1], val_y[:, :, :, :, 2], val_y[:, :, :, :, 3], val_y[:, :, :, :, 4]]
+    x_val = [val_x, val_unsupervised_target, val_y, val_supervised_flag, val_unsupervised_weight]
+    y_val = [val_y[:, :, :, :, 0], val_y[:, :, :, :, 1], val_y[:, :, :, :, 2], val_y[:, :, :, :, 3],
+             val_y[:, :, :, :, 4]]
 
     print(name)
     model = build_model(num_class=5)
     print('load_weights')
-    model.load_weights('./temporal_1.h5')
+    model.load_weights('temporal_final2.h5')
     print('predict')
     out = model.predict(x_val, batch_size=1, verbose=1)
 
@@ -216,13 +210,14 @@ def predict(val_x, val_y):
 
     np.save(name + '.npy', out)
 
+
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+    os.environ["CUDA_VISIBLE_DEVICES"] = '0'
     # train
     train_x = np.load('/home/suhita/zonals/data/training/trainArray_imgs_fold1.npy')
     train_y = np.load('/home/suhita/zonals/data/training/trainArray_GT_fold1.npy')
     val_x = np.load('/home/suhita/zonals/data/validation/valArray_imgs_fold1.npy')
     val_y = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy')
-    train(train_x, train_y, val_x, val_y)
+    # train(train_x, train_y, val_x, val_y)
 
-    #predict(val_x, val_y)
+    predict(val_x, val_y)

@@ -20,7 +20,7 @@ class DataGenerator(keras.utils.Sequence):
         self.shuffle = shuffle
         self.rotation = rotation
         self.indexes = np.arange(len(self.id_list))
-        print('data gen-', self.indexes)
+        # print('data gen-', self.indexes)
 
     def on_epoch_end(self):
         pass

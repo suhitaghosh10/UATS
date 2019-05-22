@@ -27,7 +27,8 @@ def split_supervised_train(images, labels, num_labeled_train):
 
     # difference set between all-data indices and selected labeled data indices
     diff_set = list(np.setdiff1d(train_list_no, train_labeled_idx))
-
+    print('supervised ex-', train_labeled_idx)
+    print('un-supervised ex-', diff_set)
     return {
         'labeled_x': images[train_labeled_idx],
         'labeled_y': labels[train_labeled_idx],
@@ -35,18 +36,31 @@ def split_supervised_train(images, labels, num_labeled_train):
     }
 
 
-def make_train_test_dataset(inp_dic, num_class):
+def make_train_test_dataset(train_x, train_y, val_x, val_y, num_labeled_train, num_class,
+                            unsupervised_target_init=False):
     """make train dataset and test dataset"""
-    train_x = np.concatenate((inp_dic['labeled_x'], inp_dic['unlabeled_x']), axis=0)
+    ret_dic = {}
+    # validation
+    ret_dic['val_x'] = val_x
+    ret_dic['val_y'] = val_y
 
-    # transform categorical labels to one-hot vectors
-    supervised_label = inp_dic['labeled_y']
-    test_y = inp_dic['val_y']
+    # train
+    labeled_set = []
+    train_list_no = np.arange(0, train_x.shape[0])
+    labeled_set.extend(np.random.choice(train_list_no, num_labeled_train, replace=False))
 
-    num_train_unlabeled = inp_dic['unlabeled_x'].shape[0]
+    # difference set between all-data indices and selected labeled data indices
+    unlabeled_set = list(np.setdiff1d(train_list_no, labeled_set))
+    train_x = np.concatenate((train_x[labeled_set], train_x[unlabeled_set]), axis=0)
+
+    supervised_label = train_y[labeled_set]
+    unsupervised_label = train_y[unlabeled_set]
+
+    num_train_unlabeled = unsupervised_label.shape[0]
 
     # fill dummy 0 array and the size will corresponds to train dataset at axis 0
-    unlabeled_data_label = np.zeros((num_train_unlabeled, 32, 168, 168, num_class))
+    unlabeled_data_label = np.empty_like(unsupervised_label)
+    unlabeled_data_label[:] = np.mean(train_y, axis=0)
     supervised_label = np.concatenate((supervised_label, unlabeled_data_label), axis=0)
     num_train_data = supervised_label.shape[0]
 
@@ -54,20 +68,21 @@ def make_train_test_dataset(inp_dic, num_class):
 
     supervised_flag = np.concatenate( (np.ones((num_train_data - num_train_unlabeled, 32, 168, 168,1)), np.zeros((num_train_unlabeled, 32, 168, 168,1))))
     # initialize ensemble prediction label for unsupervised component. It corresponds to matrix Z
-    unsupervised_target = np.zeros((num_train_data, 32, 168, 168, num_class))
+    if unsupervised_target_init:
+        unsupervised_target = train_y
+    else:
+        unsupervised_target = np.zeros((num_train_data, 32, 168, 168, num_class))
 
     # initialize weight of unsupervised loss component
     unsupervised_weight = np.zeros((num_train_data, 32, 168, 168, num_class))
 
-    del inp_dic['labeled_x'], inp_dic['labeled_y'], inp_dic['unlabeled_x']
-    inp_dic['train_x'] = train_x
-    inp_dic['supervised_label'] = supervised_label
-    inp_dic['unsupervised_target'] = unsupervised_target
-    inp_dic['train_sup_flag'] = supervised_flag
-    inp_dic['unsupervised_weight'] = unsupervised_weight
-    inp_dic['val_y'] = test_y
+    ret_dic['train_x'] = train_x
+    ret_dic['supervised_label'] = supervised_label
+    ret_dic['unsupervised_target'] = unsupervised_target
+    ret_dic['train_sup_flag'] = supervised_flag
+    ret_dic['unsupervised_weight'] = unsupervised_weight
 
-    return inp_dic
+    return ret_dic
 
 
 def data_augmentation_tempen(inputs, trans_range):
