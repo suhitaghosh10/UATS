@@ -10,7 +10,7 @@ from lib.segmentation.ops import ramp_up_weight, ramp_down_weight
 from lib.segmentation.utils import make_train_test_dataset
 from zonal_utils.AugmentationGenerator import *
 
-TB_LOG_DIR = './tb/variance_mcdropout/4'
+TB_LOG_DIR = './tb/variance_mcdropout/5'
 
 
 def train(train_x, train_y, val_x, val_y, gpu_id, nb_gpus):

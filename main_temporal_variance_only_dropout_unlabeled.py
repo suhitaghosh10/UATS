@@ -6,14 +6,14 @@ from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, EarlyStopping, T
 
 from generator.data_gen import DataGenerator
 from lib.segmentation.model_WN_MCdropout import build_model
-from lib.segmentation.ops import ramp_up_weight, ramp_down_weight
+from lib.segmentation.ops import ramp_down_weight
 from lib.segmentation.utils import make_train_test_dataset
 from zonal_utils.AugmentationGenerator import *
 
-TB_LOG_DIR = './tb/variance_mcdropout/4'
+TB_LOG_DIR = './tb/variance_mcdropout/5'
 
 
-def train(train_x, train_y, val_x, val_y, gpu_id, nb_gpus):
+def train(train_x, train_y, train_u, val_x, val_y, gpu_id, nb_gpus):
     # 38 Training 20 unsupervised data.
     # hyper-params
     num_train_data = train_x.shape[0]
@@ -35,7 +35,7 @@ def train(train_x, train_y, val_x, val_y, gpu_id, nb_gpus):
     val_id_list = [str(i) for i in np.arange(0, val_x.shape[0])]
 
     # prepare weights and arrays for updates
-    gen_weight = ramp_up_weight(ramp_up_period, weight_max * (num_labeled_train / num_train_data))
+    # gen_weight = ramp_up_weight(ramp_up_period, weight_max * (num_labeled_train / num_train_data))
     gen_lr_weight = ramp_down_weight(ramp_down_period)
 
     # prepare dataset
@@ -143,7 +143,7 @@ def train(train_x, train_y, val_x, val_y, gpu_id, nb_gpus):
     print('Creating callbacks...')
     print('-' * 30)
     csv_logger = CSVLogger('validation.csv', append=True, separator=';')
-    model_checkpoint = ModelCheckpoint('./temporal_variance_mcdropout.h5', monitor='val_loss', save_best_only=True,
+    model_checkpoint = ModelCheckpoint('./temporal_variance_mcdropout.h5', monitor='val_afs_loss', save_best_only=True,
                                        verbose=1,
                                        mode='min')
     tensorboard = TensorBoard(log_dir=TB_LOG_DIR, write_graph=False, write_grads=True, histogram_freq=0,
@@ -180,7 +180,7 @@ def train(train_x, train_y, val_x, val_y, gpu_id, nb_gpus):
     steps = num_train_data / 2
 
     val_unsupervised_target = val_y
-    val_supervised_flag = np.ones((val_x.shape[0], 32, 168, 168, 1))
+    val_supervised_flag = np.zeros((val_x.shape[0], 32, 168, 168, 1))
     val_unsupervised_weight = np.zeros((val_x.shape[0], 32, 168, 168, 5))
 
     pz = val_y[:, :, :, :, 0]
@@ -248,8 +248,9 @@ if __name__ == '__main__':
     # train
     train_x = np.load('/home/suhita/zonals/data/training/trainArray_imgs_fold1.npy')
     train_y = np.load('/home/suhita/zonals/data/training/trainArray_GT_fold1.npy')
+    train_u = np.load('/home/suhita/zonals/data/training/trainArray_imgs_unlabeled.npy')
     val_x = np.load('/home/suhita/zonals/data/validation/valArray_imgs_fold1.npy')
     val_y = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy')
-    train(train_x, train_y, val_x, val_y, gpu, nb_gpus)
+    train(train_x, train_y, train_u, val_x, val_y, gpu, nb_gpus)
 
     # predict(val_x, val_y)
