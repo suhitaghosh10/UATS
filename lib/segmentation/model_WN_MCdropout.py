@@ -158,7 +158,7 @@ def upLayer(inputLayer, concatLayer, filterSize, i, bn=False, do=False):
         return conv
 
 
-def build_model(img_shape=(32, 168, 168), num_class=5, learning_rate=5e-5):
+def build_model(img_shape=(32, 168, 168), num_class=5, learning_rate=5e-5, gpu_id=None, nb_gpus=None):
     input_img = Input((*img_shape, 1), name='img_inp')
     unsupervised_label = Input((*img_shape, 5), name='unsup_label_inp')
     gt = Input(shape=(*img_shape, num_class), name='gt_inp')
@@ -282,10 +282,11 @@ def build_model(img_shape=(32, 168, 168), num_class=5, learning_rate=5e-5):
     afs = concatenate([afs_unsup, afs_gt, supervised_flag, afs_wt], name='afs_c')
     bg = concatenate([bg_unsup, bg_gt, supervised_flag, bg_wt], name='bg_c')
 
-    model = Model([input_img, unsupervised_label, gt, supervised_flag, unsupervised_weight],
+    with tf.device(gpu_id):
+        model = Model([input_img, unsupervised_label, gt, supervised_flag, unsupervised_weight],
                   [pz_out, cz_out, us_out, afs_out, bg_out])
-    optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
-    model.compile(optimizer=optimizer,
+        optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
+        model.compile(optimizer=optimizer,
                   loss={'pz': semi_supervised_loss(pz), 'cz': semi_supervised_loss(cz), 'us': semi_supervised_loss(us),
                         'afs': semi_supervised_loss(afs), 'bg': semi_supervised_loss(bg)},
                   metrics={'pz': dice_coef, 'cz': dice_coef, 'us': dice_coef,
