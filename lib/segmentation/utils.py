@@ -84,6 +84,92 @@ def make_train_test_dataset(train_x, train_y, val_x, val_y, num_labeled_train, n
 
     return ret_dic
 
+def make_train_test_dataset(train_x, train_y, val_x, val_y, num_labeled_train, num_class,
+                            unsupervised_target_init=False):
+    """make train dataset and test dataset"""
+    ret_dic = {}
+    # validation
+    ret_dic['val_x'] = val_x
+    ret_dic['val_y'] = val_y
+
+    # train
+    labeled_set = []
+    train_list_no = np.arange(0, train_x.shape[0])
+    labeled_set.extend(np.random.choice(train_list_no, num_labeled_train, replace=False))
+
+    # difference set between all-data indices and selected labeled data indices
+    unlabeled_set = list(np.setdiff1d(train_list_no, labeled_set))
+    train_x = np.concatenate((train_x[labeled_set], train_x[unlabeled_set]), axis=0)
+
+    supervised_label = train_y[labeled_set]
+    unsupervised_label = train_y[unlabeled_set]
+
+    num_train_unlabeled = unsupervised_label.shape[0]
+
+    # fill dummy 0 array and the size will corresponds to train dataset at axis 0
+    unlabeled_data_label = np.empty_like(unsupervised_label)
+    unlabeled_data_label[:] = np.mean(train_y, axis=0)
+    supervised_label = np.concatenate((supervised_label, unlabeled_data_label), axis=0)
+    num_train_data = supervised_label.shape[0]
+
+    # flag to indicate that supervised(1) or not(0) in train data
+
+    supervised_flag = np.concatenate( (np.ones((num_train_data - num_train_unlabeled, 32, 168, 168,1)), np.zeros((num_train_unlabeled, 32, 168, 168,1))))
+    # initialize ensemble prediction label for unsupervised component. It corresponds to matrix Z
+    if unsupervised_target_init:
+        unsupervised_target = train_y
+    else:
+        unsupervised_target = np.zeros((num_train_data, 32, 168, 168, num_class))
+
+    # initialize weight of unsupervised loss component
+    unsupervised_weight = np.zeros((num_train_data, 32, 168, 168, num_class))
+
+    ret_dic['train_x'] = train_x
+    ret_dic['supervised_label'] = supervised_label
+    ret_dic['unsupervised_target'] = unsupervised_target
+    ret_dic['train_sup_flag'] = supervised_flag
+    ret_dic['unsupervised_weight'] = unsupervised_weight
+
+    return ret_dic
+
+def make_dataset(train_x, train_y, train_u, val_x, val_y, num_class, model):
+    """make train dataset and test dataset"""
+    ret_dic = {}
+    # validation
+    ret_dic['val_x'] = val_x
+    ret_dic['val_y'] = val_y
+
+    # train
+    num_labeled_train = train_x.shape[0]
+    num_un_labeled_train = train_u.shape[0]
+    total_train_num = num_labeled_train + num_un_labeled_train
+    labeled_set = []
+
+    train_x = np.concatenate((train_x, train_u), axis=0)
+
+    supervised_label = train_y
+    unsupervised_label = np.empty((num_un_labeled_train, 32, 168, 168, 5))
+    #model prediction will act as gt for unlabeled data
+    #TODO
+
+    supervised_label = np.concatenate((supervised_label, unsupervised_label), axis=0)
+
+    # flag to indicate that supervised(1) or not(0) in train data
+
+    supervised_flag = np.concatenate( (np.ones((num_labeled_train, 32, 168, 168,1)), np.zeros((num_un_labeled_train, 32, 168, 168,1))))
+    unsupervised_target = np.concatenate((train_y, unsupervised_label), axis=-1)
+
+    # initialize weight of unsupervised loss component
+    unsupervised_weight = np.zeros((total_train_num, 32, 168, 168, num_class))
+
+    ret_dic['train_x'] = train_x
+    ret_dic['supervised_label'] = supervised_label
+    ret_dic['unsupervised_target'] = unsupervised_target
+    ret_dic['train_sup_flag'] = supervised_flag
+    ret_dic['unsupervised_weight'] = unsupervised_weight
+
+    return ret_dic
+
 
 def data_augmentation_tempen(inputs, trans_range):
     """data augmentation by random translation and horizonal flip.

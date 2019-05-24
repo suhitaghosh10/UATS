@@ -7,7 +7,7 @@ from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, EarlyStopping, T
 from generator.data_gen import DataGenerator
 from lib.segmentation.model_WN_MCdropout import build_model
 from lib.segmentation.ops import ramp_down_weight
-from lib.segmentation.utils import make_train_test_dataset
+from lib.segmentation.utils import make_dataset
 from zonal_utils.AugmentationGenerator import *
 
 TB_LOG_DIR = './tb/variance_mcdropout/5'
@@ -16,16 +16,17 @@ TB_LOG_DIR = './tb/variance_mcdropout/5'
 def train(train_x, train_y, train_u, val_x, val_y, gpu_id, nb_gpus):
     # 38 Training 20 unsupervised data.
     # hyper-params
-    num_train_data = train_x.shape[0]
-    num_labeled_train = 38
-    num_unlabeled_train = num_train_data - num_labeled_train
+    num_un_labeled_train = train_u.shape[0]
+    num_labeled_train = train_x.shape[0]
+    num_train_data = num_un_labeled_train + num_labeled_train
+
     ramp_up_period = 100
     ramp_down_period = 100
     num_class = 5
     num_epoch = 351
     batch_size = 2
     weight_max = 40
-    learning_rate = 5e-5
+    learning_rate = 4.5e-5
     alpha = 0.6
     EarlyStop = False
     LRScheduling = False
@@ -44,9 +45,9 @@ def train(train_x, train_y, train_u, val_x, val_y, gpu_id, nb_gpus):
     print('-' * 30)
 
     # ret_dic = split_supervised_train(train_x, train_y, num_labeled_train)
-
-    ret_dic = make_train_test_dataset(train_x, train_y, val_x, val_y, num_labeled_train, num_class,
-                                      unsupervised_target_init=True)
+    # Build Model
+    model = build_model(num_class=num_class, learning_rate=learning_rate, gpu_id=gpu_id, nb_gpus=nb_gpus)
+    ret_dic = make_dataset(train_x, train_y, train_u, val_x, val_y, num_class, model)
 
     unsupervised_target = ret_dic['unsupervised_target']
     supervised_label = ret_dic['supervised_label']
@@ -60,8 +61,7 @@ def train(train_x, train_y, train_u, val_x, val_y, gpu_id, nb_gpus):
     print('Creating and compiling model...')
     print('-' * 30)
 
-    # Build Model
-    model = build_model(num_class=num_class, learning_rate=learning_rate, gpu_id=gpu_id, nb_gpus=nb_gpus)
+
 
     # model.metrics_tensors += model.outputs
     model.summary()
@@ -142,7 +142,7 @@ def train(train_x, train_y, train_u, val_x, val_y, gpu_id, nb_gpus):
     print('-' * 30)
     print('Creating callbacks...')
     print('-' * 30)
-    csv_logger = CSVLogger('validation.csv', append=True, separator=';')
+    #csv_logger = CSVLogger('validation.csv', append=True, separator=';')
     model_checkpoint = ModelCheckpoint('./temporal_variance_mcdropout.h5', monitor='val_afs_loss', save_best_only=True,
                                        verbose=1,
                                        mode='min')
