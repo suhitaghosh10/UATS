@@ -10,7 +10,7 @@ from lib.segmentation.ops import ramp_up_weight, ramp_down_weight
 from lib.segmentation.utils import make_train_test_dataset
 from zonal_utils.AugmentationGenerator import *
 
-TB_LOG_DIR = './tb/variance_mcdropout/5'
+TB_LOG_DIR = './tb/variance_mcdropout/7'
 
 
 def train(train_x, train_y, val_x, val_y, gpu_id, nb_gpus):
@@ -88,7 +88,7 @@ def train(train_x, train_y, val_x, val_y, gpu_id, nb_gpus):
         def on_batch_end(self, batch, logs=None):
             # print('batch no', batch)
 
-            if batch == self.last_batch_no and self.epoch > 20:
+            if batch == self.last_batch_no and self.epoch > 5:
                 inp = [self.img, self.unsupervised_target, self.supervised_label, self.supervised_flag,
                        self.unsupervised_weight]
                 cur_pred = np.empty((num_train_data, 32, 168, 168, num_class))
@@ -108,7 +108,7 @@ def train(train_x, train_y, val_x, val_y, gpu_id, nb_gpus):
                 del cur_pred
 
                 # update ensemble_prediction and unsupervised weight when an epoch ends
-                self.unsupervised_weight = 1. - np.abs(cur_pred_final - self.supervised_label)
+                self.unsupervised_weight = 1. - np.abs(cur_pred_final - self.ensemble_prediction)
 
                 # Z = αZ + (1 - α)z
                 self.ensemble_prediction = alpha * self.ensemble_prediction + (1 - alpha) * cur_pred_final
@@ -181,7 +181,7 @@ def train(train_x, train_y, val_x, val_y, gpu_id, nb_gpus):
 
     val_unsupervised_target = val_y
     val_supervised_flag = np.ones((val_x.shape[0], 32, 168, 168, 1))
-    val_unsupervised_weight = np.zeros((val_x.shape[0], 32, 168, 168, 5))
+    val_unsupervised_weight = np.ones((val_x.shape[0], 32, 168, 168, 5))
 
     pz = val_y[:, :, :, :, 0]
     cz = val_y[:, :, :, :, 1]

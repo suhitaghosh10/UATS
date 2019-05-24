@@ -7,7 +7,8 @@ from sklearn.utils import shuffle
 
 from lib.segmentation.ops import ramp_up_weight, semi_supervised_loss, evaluate, \
     ramp_down_weight, update_weight
-from lib.segmentation.utils import load_data, split_supervised_train, make_train_test_dataset, normalize_images, whiten_zca, \
+from lib.segmentation.utils import load_data, split_supervised_train, make_train_test_dataset, normalize_images, \
+    whiten_zca, \
     data_augmentation_tempen
 
 
