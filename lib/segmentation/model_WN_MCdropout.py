@@ -9,6 +9,7 @@ from keras.layers import concatenate, Input, Conv3D, MaxPooling3D, Conv3DTranspo
     BatchNormalization, Dropout
 from keras.layers.core import Activation
 from keras.models import Model
+from keras.utils import multi_gpu_model
 
 from lib.segmentation.ops import semi_supervised_loss, dice_coef
 from lib.segmentation.weight_norm import AdamWithWeightnorm
@@ -213,8 +214,9 @@ def build_model(img_shape=(32, 168, 168), num_class=5, learning_rate=5e-5, gpu_i
     conv6 = upLayer(conv5, conv2_b_m, sfs * 8, 6, bn, do)
     conv7 = upLayer(conv6, conv1_b_m, sfs * 4, 7, bn, do)
 
-    conv_out = Conv3D(5, (1, 1, 1), activation='softmax', name='conv_final_softmax', kernel_initializer=kernel_init)(
+    conv_out = Conv3D(5, (1, 1, 1), name='conv_b4_softmax', kernel_initializer=kernel_init)(
         conv7)
+    conv_sm_out = Activation(activation='softmax', name='conv_final_softmax')(conv_out)
 
     '''
     pz_out = Lambda(lambda x: K.reshape(x[:, :, :, :, 0], tf.convert_to_tensor([-1, *img_shape, 1])), name='pz')(
@@ -228,6 +230,12 @@ def build_model(img_shape=(32, 168, 168), num_class=5, learning_rate=5e-5, gpu_i
     bg_out = Lambda(lambda x: K.reshape(x[:, :, :, :, 4], tf.convert_to_tensor([-1, *img_shape, 1])), name='bg')(
         conv_out)
     '''
+
+    pz_sm_out = Lambda(lambda x: x[:, :, :, :, 0], name='pz')(conv_sm_out)
+    cz_sm_out = Lambda(lambda x: x[:, :, :, :, 1], name='cz')(conv_sm_out)
+    us_sm_out = Lambda(lambda x: x[:, :, :, :, 2], name='us')(conv_sm_out)
+    afs_sm_out = Lambda(lambda x: x[:, :, :, :, 3], name='afs')(conv_sm_out)
+    bg_sm_out = Lambda(lambda x: x[:, :, :, :, 4], name='bg')(conv_sm_out)
 
     pz_out = Lambda(lambda x: x[:, :, :, :, 0], name='pz')(conv_out)
     cz_out = Lambda(lambda x: x[:, :, :, :, 1], name='cz')(conv_out)
@@ -284,15 +292,23 @@ def build_model(img_shape=(32, 168, 168), num_class=5, learning_rate=5e-5, gpu_i
 
     with tf.device(gpu_id):
         model = Model([input_img, unsupervised_label, gt, supervised_flag, unsupervised_weight],
-                  [pz_out, cz_out, us_out, afs_out, bg_out])
+                      [pz_sm_out, cz_sm_out, us_sm_out, afs_sm_out, bg_sm_out])
+
+        p_model = multi_gpu_model(model, gpus=nb_gpus)
+
+        model_copy = Model([input_img, unsupervised_label, gt, supervised_flag, unsupervised_weight],
+                           [pz_out, cz_out, us_out, afs_out, bg_out])
+
+        # intermediate_layer_model = Model(inputs=model.input,outputs=model.get_layer(layer_name).output)
+
         optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
-        model.compile(optimizer=optimizer,
+        p_model.compile(optimizer=optimizer,
                   loss={'pz': semi_supervised_loss(pz), 'cz': semi_supervised_loss(cz), 'us': semi_supervised_loss(us),
                         'afs': semi_supervised_loss(afs), 'bg': semi_supervised_loss(bg)},
                   metrics={'pz': dice_coef, 'cz': dice_coef, 'us': dice_coef,
                            'afs': dice_coef, 'bg': dice_coef}
                   )
 
-    return model
+    return p_model, model_copy
     # return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg])
     # return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg, input_idx])

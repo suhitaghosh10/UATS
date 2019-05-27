@@ -10,7 +10,7 @@ from lib.segmentation.ops import ramp_up_weight, ramp_down_weight
 from lib.segmentation.utils import make_train_test_dataset
 from zonal_utils.AugmentationGenerator import *
 
-TB_LOG_DIR = './tb/variance_mcdropout/7'
+TB_LOG_DIR = './tb/variance_mcdropout/1'
 
 
 def train(train_x, train_y, val_x, val_y, gpu_id, nb_gpus):
@@ -22,10 +22,10 @@ def train(train_x, train_y, val_x, val_y, gpu_id, nb_gpus):
     ramp_up_period = 100
     ramp_down_period = 100
     num_class = 5
-    num_epoch = 351
+    num_epoch = 500
     batch_size = 2
     weight_max = 40
-    learning_rate = 5e-5
+    learning_rate = 5e-6
     alpha = 0.6
     EarlyStop = False
     LRScheduling = False
@@ -61,7 +61,7 @@ def train(train_x, train_y, val_x, val_y, gpu_id, nb_gpus):
     print('-' * 30)
 
     # Build Model
-    model = build_model(num_class=num_class, learning_rate=learning_rate, gpu_id=gpu_id, nb_gpus=nb_gpus)
+    model, model_copy = build_model(num_class=num_class, learning_rate=learning_rate, gpu_id=gpu_id, nb_gpus=nb_gpus)
 
     # model.metrics_tensors += model.outputs
     model.summary()
@@ -77,6 +77,9 @@ def train(train_x, train_y, val_x, val_y, gpu_id, nb_gpus):
             self.supervised_flag = supervised_flag
             self.unsupervised_weight = unsupervised_weight
             self.last_batch_no = num_train_data / batch_size - 1
+            self.pred_sq_sum = np.zeros_like(train_y)
+            self.pred_sum = np.zeros_like(train_y)
+            self.writer = tf.summary.FileWriter(TB_LOG_DIR)
 
             # initial epoch
             self.ensemble_prediction = train_y
@@ -86,33 +89,68 @@ def train(train_x, train_y, val_x, val_y, gpu_id, nb_gpus):
             pass
 
         def on_batch_end(self, batch, logs=None):
+            # self.epoch = self.epoch+1
             # print('batch no', batch)
-
-            if batch == self.last_batch_no and self.epoch > 5:
+            # update ensemble_prediction and unsupervised weight when an epoch ends
+            if batch == self.last_batch_no:
+                # update ensemble pred
                 inp = [self.img, self.unsupervised_target, self.supervised_label, self.supervised_flag,
                        self.unsupervised_weight]
-                cur_pred = np.empty((num_train_data, 32, 168, 168, num_class))
+                # output in train mode = 1
 
-                model_out = model.predict(inp, batch_size=2)
-                model_out += model.predict(inp, batch_size=2)
-                model_out += model.predict(inp, batch_size=2)
+                temp = np.empty((num_train_data, 32, 168, 168, num_class))
 
-                cur_pred[:, :, :, :, 0] = model_out[0] / 3
-                cur_pred[:, :, :, :, 1] = model_out[1] / 3
-                cur_pred[:, :, :, :, 2] = model_out[2] / 3
-                cur_pred[:, :, :, :, 3] = model_out[3] / 3
-                cur_pred[:, :, :, :, 4] = model_out[4] / 3
+                model_out1 = model.predict(inp, batch_size=2)
+                model_out2 = model.predict(inp, batch_size=2)
+                model_out3 = model.predict(inp, batch_size=2)
 
-                max = np.reshape(np.max(cur_pred, axis=-1), (num_train_data, 32, 168, 168, 1))
-                cur_pred_final = np.where(cur_pred == max, max, cur_pred)
-                del cur_pred
+                temp[:, :, :, :, 0] = (model_out1[0] + model_out2[0] + model_out3[0]) / 3
+                temp[:, :, :, :, 1] = (model_out1[1] + model_out2[1] + model_out3[1]) / 3
+                temp[:, :, :, :, 2] = (model_out1[2] + model_out2[2] + model_out3[2]) / 3
+                temp[:, :, :, :, 3] = (model_out1[3] + model_out2[3] + model_out3[3]) / 3
+                temp[:, :, :, :, 4] = (model_out1[4] + model_out2[4] + model_out3[4]) / 3
 
-                # update ensemble_prediction and unsupervised weight when an epoch ends
-                self.unsupervised_weight = 1. - np.abs(cur_pred_final - self.ensemble_prediction)
+                del model_out1, model_out2, model_out3
+
+                max = np.reshape(np.max(temp, axis=-1), (num_train_data, 32, 168, 168, 1))
+                # approach 1 -> cur_pred_final = np.where(temp == max, max, temp)
+                cur_pred_final = np.where(temp == max, max, 0)  #assign 0 to non-class and 1 to zone belonging to class
 
                 # Z = αZ + (1 - α)z
                 self.ensemble_prediction = alpha * self.ensemble_prediction + (1 - alpha) * cur_pred_final
                 self.unsupervised_target = self.ensemble_prediction / (1 - alpha ** (self.epoch + 1))
+
+                # update unsup wts
+                model_pred = model_copy.predict(inp, batch_size=2)
+                temp[:, :, :, :, 0] = model_pred[0]
+                temp[:, :, :, :, 1] = model_pred[1]
+                temp[:, :, :, :, 2] = model_pred[2]
+                temp[:, :, :, :, 3] = model_pred[3]
+                temp[:, :, :, :, 4] = model_pred[4]
+                max = np.amax(temp)
+                min = np.clip(np.amin(temp), a_max=100, a_min=-100)
+                norm_pred = (temp - min) / (max - min)
+                del temp
+                self.pred_sq_sum = self.pred_sq_sum + (norm_pred ** 2)
+                self.pred_sum = self.pred_sum + norm_pred
+
+                sd = np.sqrt((self.pred_sq_sum / (self.epoch + 1)) - ((self.pred_sum / (self.epoch + 1)) ** 2))
+                self.unsupervised_weight = 1. - sd
+                summary = tf.Summary()
+                summary_value = summary.value.add()
+                summary_value.simple_value = sd[0, 16, 0, 0, 0]
+                summary_value.tag = 'sd_1'
+                self.writer.add_summary(summary, self.epoch)
+                self.writer.flush()
+
+                # summary = tf.Summary(value=[tf.Summary.Value(tag='sd_1', simple_value=sd[0,16,0,0,0])])
+                # summary.value.add(tag='sd_2', value=sd[0, 16, 0, 0, 1])
+                # summary.value.add(tag='sd_3', value=sd[0, 16, 0, 0, 2])
+                # summary.value.add(tag='sd_4', value=sd[0, 16, 0, 0, 3])
+                # summary.value.add(tag='sd_5', value=sd[0, 16, 0, 0, 4])
+                #self.writer.add_summary(summary, self.epoch)
+
+
 
         def on_epoch_begin(self, epoch, logs=None):
             self.epoch = epoch
@@ -137,6 +175,7 @@ def train(train_x, train_y, val_x, val_y, gpu_id, nb_gpus):
 
         def get_training_list(self):
             return self.train_idx_list
+
 
     # callbacks
     print('-' * 30)
@@ -231,7 +270,7 @@ def predict(val_x, val_y):
 if __name__ == '__main__':
     gpu = '/CPU:0'
     batch_size = 2
-    gpu_id = '2'
+    gpu_id = '2, 3'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
