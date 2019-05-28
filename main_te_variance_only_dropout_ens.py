@@ -10,7 +10,7 @@ from lib.segmentation.ops import ramp_up_weight, ramp_down_weight
 from lib.segmentation.utils import make_train_test_dataset
 from zonal_utils.AugmentationGenerator import *
 
-TB_LOG_DIR = './tb/variance_mcdropout/1'
+TB_LOG_DIR = './tb/variance_mcdropout/2'
 
 
 def train(train_x, train_y, val_x, val_y, gpu_id, nb_gpus):
@@ -110,6 +110,7 @@ def train(train_x, train_y, val_x, val_y, gpu_id, nb_gpus):
                 temp[:, :, :, :, 3] = (model_out1[3] + model_out2[3] + model_out3[3]) / 3
                 temp[:, :, :, :, 4] = (model_out1[4] + model_out2[4] + model_out3[4]) / 3
 
+
                 del model_out1, model_out2, model_out3
 
                 max = np.reshape(np.max(temp, axis=-1), (num_train_data, 32, 168, 168, 1))
@@ -135,13 +136,15 @@ def train(train_x, train_y, val_x, val_y, gpu_id, nb_gpus):
                 self.pred_sum = self.pred_sum + norm_pred
 
                 sd = np.sqrt((self.pred_sq_sum / (self.epoch + 1)) - ((self.pred_sum / (self.epoch + 1)) ** 2))
-                self.unsupervised_weight = 1. - sd
-                summary = tf.Summary()
-                summary_value = summary.value.add()
-                summary_value.simple_value = sd[0, 16, 0, 0, 0]
-                summary_value.tag = 'sd_1'
-                self.writer.add_summary(summary, self.epoch)
-                self.writer.flush()
+                next_weight = next(gen_weight)
+                self.unsupervised_weight = (1. - sd) * next_weight
+                print('damp weight', next_weight)
+                # summary = tf.Summary()
+                # summary_value = summary.value.add()
+                # summary_value.simple_value = sd[0, 16, 0, 0, 0]
+                # summary_value.tag = 'sd_1'
+                # self.writer.add_summary(summary, self.epoch)
+                # self.writer.flush()
 
                 # summary = tf.Summary(value=[tf.Summary.Value(tag='sd_1', simple_value=sd[0,16,0,0,0])])
                 # summary.value.add(tag='sd_2', value=sd[0, 16, 0, 0, 1])

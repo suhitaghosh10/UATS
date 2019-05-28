@@ -2,7 +2,7 @@ import tensorflow as tf
 from keras import backend as K
 from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import Callback
-from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, EarlyStopping, TensorBoard, CSVLogger
+from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, EarlyStopping, TensorBoard
 
 from generator.data_gen import DataGenerator
 from lib.segmentation.model_WN_MCdropout import build_model
@@ -11,6 +11,8 @@ from lib.segmentation.utils import make_dataset
 from zonal_utils.AugmentationGenerator import *
 
 TB_LOG_DIR = './tb/variance_mcdropout/5'
+ENSEMBLE_NO = 10
+WINDOW_SIZE = 10
 
 
 def train(train_x, train_y, train_u, val_x, val_y, gpu_id, nb_gpus):
@@ -46,7 +48,7 @@ def train(train_x, train_y, train_u, val_x, val_y, gpu_id, nb_gpus):
 
     # ret_dic = split_supervised_train(train_x, train_y, num_labeled_train)
     # Build Model
-    model = build_model(num_class=num_class, learning_rate=learning_rate, gpu_id=gpu_id, nb_gpus=nb_gpus)
+    model, model_no_sm = build_model(num_class=num_class, learning_rate=learning_rate, gpu_id=gpu_id, nb_gpus=nb_gpus)
     ret_dic = make_dataset(train_x, train_y, train_u, val_x, val_y, num_class, model)
 
     unsupervised_target = ret_dic['unsupervised_target']
@@ -76,6 +78,8 @@ def train(train_x, train_y, train_u, val_x, val_y, gpu_id, nb_gpus):
             self.supervised_label = supervised_label
             self.supervised_flag = supervised_flag
             self.unsupervised_weight = unsupervised_weight
+            self.pred_sq_sum = np.zeros((ENSEMBLE_NO, unsupervised_weight))
+            self.pred_sum = np.zeros((ENSEMBLE_NO, unsupervised_weight))
             self.last_batch_no = num_train_data / batch_size - 1
 
             # initial epoch
@@ -93,26 +97,46 @@ def train(train_x, train_y, train_u, val_x, val_y, gpu_id, nb_gpus):
                        self.unsupervised_weight]
                 cur_pred = np.empty((num_train_data, 32, 168, 168, num_class))
 
-                model_out = model.predict(inp, batch_size=2)
-                model_out += model.predict(inp, batch_size=2)
-                model_out += model.predict(inp, batch_size=2)
+                model_out = model.predict(inp, batch_size=2)  # 1
+                model_out += model.predict(inp, batch_size=2)  # 2
+                model_out += model.predict(inp, batch_size=2)  # 3
+                model_out += model.predict(inp, batch_size=2)  # 4
+                model_out += model.predict(inp, batch_size=2)  # 5
+                model_out += model.predict(inp, batch_size=2)  # 6
+                model_out += model.predict(inp, batch_size=2)  # 7
+                model_out += model.predict(inp, batch_size=2)  # 8
+                model_out += model.predict(inp, batch_size=2)  # 9
+                model_out += model.predict(inp, batch_size=2)  # 10
 
-                cur_pred[:, :, :, :, 0] = model_out[0] / 3
-                cur_pred[:, :, :, :, 1] = model_out[1] / 3
-                cur_pred[:, :, :, :, 2] = model_out[2] / 3
-                cur_pred[:, :, :, :, 3] = model_out[3] / 3
-                cur_pred[:, :, :, :, 4] = model_out[4] / 3
+                cur_pred[:, :, :, :, 0] = model_out[0] / ENSEMBLE_NO
+                cur_pred[:, :, :, :, 1] = model_out[1] / ENSEMBLE_NO
+                cur_pred[:, :, :, :, 2] = model_out[2] / ENSEMBLE_NO
+                cur_pred[:, :, :, :, 3] = model_out[3] / ENSEMBLE_NO
+                cur_pred[:, :, :, :, 4] = model_out[4] / ENSEMBLE_NO
 
                 max = np.reshape(np.max(cur_pred, axis=-1), (num_train_data, 32, 168, 168, 1))
-                cur_pred_final = np.where(cur_pred == max, max, cur_pred)
+                cur_pred_final = np.where(cur_pred == max, 1., 0.)
                 del cur_pred
-
-                # update ensemble_prediction and unsupervised weight when an epoch ends
-                self.unsupervised_weight = 1. - np.abs(cur_pred_final - self.supervised_label)
-
                 # Z = αZ + (1 - α)z
                 self.ensemble_prediction = alpha * self.ensemble_prediction + (1 - alpha) * cur_pred_final
                 self.unsupervised_target = self.ensemble_prediction / (1 - alpha ** (self.epoch + 1))
+
+                # update unsupervised weight when an epoch ends
+                # temp = np.empty((num_train_data, 32, 168, 168, num_class))
+                norm_pred = np.empty_like(self.pred_sum)
+                for i in np.arange(0, ENSEMBLE_NO):
+                    model_pred = model_no_sm.predict(inp, batch_size=2)
+                    max = np.amax(model_pred)
+                    min = np.clip(np.amin(model_pred), a_max=100, a_min=-100)
+                    norm_pred[i] = (model_pred - min) / (max - min)
+                    self.pred_sq_sum[i] = self.pred_sq_sum + (norm_pred ** 2)
+                    self.pred_sum[i] = self.pred_sum + norm_pred
+
+                sd = np.sqrt((self.pred_sq_sum / (self.epoch + 1)) - ((self.pred_sum / (self.epoch + 1)) ** 2))
+                next_weight = next(gen_weight)
+                self.unsupervised_weight = (1. - sd) * next_weight
+
+
 
         def on_epoch_begin(self, epoch, logs=None):
             self.epoch = epoch
