@@ -14,6 +14,7 @@ TB_LOG_DIR = './tb/variance_mcdropout/5'
 UPDATE_ENS_AFTER_EPOCH = 50
 UPDATE_WTS_AFTER_EPOCH = 100
 ENSEMBLE_NO = 10
+CONFIDENCE_THRESHOLD = 0.9
 
 
 def train(train_x, train_y, train_ux, train_ux_predicted, val_x, val_y, gpu_id, nb_gpus):
@@ -120,9 +121,9 @@ def train(train_x, train_y, train_ux, train_ux_predicted, val_x, val_y, gpu_id, 
                 cur_pred[:, :, :, :, 3] = model_out[3] / ENSEMBLE_NO
                 cur_pred[:, :, :, :, 4] = model_out[4] / ENSEMBLE_NO
 
-                max = np.reshape(np.max(cur_pred, axis=-1), (num_train_data, 32, 168, 168, 1))
-                cur_pred_final = np.where(cur_pred == max, 1., 0.)
-                del cur_pred
+                cur_pred_max = np.reshape(np.max(cur_pred, axis=-1), (num_train_data, 32, 168, 168, 1))
+                cur_pred_final = np.where(cur_pred == cur_pred_max, 1., 0.)
+                #del cur_pred
                 # update unsupervised target
                 # Z = αZ + (1 - α)z
                 self.ensemble_prediction = alpha * self.ensemble_prediction + (1 - alpha) * cur_pred_final
@@ -144,8 +145,9 @@ def train(train_x, train_y, train_ux, train_ux_predicted, val_x, val_y, gpu_id, 
 
                 diff = np.abs(cur_output_b4_softmax - self.prev_output_b4_softmax)
                 self.prev_output_b4_softmax = cur_output_b4_softmax
-                next_weight = next(gen_weight)
-                self.unsupervised_weight = (1. - diff) * next_weight
+                confident_pixels = np.where(cur_pred >= CONFIDENCE_THRESHOLD, cur_pred, 0.)
+                #here nultiply with confident pixels selected by threshold rather than ramp-up func
+                self.unsupervised_weight = (1. - diff) * confident_pixels
 
             # shuffle examples
             np.random.shuffle(self.train_idx_list)
