@@ -132,7 +132,8 @@ def make_train_test_dataset(train_x, train_y, val_x, val_y, num_labeled_train, n
 
     return ret_dic
 
-def make_dataset(train_x, train_y, train_u, val_x, val_y, num_class, model):
+
+def make_dataset(train_x, train_y, train_ux, train_uy, val_x, val_y, num_class, model):
     """make train dataset and test dataset"""
     ret_dic = {}
     # validation
@@ -141,28 +142,22 @@ def make_dataset(train_x, train_y, train_u, val_x, val_y, num_class, model):
 
     # train
     num_labeled_train = train_x.shape[0]
-    num_un_labeled_train = train_u.shape[0]
+    num_un_labeled_train = train_ux.shape[0]
     total_train_num = num_labeled_train + num_un_labeled_train
-    labeled_set = []
 
-    train_x = np.concatenate((train_x, train_u), axis=0)
+    imgs = np.concatenate((train_x, train_ux), axis=0)
 
-    supervised_label = train_y
-    unsupervised_label = np.empty((num_un_labeled_train, 32, 168, 168, 5))
-    #model prediction will act as gt for unlabeled data
-    #TODO
-
-    supervised_label = np.concatenate((supervised_label, unsupervised_label), axis=0)
+    supervised_label = np.concatenate((train_y, train_uy), axis=0)
 
     # flag to indicate that supervised(1) or not(0) in train data
 
     supervised_flag = np.concatenate( (np.ones((num_labeled_train, 32, 168, 168,1)), np.zeros((num_un_labeled_train, 32, 168, 168,1))))
-    unsupervised_target = np.concatenate((train_y, unsupervised_label), axis=-1)
+    unsupervised_target = np.concatenate((train_y, train_uy), axis=-1)
 
     # initialize weight of unsupervised loss component
     unsupervised_weight = np.zeros((total_train_num, 32, 168, 168, num_class))
 
-    ret_dic['train_x'] = train_x
+    ret_dic['train_x'] = imgs
     ret_dic['supervised_label'] = supervised_label
     ret_dic['unsupervised_target'] = unsupervised_target
     ret_dic['train_sup_flag'] = supervised_flag

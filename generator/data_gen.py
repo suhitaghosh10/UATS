@@ -5,7 +5,7 @@ class DataGenerator(keras.utils.Sequence):
 
     def __init__(self, img_array, unsupervised_target, supervised_label, supervised_flag, unsupervised_weight, id_list,
                  batch_size=2, dim=(32, 168, 168), n_channels=1,
-                 n_classes=10, shuffle=True, rotation=True):
+                 n_classes=5, shuffle=True):
         'Initialization'
         self.dim = dim
         self.img_array = img_array
@@ -18,7 +18,6 @@ class DataGenerator(keras.utils.Sequence):
         self.n_channels = n_channels
         self.n_classes = n_classes
         self.shuffle = shuffle
-        self.rotation = rotation
         self.indexes = np.arange(len(self.id_list))
         # print('data gen-', self.indexes)
 
