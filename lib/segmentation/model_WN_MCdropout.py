@@ -9,10 +9,10 @@ from keras.layers import concatenate, Input, Conv3D, MaxPooling3D, Conv3DTranspo
     BatchNormalization, Dropout
 from keras.layers.core import Activation
 from keras.models import Model
+from keras.optimizers import Adam
 from keras.utils import multi_gpu_model
 
-from lib.segmentation.ops import semi_supervised_loss, dice_coef
-from lib.segmentation.weight_norm import AdamWithWeightnorm
+from lib.segmentation.ops import semi_supervised_loss_dice, semi_supervised_loss_mse, dice_coef
 
 
 class MeanOnlyBatchNormalization(Layer):
@@ -159,10 +159,11 @@ def upLayer(inputLayer, concatLayer, filterSize, i, bn=False, do=False):
         return conv
 
 
-def build_model(img_shape=(32, 168, 168), num_class=5, learning_rate=5e-5, gpu_id=None, nb_gpus=None):
+def build_model(img_shape=(32, 168, 168), use_dice_cl=None, num_class=5, learning_rate=5e-5, gpu_id=None, nb_gpus=None,
+                trained_model=None):
     input_img = Input((*img_shape, 1), name='img_inp')
     unsupervised_label = Input((*img_shape, 5), name='unsup_label_inp')
-    gt = Input(shape=(*img_shape, num_class), name='gt_inp')
+    # gt = Input(shape=(*img_shape, num_class), name='gt_inp')
     supervised_flag = Input(shape=(*img_shape, 1), name='flag_inp')
     unsupervised_weight = Input(shape=(*img_shape, num_class), name='wt_inp')
     # input_idx = Input(shape=(batch_num))
@@ -214,9 +215,7 @@ def build_model(img_shape=(32, 168, 168), num_class=5, learning_rate=5e-5, gpu_i
     conv6 = upLayer(conv5, conv2_b_m, sfs * 8, 6, bn, do)
     conv7 = upLayer(conv6, conv1_b_m, sfs * 4, 7, bn, do)
 
-    conv_out = Conv3D(5, (1, 1, 1), name='conv_b4_softmax', kernel_initializer=kernel_init)(
-        conv7)
-    conv_sm_out = Activation(activation='softmax', name='conv_final_softmax')(conv_out)
+    conv_out = Conv3D(5, (1, 1, 1), activation='softmax', name='conv_final_softmax')(conv7)
 
     '''
     pz_out = Lambda(lambda x: K.reshape(x[:, :, :, :, 0], tf.convert_to_tensor([-1, *img_shape, 1])), name='pz')(
@@ -231,40 +230,43 @@ def build_model(img_shape=(32, 168, 168), num_class=5, learning_rate=5e-5, gpu_i
         conv_out)
     '''
 
-    pz_sm_out = Lambda(lambda x: x[:, :, :, :, 0], name='pz')(conv_sm_out)
-    cz_sm_out = Lambda(lambda x: x[:, :, :, :, 1], name='cz')(conv_sm_out)
-    us_sm_out = Lambda(lambda x: x[:, :, :, :, 2], name='us')(conv_sm_out)
-    afs_sm_out = Lambda(lambda x: x[:, :, :, :, 3], name='afs')(conv_sm_out)
-    bg_sm_out = Lambda(lambda x: x[:, :, :, :, 4], name='bg')(conv_sm_out)
+    pz_sm_out = Lambda(lambda x: x[:, :, :, :, 0], name='pz')(conv_out)
+    cz_sm_out = Lambda(lambda x: x[:, :, :, :, 1], name='cz')(conv_out)
+    us_sm_out = Lambda(lambda x: x[:, :, :, :, 2], name='us')(conv_out)
+    afs_sm_out = Lambda(lambda x: x[:, :, :, :, 3], name='afs')(conv_out)
+    bg_sm_out = Lambda(lambda x: x[:, :, :, :, 4], name='bg')(conv_out)
 
+    '''
     pz_out = Lambda(lambda x: x[:, :, :, :, 0], name='pz')(conv_out)
     cz_out = Lambda(lambda x: x[:, :, :, :, 1], name='cz')(conv_out)
     us_out = Lambda(lambda x: x[:, :, :, :, 2], name='us')(conv_out)
     afs_out = Lambda(lambda x: x[:, :, :, :, 3], name='afs')(conv_out)
     bg_out = Lambda(lambda x: x[:, :, :, :, 4], name='bg')(conv_out)
+    '''
 
     # for loss func
-    pz_unsup = Lambda(lambda x: K.reshape(x[:, :, :, :, 0], tf.convert_to_tensor([-1, *img_shape, 1])),
-                      name='pz_unsup')(
-        unsupervised_label)
-    cz_unsup = Lambda(lambda x: K.reshape(x[:, :, :, :, 1], tf.convert_to_tensor([-1, *img_shape, 1])),
-                      name='cz_unsup')(
-        unsupervised_label)
-    us_unsup = Lambda(lambda x: K.reshape(x[:, :, :, :, 2], tf.convert_to_tensor([-1, *img_shape, 1])),
-                      name='us_unsup')(
-        unsupervised_label)
-    afs_unsup = Lambda(lambda x: K.reshape(x[:, :, :, :, 3], tf.convert_to_tensor([-1, *img_shape, 1])),
-                       name='afs_unsup')(
-        unsupervised_label)
-    bg_unsup = Lambda(lambda x: K.reshape(x[:, :, :, :, 4], tf.convert_to_tensor([-1, *img_shape, 1])),
-                      name='bg_unsup')(
-        unsupervised_label)
 
-    pz_gt = Lambda(lambda x: K.reshape(x[:, :, :, :, 0], tf.convert_to_tensor([-1, *img_shape, 1])), name='pz_gt')(gt)
-    cz_gt = Lambda(lambda x: K.reshape(x[:, :, :, :, 1], tf.convert_to_tensor([-1, *img_shape, 1])), name='cz_gt')(gt)
-    us_gt = Lambda(lambda x: K.reshape(x[:, :, :, :, 2], tf.convert_to_tensor([-1, *img_shape, 1])), name='us_gt')(gt)
-    afs_gt = Lambda(lambda x: K.reshape(x[:, :, :, :, 3], tf.convert_to_tensor([-1, *img_shape, 1])), name='afs_gt')(gt)
-    bg_gt = Lambda(lambda x: K.reshape(x[:, :, :, :, 4], tf.convert_to_tensor([-1, *img_shape, 1])), name='bg_gt')(gt)
+    # pz_gt = Lambda(lambda x: K.reshape(x[:, :, :, :, 0], tf.convert_to_tensor([-1, *img_shape, 1])), name='pz_gt')(gt)
+    # cz_gt = Lambda(lambda x: K.reshape(x[:, :, :, :, 1], tf.convert_to_tensor([-1, *img_shape, 1])), name='cz_gt')(gt)
+    # us_gt = Lambda(lambda x: K.reshape(x[:, :, :, :, 2], tf.convert_to_tensor([-1, *img_shape, 1])), name='us_gt')(gt)
+    # afs_gt = Lambda(lambda x: K.reshape(x[:, :, :, :, 3], tf.convert_to_tensor([-1, *img_shape, 1])), name='afs_gt')(gt)
+    # bg_gt = Lambda(lambda x: K.reshape(x[:, :, :, :, 4], tf.convert_to_tensor([-1, *img_shape, 1])), name='bg_gt')(gt)
+
+    pz_ensemble_pred = Lambda(lambda x: K.reshape(x[:, :, :, :, 0], tf.convert_to_tensor([-1, *img_shape, 1])),
+                              name='pzu')(
+        unsupervised_label)
+    cz_ensemble_pred = Lambda(lambda x: K.reshape(x[:, :, :, :, 1], tf.convert_to_tensor([-1, *img_shape, 1])),
+                              name='czu')(
+        unsupervised_label)
+    us_ensemble_pred = Lambda(lambda x: K.reshape(x[:, :, :, :, 2], tf.convert_to_tensor([-1, *img_shape, 1])),
+                              name='usu')(
+        unsupervised_label)
+    afs_ensemble_pred = Lambda(lambda x: K.reshape(x[:, :, :, :, 3], tf.convert_to_tensor([-1, *img_shape, 1])),
+                               name='afsu')(
+        unsupervised_label)
+    bg_ensemble_pred = Lambda(lambda x: K.reshape(x[:, :, :, :, 4], tf.convert_to_tensor([-1, *img_shape, 1])),
+                              name='bgu')(
+        unsupervised_label)
 
     pz_wt = Lambda(lambda x: K.reshape(x[:, :, :, :, 0], tf.convert_to_tensor([-1, *img_shape, 1])), name='pz_wt')(
         unsupervised_weight)
@@ -277,38 +279,77 @@ def build_model(img_shape=(32, 168, 168), num_class=5, learning_rate=5e-5, gpu_i
     bg_wt = Lambda(lambda x: K.reshape(x[:, :, :, :, 4], tf.convert_to_tensor([-1, *img_shape, 1])), name='bg_wt')(
         unsupervised_weight)
 
-    # concatenate label
-    # pz = concatenate([pz_out, pz_gt, supervised_flag, pz_wt], name='pz')
-    # cz = concatenate([cz_out, cz_gt, supervised_flag, cz_wt], name='cz')
-    # us = concatenate([us_out, us_gt, supervised_flag, us_wt], name='us')
-    # afs = concatenate([afs_out, afs_gt, supervised_flag, afs_wt], name='afs')
-    # bg = concatenate([bg_out, bg_gt, supervised_flag, bg_wt], name='bg')
+    # pz = concatenate([pz_unsup, pz_gt, supervised_flag, pz_wt], name='pz_c')
+    # cz = concatenate([cz_unsup, cz_gt, supervised_flag, cz_wt], name='cz_c')
+    # us = concatenate([us_unsup, us_gt, supervised_flag, us_wt], name='us_c')
+    # afs = concatenate([afs_unsup, afs_gt, supervised_flag, afs_wt], name='afs_c')
+    # bg = concatenate([bg_unsup, bg_gt, supervised_flag, bg_wt], name='bg_c')
 
-    pz = concatenate([pz_unsup, pz_gt, supervised_flag, pz_wt], name='pz_c')
-    cz = concatenate([cz_unsup, cz_gt, supervised_flag, cz_wt], name='cz_c')
-    us = concatenate([us_unsup, us_gt, supervised_flag, us_wt], name='us_c')
-    afs = concatenate([afs_unsup, afs_gt, supervised_flag, afs_wt], name='afs_c')
-    bg = concatenate([bg_unsup, bg_gt, supervised_flag, bg_wt], name='bg_c')
+    pz = concatenate([pz_ensemble_pred, supervised_flag, pz_wt], name='pz_c')
+    cz = concatenate([cz_ensemble_pred, supervised_flag, cz_wt], name='cz_c')
+    us = concatenate([us_ensemble_pred, supervised_flag, us_wt], name='us_c')
+    afs = concatenate([afs_ensemble_pred, supervised_flag, afs_wt], name='afs_c')
+    bg = concatenate([bg_ensemble_pred, supervised_flag, bg_wt], name='bg_c')
 
-    with tf.device(gpu_id):
-        model = Model([input_img, unsupervised_label, gt, supervised_flag, unsupervised_weight],
-                      [pz_sm_out, cz_sm_out, us_sm_out, afs_sm_out, bg_sm_out])
+    # optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
+    optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999)
 
-        p_model = multi_gpu_model(model, gpus=nb_gpus)
+    if (gpu_id is None):
+        p_model = Model([input_img, unsupervised_label, supervised_flag, unsupervised_weight],
+                        [pz_sm_out, cz_sm_out, us_sm_out, afs_sm_out, bg_sm_out])
+        if trained_model is not None:
+            p_model.load_weights(trained_model)
 
-        model_copy = Model([input_img, unsupervised_label, gt, supervised_flag, unsupervised_weight],
-                           [pz_out, cz_out, us_out, afs_out, bg_out])
+        # model_copy = Model([input_img, unsupervised_label, supervised_flag, unsupervised_weight],[pz_out, cz_out, us_out, afs_out, bg_out])
 
         # intermediate_layer_model = Model(inputs=model.input,outputs=model.get_layer(layer_name).output)
 
-        optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
-        p_model.compile(optimizer=optimizer,
-                  loss={'pz': semi_supervised_loss(pz), 'cz': semi_supervised_loss(cz), 'us': semi_supervised_loss(us),
-                        'afs': semi_supervised_loss(afs), 'bg': semi_supervised_loss(bg)},
-                  metrics={'pz': dice_coef, 'cz': dice_coef, 'us': dice_coef,
-                           'afs': dice_coef, 'bg': dice_coef}
-                  )
+        if use_dice_cl:
+            p_model.compile(optimizer=optimizer,
+                            loss={'pz': semi_supervised_loss_dice(pz), 'cz': semi_supervised_loss_dice(cz),
+                                  'us': semi_supervised_loss_dice(us),
+                                  'afs': semi_supervised_loss_dice(afs), 'bg': semi_supervised_loss_dice(bg)},
+                            metrics={'pz': dice_coef, 'cz': dice_coef, 'us': dice_coef,
+                                     'afs': dice_coef, 'bg': dice_coef}
+                            )
+        else:
+            p_model.compile(optimizer=optimizer,
+                            loss={'pz': semi_supervised_loss_mse(pz), 'cz': semi_supervised_loss_mse(cz),
+                                  'us': semi_supervised_loss_mse(us),
+                                  'afs': semi_supervised_loss_mse(afs), 'bg': semi_supervised_loss_mse(bg)},
+                            metrics={'pz': dice_coef, 'cz': dice_coef, 'us': dice_coef,
+                                     'afs': dice_coef, 'bg': dice_coef}
+                            )
+    else:
+        with tf.device(gpu_id):
+            model = Model([input_img, unsupervised_label, supervised_flag, unsupervised_weight],
+                          [pz_sm_out, cz_sm_out, us_sm_out, afs_sm_out, bg_sm_out])
+            if trained_model is not None:
+                model.load_weights(trained_model)
 
-    return p_model, model_copy
+            p_model = multi_gpu_model(model, gpus=nb_gpus)
+
+            #model_copy = Model([input_img, unsupervised_label, gt, supervised_flag, unsupervised_weight],[pz_out, cz_out, us_out, afs_out, bg_out])
+
+        # intermediate_layer_model = Model(inputs=model.input,outputs=model.get_layer(layer_name).output)
+
+            if use_dice_cl:
+                p_model.compile(optimizer=optimizer,
+                                loss={'pz': semi_supervised_loss_dice(pz), 'cz': semi_supervised_loss_dice(cz),
+                                      'us': semi_supervised_loss_dice(us),
+                                      'afs': semi_supervised_loss_dice(afs), 'bg': semi_supervised_loss_dice(bg)},
+                                metrics={'pz': dice_coef, 'cz': dice_coef, 'us': dice_coef,
+                                         'afs': dice_coef, 'bg': dice_coef}
+                                )
+            else:
+                p_model.compile(optimizer=optimizer,
+                                loss={'pz': semi_supervised_loss_mse(pz), 'cz': semi_supervised_loss_mse(cz),
+                                      'us': semi_supervised_loss_mse(us),
+                                      'afs': semi_supervised_loss_mse(afs), 'bg': semi_supervised_loss_mse(bg)},
+                                metrics={'pz': dice_coef, 'cz': dice_coef, 'us': dice_coef,
+                                         'afs': dice_coef, 'bg': dice_coef}
+                                )
+
+    return p_model
     # return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg])
     # return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg, input_idx])

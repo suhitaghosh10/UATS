@@ -1,7 +1,3 @@
-import matplotlib.pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap
-import csv
-from eval.preprocess import *
 import csv
 
 import matplotlib.pyplot as plt
@@ -497,30 +493,35 @@ def removeIslands(predictedArray):
     return finalPrediction
 
 
-def postprocesAndEvaluateFiles(name, GT_array, csvName):
-    prediction = np.load(name + '.npy')[:, :, :, :, :, 0]
-    print(GT_array.shape)
+def postprocesAndEvaluateFiles(name, GT_array, csvName, eval=True):
+    prediction = np.load(name + '.npy')
+    prediction = np.transpose(prediction, (4, 0, 1, 2, 3))
+    # print(GT_array.shape)
     print(prediction.shape)
 
     outDir = name[:-3] + '/'
     if not os.path.exists(outDir):
         os.makedirs(outDir)
 
+    out_arr = np.zeros((prediction.shape[1], 32, 168, 168, 5))
     for i in range(0, prediction.shape[1]):
         print(i)
         array = removeIslands(prediction[:, i, :, :, :])
+        print(array.shape)
+        out_arr[i] = np.transpose(array, (1, 2, 3, 0))
         # print('preditction', prediction.shape)
         # array = prediction[:, i, :, :, :]
-        np.save(outDir + 'predicted_' + str(i), array)
+    np.save(outDir + 'predicted_final_', out_arr.astype('int8'))
 
-    evaluateFiles_zones(GT_array, pred_directory=outDir, csvName=csvName)
+    if eval:
+        evaluateFiles_zones(GT_array, pred_directory=outDir, csvName=csvName)
 
 
 if __name__ == '__main__':
-    name = '/home/suhita/zonals/temporal/augmented_x20_sfs16_dataGeneration_LR_'
-    GT_array_name = '/home/suhita/zonals/data/validation/valArray_GT_fold1.npy'
-    csvName = 'temporal_final.csv'
-    GT_array = np.load(GT_array_name)
+    name = '/home/suhita/zonals/data/training/trainArray_unlabeled_GT_fold1'
+    # GT_array_name = '/home/suhita/zonals/data/training/trainArray_unlabeled_GT_fold1'
+    # csvName = 'temporal_final.csv'
+    #GT_array = np.load(GT_array_name)
 
     # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
-    postprocesAndEvaluateFiles(name, GT_array, csvName)
+    postprocesAndEvaluateFiles(name, None, None, eval=False)

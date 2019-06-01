@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 from keras import backend as K
 
 ZONE = {0: 'pz', 1: 'cz', 2: 'us', 3: 'afs', 4: 'bg'}
@@ -35,16 +36,30 @@ def ramp_down_weight(ramp_period):
 
 
 def dice_coef(y_true, y_pred, smooth=1., axis=(-3, -2, -1)):
-    # y_true_f = K.flatten(y_true)
-    # y_pred_f = K.flatten(y_pred)
-    # intersection = K.sum(y_true_f * y_pred_f)
-    # along each image
-    intersection = K.sum(y_true * y_pred, axis=axis)
-    # return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
-    return (2. * intersection + smooth) / (K.sum(y_true, axis=axis) + K.sum(y_pred, axis=axis) + smooth)
+    # intersection = K.sum(y_true * y_pred, axis=axis)
+    # return (2. * intersection + smooth) / (K.sum(y_true, axis=axis) + K.sum(y_pred, axis=axis) + smooth)
+    y_true_f = K.flatten(y_true)
+    y_pred_f = K.flatten(y_pred)
+    intersection = K.sum(y_true_f * y_pred_f)
+    return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
 
 
-def semi_supervised_loss(input):
+def c_dice_coef(y_true, y_pred, smooth=1.):
+    y_true_f = K.flatten(y_true)
+    y_pred_f = K.flatten(y_pred)
+    size_of_A_intersect_B = K.sum(y_true_f * y_pred_f)
+    size_of_A = K.sum(y_true_f)
+    size_of_B = K.sum(y_pred_f)
+    sign_B = tf.where(tf.greater(y_pred_f, 0), K.ones_like(y_pred_f), K.zeros_like(y_pred_f))
+    if tf.greater(size_of_A_intersect_B, 0) is not None:
+        c = K.sum(y_true_f * y_pred_f) / K.sum(y_true_f * sign_B)
+    else:
+        c = 1
+
+    return ((2. * size_of_A_intersect_B) + smooth) / ((c * size_of_A) + size_of_B + smooth)
+
+
+def semi_supervised_loss_dice(input):
     """custom loss function"""
     epsilon = 1e-08
     smooth = 1.
@@ -54,17 +69,16 @@ def semi_supervised_loss(input):
         the order of y_true:
         unsupervised_target(num_class), supervised_label(num_class), supervised_flag(1), unsupervised weight(1)
         """
-        unsupervised_target = input[:, :, :, :, 0]
-        gt = input[:, :, :, :, 1]
-        supervised_flag = input[:, :, :, :, 2]
-        weight = input[:, :, :, :, 3]  # last elem are weights
+        unsupervised_gt = input[:, :, :, :, 0]
+        # gt = input[:, :, :, :, 1]
+        supervised_flag = input[:, :, :, :, 1]
+        weight = input[:, :, :, :, 2]  # last elem are weights
 
-        model_pred = y_pred
-        print(K.int_shape(y_pred))
+        # model_pred = y_pred
+        # print(K.int_shape(y_pred))
 
-        # weighted unsupervised loss over batchsize
         # unsupervised_loss = weight * K.mean(mean_squared_error(unsupervised_target, model_pred))
-        unsupervised_loss = weight * - K.mean(dice_coef(unsupervised_target, model_pred))
+        unsupervised_loss = - K.mean(weight * c_dice_coef(unsupervised_gt, y_pred))
         print('unsupervised_loss', unsupervised_loss)
 
         # To sum over only supervised data on categorical_crossentropy, supervised_flag(1/0) is used
@@ -72,7 +86,34 @@ def semi_supervised_loss(input):
         # supervised_loss = - K.mean(
         #    K.sum(supervised_label * K.log(K.clip(model_pred, epsilon, 1.0 - epsilon)), axis=1) * supervised_flag)
 
-        supervised_loss = - K.mean(dice_coef(gt, model_pred) * supervised_flag[:, 0, 0, 0])
+        supervised_loss = - K.mean(dice_coef(y_true, y_pred) * supervised_flag[:, 0, 0, 0])
+
+        return supervised_loss + unsupervised_loss
+
+    return loss_func
+
+
+def semi_supervised_loss_mse(input):
+    """custom loss function"""
+    epsilon = 1e-08
+    smooth = 1.
+
+    def loss_func(y_true, y_pred):
+        """semi-supervised loss function
+        the order of y_true:
+        unsupervised_target(num_class), supervised_label(num_class), supervised_flag(1), unsupervised weight(1)
+        """
+        unsupervised_gt = input[:, :, :, :, 0]
+        # gt = input[:, :, :, :, 1]
+        supervised_flag = input[:, :, :, :, 1]
+        weight = input[:, :, :, :, 2]  # last elem are weights
+
+        # model_pred = y_pred
+
+        unsupervised_loss = - K.mean(weight * K.square(unsupervised_gt - y_pred))
+        #print('unsupervised_loss', unsupervised_loss)
+
+        supervised_loss = - K.mean(dice_coef(y_true, y_pred) * supervised_flag[:, 0, 0, 0])
 
         return supervised_loss + unsupervised_loss
 

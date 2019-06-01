@@ -65,8 +65,6 @@ def train(train_x, train_y, train_ux, train_ux_predicted, val_x, val_y, gpu_id, 
     print('Creating and compiling model...')
     print('-' * 30)
 
-
-
     # model.metrics_tensors += model.outputs
     model.summary()
 
@@ -88,7 +86,6 @@ def train(train_x, train_y, train_ux, train_ux_predicted, val_x, val_y, gpu_id, 
 
         def on_batch_end(self, batch, logs=None):
             pass
-
 
         def on_epoch_begin(self, epoch, logs=None):
 
@@ -123,7 +120,7 @@ def train(train_x, train_y, train_ux, train_ux_predicted, val_x, val_y, gpu_id, 
 
                 cur_pred_max = np.reshape(np.max(cur_pred, axis=-1), (num_train_data, 32, 168, 168, 1))
                 cur_pred_final = np.where(cur_pred == cur_pred_max, 1., 0.)
-                #del cur_pred
+                # del cur_pred
                 # update unsupervised target
                 # Z = αZ + (1 - α)z
                 self.ensemble_prediction = alpha * self.ensemble_prediction + (1 - alpha) * cur_pred_final
@@ -137,7 +134,7 @@ def train(train_x, train_y, train_ux, train_ux_predicted, val_x, val_y, gpu_id, 
 
             if epoch > UPDATE_WTS_AFTER_EPOCH:
                 # update unsupervised weight
-                #for i in np.arange(0, ENSEMBLE_NO):
+                # for i in np.arange(0, ENSEMBLE_NO):
                 cur_epoch_model_pred = model_no_sm.predict(inp, batch_size=2)
                 max = np.amax(cur_epoch_model_pred)
                 min = np.clip(np.amin(cur_epoch_model_pred), a_max=100, a_min=-100)
@@ -146,18 +143,18 @@ def train(train_x, train_y, train_ux, train_ux_predicted, val_x, val_y, gpu_id, 
                 diff = np.abs(cur_output_b4_softmax - self.prev_output_b4_softmax)
                 self.prev_output_b4_softmax = cur_output_b4_softmax
                 confident_pixels = np.where(cur_pred >= CONFIDENCE_THRESHOLD, cur_pred, 0.)
-                #here nultiply with confident pixels selected by threshold rather than ramp-up func
+                # here nultiply with confident pixels selected by threshold rather than ramp-up func
                 self.unsupervised_weight = (1. - diff) * confident_pixels
 
             # shuffle examples
             np.random.shuffle(self.train_idx_list)
             np.random.shuffle(val_id_list)
             DataGenerator(imgs,
-                        self.unsupervised_target,
-                        supervised_label,
-                        supervised_flag,
-                        self.unsupervised_weight,
-                        self.train_idx_list)
+                          self.unsupervised_target,
+                          supervised_label,
+                          supervised_flag,
+                          self.unsupervised_weight,
+                          self.train_idx_list)
 
         def get_training_list(self):
             return self.train_idx_list
@@ -166,7 +163,7 @@ def train(train_x, train_y, train_ux, train_ux_predicted, val_x, val_y, gpu_id, 
     print('-' * 30)
     print('Creating callbacks...')
     print('-' * 30)
-    #csv_logger = CSVLogger('validation.csv', append=True, separator=';')
+    # csv_logger = CSVLogger('validation.csv', append=True, separator=';')
     model_checkpoint = ModelCheckpoint('./temporal_variance_mcdropout.h5', monitor='val_afs_loss', save_best_only=True,
                                        verbose=1,
                                        mode='min')

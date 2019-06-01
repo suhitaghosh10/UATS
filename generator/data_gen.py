@@ -28,8 +28,8 @@ class DataGenerator(keras.utils.Sequence):
         'Generates data containing batch_size samples'
         img = np.zeros((self.batch_size, *self.dim, 1))
         unsup_label = np.zeros((self.batch_size, *self.dim, 5))
-        gt = np.zeros((self.batch_size, *self.dim, 5))
-        flag = np.zeros((self.batch_size, *self.dim, 1))
+        gt = np.zeros((self.batch_size, *self.dim, 5), dtype=np.int)
+        flag = np.zeros((self.batch_size, *self.dim, 1), dtype=np.int)
         wt = np.zeros((self.batch_size, *self.dim, 5))
 
         pz = np.zeros((self.batch_size, *self.dim))
