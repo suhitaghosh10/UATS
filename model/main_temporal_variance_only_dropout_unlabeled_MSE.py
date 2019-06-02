@@ -13,17 +13,17 @@ from zonal_utils.AugmentationGenerator import *
 
 # 58 Training 236 unsupervised data.
 
-TB_LOG_DIR = './tb/variance_mcdropout/mse'
+TB_LOG_DIR = './tb/variance_mcdropout/mse1'
 MODEL_NAME = './temporal_mse.h5'
 NUM_CLASS = 5
 num_epoch = 351
-batch_size = 2
+batch_size = 20
 
 # hyper-params
 UPDATE_WTS_AFTER_EPOCH = 1
 ENSEMBLE_NO = 3
-ramp_up_period = 100
-ramp_down_period = 100
+ramp_up_period = 1
+ramp_down_period = 50
 # weight_max = 40
 weight_max = 1
 learning_rate = 5e-5
