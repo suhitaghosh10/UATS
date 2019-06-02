@@ -75,7 +75,7 @@ def train(gpu_id, nb_gpus):
         # ret_dic = split_supervised_train(train_x, train_y, num_labeled_train)
         # Build Model
         trained_model_path = '/home/suhita/zonals/data/model.h5'
-        model = build_model(num_class=NUM_CLASS, use_dice_cl=False, learning_rate=learning_rate, gpu_id=gpu_id,
+        model = build_model(num_class=NUM_CLASS, use_dice_cl=True, learning_rate=learning_rate, gpu_id=gpu_id,
                             nb_gpus=nb_gpus, trained_model=trained_model_path)
 
         print("Images Size:", num_train_data)
@@ -243,7 +243,7 @@ def predict(val_x_arr, val_y_arr):
     x_val = [val_x_arr, val_y_arr, val_supervised_flag, val_unsupervised_weight]
 
     model = build_model(num_class=NUM_CLASS, use_dice_cl=False, learning_rate=learning_rate, gpu_id=None,
-                        nb_gpus=None, trained_model='/home/suhita/zonals/temporal/temporal_mse.h5')
+                        nb_gpus=None, trained_model='/home/suhita/zonals/temporal/temporal_dice.h5')
     print('load_weights')
     #model.load_weights()
     print('predict')

@@ -163,10 +163,8 @@ def build_model(img_shape=(32, 168, 168), use_dice_cl=None, num_class=5, learnin
                 trained_model=None):
     input_img = Input((*img_shape, 1), name='img_inp')
     unsupervised_label = Input((*img_shape, 5), name='unsup_label_inp')
-    # gt = Input(shape=(*img_shape, num_class), name='gt_inp')
     supervised_flag = Input(shape=(*img_shape, 1), name='flag_inp')
     unsupervised_weight = Input(shape=(*img_shape, num_class), name='wt_inp')
-    # input_idx = Input(shape=(batch_num))
 
     kernel_init = 'he_normal'
     sfs = 16  # start filter size
