@@ -1,5 +1,6 @@
 import numpy as np
 
+'''
 timgs = np.load('/home/suhita/zonals/data/training/trainArray_imgs_fold1.npy')
 print(timgs.shape)
 tgt = np.load('/home/suhita/zonals/data/training/trainArray_GT_fold1.npy')
@@ -20,4 +21,16 @@ for i in np.arange(timgs.shape[0]):
 for i in np.arange(start=58, stop=stop):
     np.save('/home/suhita/zonals/data/training/imgs/' + str(i), imgs[i - 58])
     np.save('/home/suhita/zonals/data/training/gt/' + str(i), gt[i - 58])
+    print(i)
+    
+'''
+
+timgs = np.load('/home/suhita/zonals/data/test_anneke/final_test_array_imgs.npy')
+print(timgs.shape)
+tgt = np.load('/home/suhita/zonals/data/test_anneke/final_test_array_GT.npy')
+tgt = tgt.astype('bool').astype('int8')
+
+for i in np.arange(timgs.shape[0]):
+    np.save('/home/suhita/zonals/data/test_anneke/imgs/' + str(i), timgs[i])
+    np.save('/home/suhita/zonals/data/test_anneke/gt/' + str(i), tgt[i])
     print(i)

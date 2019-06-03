@@ -4,14 +4,13 @@ import numpy as np
 
 class DataGenerator(keras.utils.Sequence):
 
-    def __init__(self, path, unsupervised_target, unsupervised_weight, supervised_flag, id_list,
-                 batch_size=2, dim=(32, 168, 168)):
+    def __init__(self, path, supervised_flag, id_list, batch_size=2, dim=(32, 168, 168)):
         'Initialization'
         self.dim = dim
         self.path = path
-        self.unsupervised_target = unsupervised_target
+        # self.unsupervised_target = unsupervised_target
         self.supervised_flag = supervised_flag
-        self.unsupervised_weight = unsupervised_weight
+        #self.unsupervised_weight = unsupervised_weight
         self.batch_size = batch_size
         self.id_list = id_list
         self.indexes = np.arange(len(self.id_list))
@@ -36,11 +35,13 @@ class DataGenerator(keras.utils.Sequence):
         for i, ID in enumerate(list_IDs_temp):
             # img[i] = self.img_array[int(ID)]
             img[i] = np.load(self.path + 'imgs/' + ID + '.npy')
-            unsup_label[i] = self.unsupervised_target[int(ID)]
+            # unsup_label[i] = self.unsupervised_target[int(ID)]
+            unsup_label[i] = np.load(self.path + 'ens_gt/' + ID + '.npy')
             # gt[i] = self.supervised_label[int(ID)]
             gt = np.load(self.path + 'gt/' + ID + '.npy').astype('int8')
             flag[i] = self.supervised_flag[int(ID)]
-            wt[i] = self.unsupervised_weight[int(ID)]
+            # wt[i] = self.unsupervised_weight[int(ID)]
+            wt[i] = np.load(self.path + 'wt/' + ID + '.npy')
 
             pz_gt[i] = gt[:, :, :, 0]
             cz_gt[i] = gt[:, :, :, 1]

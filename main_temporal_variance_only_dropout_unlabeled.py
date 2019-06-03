@@ -5,7 +5,7 @@ from keras.callbacks import Callback
 from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, EarlyStopping, TensorBoard
 
 from generator.data_gen import DataGenerator
-from lib.segmentation.model_WN_MCdropout import build_model
+from lib.segmentation.model_WN_MCdropout import weighted_model
 from lib.segmentation.ops import ramp_down_weight, ramp_up_weight
 from lib.segmentation.utils import make_dataset
 from zonal_utils.AugmentationGenerator import *
@@ -48,7 +48,9 @@ def train(train_x, train_y, train_ux, train_ux_predicted, val_x, val_y, gpu_id, 
 
     # ret_dic = split_supervised_train(train_x, train_y, num_labeled_train)
     # Build Model
-    model, model_no_sm = build_model(num_class=num_class, learning_rate=learning_rate, gpu_id=gpu_id, nb_gpus=nb_gpus)
+    wm = weighted_model()
+    model, model_no_sm = wm.build_model(num_class=num_class, learning_rate=learning_rate, gpu_id=gpu_id,
+                                        nb_gpus=nb_gpus)
     ret_dic = make_dataset(train_x, train_y, train_ux, train_ux_predicted, val_x, val_y, num_class, model)
 
     imgs = ret_dic['train_x']
@@ -230,7 +232,8 @@ def predict(val_x, val_y):
              val_y[:, :, :, :, 4]]
 
     print(name)
-    model = build_model(num_class=5)
+    wm = weighted_model()
+    model = wm.build_model(num_class=5)
     print('load_weights')
     model.load_weights('temporal_final3.h5')
     print('predict')

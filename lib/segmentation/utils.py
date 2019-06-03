@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 from keras.preprocessing.image import ImageDataGenerator
 
@@ -147,26 +149,56 @@ def make_dataset(train_x, train_y, train_ux, train_uy, val_x, val_y, num_class):
 
     imgs = np.concatenate((train_x, train_ux), axis=0)
 
-    supervised_label = np.concatenate((train_y, train_uy), axis=0).astype('int8')
+    supervised_label = np.concatenate((train_y, train_uy), axis=0)
 
     # flag to indicate that supervised(1) or not(0) in train data
 
     supervised_flag = np.concatenate(
-        (np.ones((num_labeled_train, 32, 168, 168, 1)), np.zeros((num_un_labeled_train, 32, 168, 168, 1)))).astype(
-        'int8')
-    unsupervised_target = np.concatenate((train_y, train_uy)).astype('float32')
+        (np.ones((num_labeled_train, 32, 168, 168, 1)), np.zeros((num_un_labeled_train, 32, 168, 168, 1))))
+    unsupervised_target = np.concatenate((train_y, train_uy))
 
     # initialize weight of unsupervised loss component
-    unsupervised_weight = np.zeros((total_train_num, 32, 168, 168, num_class)).astype('float16')
+    unsupervised_weight = np.zeros((total_train_num, 32, 168, 168, num_class))
 
     ret_dic['train_x'] = imgs
-    ret_dic['supervised_label'] = supervised_label
-    ret_dic['unsupervised_target'] = unsupervised_target
-    ret_dic['train_sup_flag'] = supervised_flag
-    ret_dic['unsupervised_weight'] = unsupervised_weight
+    ret_dic['supervised_label'] = supervised_label.astype('int8')
+    ret_dic['unsupervised_target'] = unsupervised_target.astype('float32')
+    ret_dic['train_sup_flag'] = supervised_flag.astype('int8')
+    ret_dic['unsupervised_weight'] = unsupervised_weight.astype('float32')
     del imgs, supervised_label, unsupervised_target, supervised_flag, unsupervised_weight
 
     return ret_dic
+
+
+def get_complete_array(folder_path, data_type='float32'):
+    files = os.listdir(folder_path)
+    total_arr = None
+    for idx in np.arange(len(files)):
+        if (idx == 0):
+            arr = np.load(folder_path + files[idx])
+            total_arr = np.zeros((len(files), *arr.shape), dtype=data_type)
+            total_arr[0] = arr
+        else:
+            total_arr[idx] = np.load(folder_path + '/' + files[idx])
+    return total_arr
+
+
+def get_array(folder_path, start, end, data_type='float64'):
+    arr = np.load(folder_path + '/1.npy')
+    total_arr = np.zeros((end - start, *arr.shape), dtype=data_type)
+    for idx in np.arange(start, end):
+        arr_idx = start - idx
+        total_arr[arr_idx] = np.load(folder_path + '/' + str(idx) + '.npy')
+
+    return total_arr
+
+
+def save_array(path, arr, start, end):
+    for idx in np.arange(start, end):
+        arr_idx = start - idx
+        np.save(path + str(idx) + '.npy', arr[arr_idx])
+
+
 
 
 def data_augmentation_tempen(inputs, trans_range):
@@ -210,3 +242,7 @@ def whiten_zca(x_train, x_test):
     x_test = g_test.next()
 
     return x_train, x_test
+
+
+if __name__ == '__main__':
+    get_complete_array('/home/suhita/zonals/data/validation/imgs/')
