@@ -1,16 +1,17 @@
 import keras
 import numpy as np
 
-
+NPY = '.npy'
 class DataGenerator(keras.utils.Sequence):
-
-    def __init__(self, path, supervised_flag, id_list, batch_size=2, dim=(32, 168, 168)):
+    def __init__(self, imgs_path, gt_path, ensemble_path, weight_path, supervised_flag, id_list, batch_size=2,
+                 dim=(32, 168, 168)):
         'Initialization'
         self.dim = dim
-        self.path = path
-        # self.unsupervised_target = unsupervised_target
+        self.imgs_path = imgs_path
+        self.gt_path = gt_path
+        self.ensemble_path = ensemble_path
+        self.weight_path = weight_path
         self.supervised_flag = supervised_flag
-        #self.unsupervised_weight = unsupervised_weight
         self.batch_size = batch_size
         self.id_list = id_list
         self.indexes = np.arange(len(self.id_list))
@@ -21,7 +22,7 @@ class DataGenerator(keras.utils.Sequence):
     def __data_generation(self, list_IDs_temp):
         'Generates data containing batch_size samples'
         img = np.empty((self.batch_size, *self.dim, 1))
-        unsup_label = np.zeros((self.batch_size, *self.dim, 5))
+        ensemble_pred = np.zeros((self.batch_size, *self.dim, 5))
         flag = np.zeros((self.batch_size, *self.dim, 1), dtype='int8')
         wt = np.zeros((self.batch_size, *self.dim, 5))
 
@@ -33,15 +34,11 @@ class DataGenerator(keras.utils.Sequence):
 
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
-            # img[i] = self.img_array[int(ID)]
-            img[i] = np.load(self.path + 'imgs/' + ID + '.npy')
-            # unsup_label[i] = self.unsupervised_target[int(ID)]
-            unsup_label[i] = np.load(self.path + 'ens_gt/' + ID + '.npy')
-            # gt[i] = self.supervised_label[int(ID)]
-            gt = np.load(self.path + 'gt/' + ID + '.npy').astype('int8')
+            img[i] = np.load(self.imgs_path + ID + NPY)
+            ensemble_pred[i] = np.load(self.ensemble_path + ID + NPY)
+            gt = np.load(self.gt_path + ID + NPY).astype('int8')
             flag[i] = self.supervised_flag[int(ID)]
-            # wt[i] = self.unsupervised_weight[int(ID)]
-            wt[i] = np.load(self.path + 'wt/' + ID + '.npy')
+            wt[i] = np.load(self.weight_path + ID + NPY)
 
             pz_gt[i] = gt[:, :, :, 0]
             cz_gt[i] = gt[:, :, :, 1]
@@ -49,8 +46,7 @@ class DataGenerator(keras.utils.Sequence):
             afs_gt[i] = gt[:, :, :, 3]
             bg_gt[i] = gt[:, :, :, 4]
 
-        x_t = [img, unsup_label, flag, wt]
-        # x_t = [img, flag]
+        x_t = [img, ensemble_pred, flag, wt]
         y_t = [pz_gt, cz_gt, us_gt, afs_gt, bg_gt]
 
         return x_t, y_t
@@ -68,6 +64,6 @@ class DataGenerator(keras.utils.Sequence):
         list_IDs_temp = [self.id_list[k] for k in indexes]
 
         # Generate data
-        [img, unsup_label, flag, wt], [pz, cz, us, afs, bg] = self.__data_generation(list_IDs_temp)
+        [img, ensemble_pred, flag, wt], [pz, cz, us, afs, bg] = self.__data_generation(list_IDs_temp)
 
-        return [img, unsup_label, flag, wt], [pz, cz, us, afs, bg]
+        return [img, ensemble_pred, flag, wt], [pz, cz, us, afs, bg]

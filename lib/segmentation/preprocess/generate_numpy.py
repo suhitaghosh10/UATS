@@ -1,14 +1,16 @@
 import numpy as np
 
+# training
+
 '''
 timgs = np.load('/home/suhita/zonals/data/training/trainArray_imgs_fold1.npy')
 print(timgs.shape)
 tgt = np.load('/home/suhita/zonals/data/training/trainArray_GT_fold1.npy')
-tgt = tgt.astype('bool').astype('int8')
+tgt = tgt.astype('int8')
 
-imgs = np.load('/home/suhita/zonals/data/training/trainArray_unlabeled_imgs_fold1.npy')
-gt = np.load('/home/suhita/zonals/data/training/trainArray_unlabeled_GT_fold1.npy')
-gt = gt.astype('bool').astype('int8')
+imgs = np.load('/home/suhita/zonals/data/training/good_prediction_arr.npy')
+gt = np.load('/home/suhita/zonals/data/training/good_prediction_arr_gt.npy')
+gt = gt.astype('int8')
 
 stop = imgs.shape[0] + 58
 print(stop)
@@ -22,15 +24,18 @@ for i in np.arange(start=58, stop=stop):
     np.save('/home/suhita/zonals/data/training/imgs/' + str(i), imgs[i - 58])
     np.save('/home/suhita/zonals/data/training/gt/' + str(i), gt[i - 58])
     print(i)
-    
 '''
+# validation
 
-timgs = np.load('/home/suhita/zonals/data/test_anneke/final_test_array_imgs.npy')
-print(timgs.shape)
-tgt = np.load('/home/suhita/zonals/data/test_anneke/final_test_array_GT.npy')
-tgt = tgt.astype('bool').astype('int8')
 
-for i in np.arange(timgs.shape[0]):
-    np.save('/home/suhita/zonals/data/test_anneke/imgs/' + str(i), timgs[i])
-    np.save('/home/suhita/zonals/data/test_anneke/gt/' + str(i), tgt[i])
+# vimgs = np.load('/home/suhita/zonals/data/validation/valArray_imgs_fold1.npy')
+vimgs = np.load('/home/suhita/zonals/data/test_anneke/final_test_array_imgs.npy')
+print(vimgs.shape)
+# vgt = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy')
+vgt = np.load('/home/suhita/zonals/data/test_anneke/final_test_array_GT.npy')
+vgt = vgt.astype('int8')
+
+for i in np.arange(vimgs.shape[0]):
+    np.save('/home/suhita/zonals/data/test_anneke/imgs/' + str(i), vimgs[i])
+    np.save('/home/suhita/zonals/data/test_anneke/gt/' + str(i), vgt[i])
     print(i)
