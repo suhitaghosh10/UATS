@@ -214,7 +214,7 @@ def train(gpu_id, nb_gpus):
                                VAR_THRESHOLD)
         lcb = wm.LossCallback()
         #del unsupervised_target, unsupervised_weight, supervised_flag, imgs
-        del supervised_flag
+        # del supervised_flag
         cb = [model_checkpoint, tcb, tensorboard, lcb]
 
         print('BATCH Size = ', batch_size)
@@ -234,7 +234,7 @@ def train(gpu_id, nb_gpus):
                                            train_id_list,
                                            **params)
 
-
+        del supervised_flag
         steps = num_train_data / batch_size
 
         val_supervised_flag = np.ones((num_val_data, 32, 168, 168, 1), dtype='int8')

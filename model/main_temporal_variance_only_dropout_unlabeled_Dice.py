@@ -57,36 +57,35 @@ def train(gpu_id, nb_gpus):
         (np.ones((num_labeled_train, 32, 168, 168, 1)), np.zeros((num_un_labeled_train, 32, 168, 168, 1)))).astype(
         'int8')
 
+    # datagen listmake_dataset
+    train_id_list = [str(i) for i in np.arange(0, num_train_data)]
 
-        # datagen listmake_dataset
-        train_id_list = [str(i) for i in np.arange(0, num_train_data)]
-
-        # prepare weights and arrays for updates
+    # prepare weights and arrays for updates
     gen_weight = ramp_up_weight(ramp_up_period, weight_max * (num_labeled_train / num_train_data))
-        gen_lr_weight = ramp_down_weight(ramp_down_period)
+    gen_lr_weight = ramp_down_weight(ramp_down_period)
 
-        # prepare dataset
-        print('-' * 30)
-        print('Loading train data...')
-        print('-' * 30)
+    # prepare dataset
+    print('-' * 30)
+    print('Loading train data...')
+    print('-' * 30)
 
-        # Build Model
+    # Build Model
 
     wm = weighted_model()
     model = wm.build_model(num_class=NUM_CLASS, use_dice_cl=True, learning_rate=learning_rate, gpu_id=gpu_id,
                            nb_gpus=nb_gpus, trained_model=TRAINED_MODEL_PATH)
 
-        print("Images Size:", num_train_data)
-        print("Unlabeled Size:", num_un_labeled_train)
+    print("Images Size:", num_train_data)
+    print("Unlabeled Size:", num_un_labeled_train)
 
-        print('-' * 30)
-        print('Creating and compiling model...')
-        print('-' * 30)
+    print('-' * 30)
+    print('Creating and compiling model...')
+    print('-' * 30)
 
-        # model.metrics_tensors += model.outputs
-        model.summary()
+    # model.metrics_tensors += model.outputs
+    model.summary()
 
-        class TemporalCallback(Callback):
+    class TemporalCallback(Callback):
 
             def __init__(self, imgs_path, gt_path, ensemble_path, weight_path, supervised_flag,
                          variance_threshold):
@@ -202,19 +201,19 @@ def train(gpu_id, nb_gpus):
             #   return self.supervised_flag
 
         # callbacks
-        print('-' * 30)
-        print('Creating callbacks...')
-        print('-' * 30)
+    print('-' * 30)
+    print('Creating callbacks...')
+    print('-' * 30)
         # csv_logger = CSVLogger('validation.csv', append=True, separator=';')
         # model_checkpoint = ModelCheckpoint(MODEL_NAME, monitor='val_loss', save_best_only=True,verbose=1, mode='min')
     if nb_gpus is not None and nb_gpus>1:
-            model_checkpoint = ModelCheckpointParallel(MODEL_NAME,
-                                                       monitor='val_loss',
-                                                       save_best_only=True,
-                                                       verbose=1,
-                                                       mode='min')
-        else:
-            model_checkpoint = ModelCheckpoint(MODEL_NAME, monitor='val_loss',
+        model_checkpoint = ModelCheckpointParallel(MODEL_NAME,
+                                                   monitor='val_loss',
+                                                   save_best_only=True,
+                                                   verbose=1,
+                                                   mode='min')
+    else:
+        model_checkpoint = ModelCheckpoint(MODEL_NAME, monitor='val_loss',
                                                save_best_only=True,
                                                verbose=1,
                                                mode='min')
@@ -227,18 +226,18 @@ def train(gpu_id, nb_gpus):
                            VAR_THRESHOLD)
     lcb = wm.LossCallback()
 
-    del supervised_flag
+
     cb = [model_checkpoint, tcb, tensorboard, lcb]
 
-        print('BATCH Size = ', batch_size)
+    print('BATCH Size = ', batch_size)
 
-        print('Callbacks: ', cb)
-        params = {'dim': (32, 168, 168),
+    print('Callbacks: ', cb)
+    params = {'dim': (32, 168, 168),
                   'batch_size': batch_size}
 
-        print('-' * 30)
-        print('Fitting model...')
-        print('-' * 30)
+    print('-' * 30)
+    print('Fitting model...')
+    print('-' * 30)
     training_generator = DataGenerator(TRAIN_IMGS_PATH,
                                        TRAIN_GT_PATH,
                                        ENS_GT_PATH,
@@ -246,25 +245,25 @@ def train(gpu_id, nb_gpus):
                                        supervised_flag,
                                        train_id_list,
                                            **params)
+    del supervised_flag
 
-
-        steps = num_train_data / batch_size
+    steps = num_train_data / batch_size
 
     val_supervised_flag = np.ones((num_val_data, 32, 168, 168, 1), dtype='int8')
     val_unsupervised_weight = np.zeros((num_val_data, 32, 168, 168, 5), dtype='float32')
     val_x_arr = get_complete_array(VAL_IMGS_PATH, data_type='float64')
     val_y_arr = get_complete_array(VAL_GT_PATH, data_type='int8')
 
-        pz = val_y_arr[:, :, :, :, 0]
-        cz = val_y_arr[:, :, :, :, 1]
-        us = val_y_arr[:, :, :, :, 2]
-        afs = val_y_arr[:, :, :, :, 3]
-        bg = val_y_arr[:, :, :, :, 4]
+    pz = val_y_arr[:, :, :, :, 0]
+    cz = val_y_arr[:, :, :, :, 1]
+    us = val_y_arr[:, :, :, :, 2]
+    afs = val_y_arr[:, :, :, :, 3]
+    bg = val_y_arr[:, :, :, :, 4]
 
-        y_val = [pz, cz, us, afs, bg]
-        x_val = [val_x_arr, val_y_arr, val_supervised_flag, val_unsupervised_weight]
-        del val_supervised_flag, val_unsupervised_weight, pz, cz, us, afs, bg, val_y_arr, val_x_arr
-        history = model.fit_generator(generator=training_generator,
+    y_val = [pz, cz, us, afs, bg]
+    x_val = [val_x_arr, val_y_arr, val_supervised_flag, val_unsupervised_weight]
+    del val_supervised_flag, val_unsupervised_weight, pz, cz, us, afs, bg, val_y_arr, val_x_arr
+    history = model.fit_generator(generator=training_generator,
                                       steps_per_epoch=steps,
                                       validation_data=[x_val, y_val],
                                       epochs=num_epoch,
