@@ -13,7 +13,7 @@ from zonal_utils.AugmentationGenerator import *
 
 # 294 Training 58 have gt
 
-TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/mse_trial2/'
+TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/mse_trial3/'
 MODEL_NAME = '/home/suhita/zonals/temporal/temporal_mse.h5'
 
 TRAIN_IMGS_PATH = '/home/suhita/zonals/data/training/imgs/'
@@ -37,12 +37,12 @@ IMGS_PER_ENS_BATCH = 100
 # hyper-params
 #UPDATE_WTS_AFTER_EPOCH = 1
 ENSEMBLE_NO = 3
-SAVE_WTS_AFTR_EPOCH = 5
+SAVE_WTS_AFTR_EPOCH = 0
 ramp_up_period = 200
 ramp_down_period = 50
 # weight_max = 40
 weight_max = 30
-learning_rate = 5e-5
+learning_rate = 5e-6
 alpha = 0.6
 VAR_THRESHOLD = 0.5
 
@@ -62,7 +62,6 @@ def train(gpu_id, nb_gpus):
 
         # datagen listmake_dataset
         train_id_list = [str(i) for i in np.arange(0, num_train_data)]
-        val_id_list = [str(i) for i in np.arange(0, num_val_data)]
 
         # prepare weights and arrays for updates
         gen_weight = ramp_up_weight(ramp_up_period, weight_max * (num_labeled_train / num_train_data))
@@ -91,14 +90,14 @@ def train(gpu_id, nb_gpus):
 
         class TemporalCallback(Callback):
 
-            def __init__(self, imgs_path, gt_path, ensemble_path, weight_path, supervised_flag, train_idx_list,
+            def __init__(self, imgs_path, gt_path, ensemble_path, weight_path, supervised_flag,
                          variance_threshold):
                 self.imgs_path = imgs_path
                 self.gt_path = gt_path
                 self.ensemble_path = ensemble_path
                 self.weight_path = weight_path
                 self.supervised_flag = supervised_flag.astype('int8')
-                self.train_idx_list = train_idx_list  # list of indexes of training eg
+                # self.train_idx_list = train_idx_list  # list of indexes of training eg
                 self.variance_th = variance_threshold
 
                 unsupervised_target = get_complete_array(TRAIN_GT_PATH, data_type='int8')
@@ -121,7 +120,7 @@ def train(gpu_id, nb_gpus):
                     K.set_value(model.optimizer.beta_1, 0.4 * weight_down + 0.5)
                     print('LR: alpha-', K.eval(model.optimizer.lr), K.eval(model.optimizer.beta_1))
 
-                if epoch > 100:
+                if epoch > 35:
                     self.variance_th = 0.6
                 elif epoch > 150:
                     self.variance_th = 0.7
@@ -178,30 +177,16 @@ def train(gpu_id, nb_gpus):
                         # del ensemble_prediction
 
                         if epoch >= SAVE_WTS_AFTR_EPOCH:
-                            unsupervised_weight = np.where(np.abs(cur_pred - ensemble_prediction) >= self.variance_th,
+                            var = np.abs(cur_pred - ensemble_prediction)
+                            mean_along_zone = np.mean(var, axis=(0, 1, 2, 3))
+
+                            unsupervised_weight = np.where(var >= mean_along_zone,
                                                            0., 1.) * next_weight
+                            del mean_along_zone, var
                             save_array(self.weight_path, unsupervised_weight, start, end)
                             del unsupervised_weight, ensemble_prediction
 
                     if 'cur_pred' in locals(): del cur_pred
-
-                # shuffle examples
-                np.random.shuffle(self.train_idx_list)
-                np.random.shuffle(val_id_list)
-                #DataGenerator('/home/suhita/zonals/data/training/',self.ensemble_prediction,self.unsupervised_weight,self.supervised_flag,self.train_idx_list)
-
-                DataGenerator(self.imgs_path,
-                              self.gt_path,
-                              self.ensemble_path,
-                              self.weight_path,
-                              self.supervised_flag,
-                              self.train_idx_list)
-
-            def get_training_list(self):
-                return self.train_idx_list
-
-            def get_supervised_flag(self):
-                return self.supervised_flag
 
         # callbacks
         print('-' * 30)
@@ -209,7 +194,7 @@ def train(gpu_id, nb_gpus):
         print('-' * 30)
         # csv_logger = CSVLogger('validation.csv', append=True, separator=';')
         # model_checkpoint = ModelCheckpoint(MODEL_NAME, monitor='val_loss', save_best_only=True,verbose=1, mode='min')
-        if nb_gpus > 1:
+        if nb_gpus is not None and nb_gpus > 1:
             model_checkpoint = ModelCheckpointParallel(MODEL_NAME,
                                                        monitor='val_loss',
                                                        save_best_only=True,
@@ -225,7 +210,7 @@ def train(gpu_id, nb_gpus):
                                   batch_size=2, write_images=False)
 
         # tcb = TemporalCallback(imgs, unsupervised_target, unsupervised_weight, train_id_list)
-        tcb = TemporalCallback(TRAIN_IMGS_PATH, TRAIN_GT_PATH, ENS_GT_PATH, WEIGHT_PATH, supervised_flag, train_id_list,
+        tcb = TemporalCallback(TRAIN_IMGS_PATH, TRAIN_GT_PATH, ENS_GT_PATH, WEIGHT_PATH, supervised_flag,
                                VAR_THRESHOLD)
         lcb = wm.LossCallback()
         #del unsupervised_target, unsupervised_weight, supervised_flag, imgs
@@ -245,8 +230,8 @@ def train(gpu_id, nb_gpus):
                                            TRAIN_GT_PATH,
                                            ENS_GT_PATH,
                                            WEIGHT_PATH,
-                                           tcb.get_supervised_flag(),
-                                           tcb.get_training_list(),
+                                           supervised_flag,
+                                           train_id_list,
                                            **params)
 
 
@@ -303,9 +288,11 @@ def predict(val_x_arr, val_y_arr):
 
 
 if __name__ == '__main__':
-    gpu = '/CPU:0'
+    # gpu = '/CPU:0'
+    gpu = '/GPU:0'
     batch_size = 2
-    gpu_id = '2, 3'
+    # gpu_id = '2, 3'
+    gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
     # os.environ["CUDA_VISIBLE_DEVICES"] = '2'
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
@@ -320,7 +307,7 @@ if __name__ == '__main__':
         'batch_size should be a multiple of the nr. of gpus. ' + \
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
-    train(gpu, nb_gpus)
+    train(gpu, None)
     val_x = np.load('/home/suhita/zonals/data/validation/valArray_imgs_fold1.npy')
     val_y = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy').astype('int8')
 

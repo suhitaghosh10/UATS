@@ -17,7 +17,7 @@ class DataGenerator(keras.utils.Sequence):
         self.indexes = np.arange(len(self.id_list))
 
     def on_epoch_end(self):
-        pass
+        np.random.shuffle(self.indexes)
 
     def __data_generation(self, list_IDs_temp):
         'Generates data containing batch_size samples'

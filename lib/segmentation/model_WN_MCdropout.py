@@ -28,14 +28,14 @@ class weighted_model:
         return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
 
     def c_dice_coef(self, y_true, y_pred, smooth=1.):
-        y_true_f = K.flatten(y_true)
-        y_pred_f = K.flatten(y_pred)
-        size_of_A_intersect_B = K.sum(y_true_f * y_pred_f)
-        size_of_A = K.sum(y_true_f)
-        size_of_B = K.sum(y_pred_f)
-        sign_B = tf.where(tf.greater(y_pred_f, 0), K.ones_like(y_pred_f), K.zeros_like(y_pred_f))
+        # y_true_f = K.flatten(y_true)
+        # y_pred_f = K.flatten(y_pred)
+        size_of_A_intersect_B = K.sum(y_true * y_pred)
+        size_of_A = K.sum(y_true)
+        size_of_B = K.sum(y_pred)
+        sign_B = tf.where(tf.greater(y_pred, 0), K.ones_like(y_pred), K.zeros_like(y_pred))
         if tf.greater(size_of_A_intersect_B, 0) is not None:
-            c = K.sum(y_true_f * y_pred_f) / K.sum(y_true_f * sign_B)
+            c = K.sum(y_true * y_pred) / K.sum(y_true * sign_B)
         else:
             c = 1
 
@@ -80,18 +80,7 @@ class weighted_model:
             supervised_flag = input[:, :, :, :, 1]
             weight = input[:, :, :, :, 2]  # last elem are weights
 
-            # model_pred = y_pred
-            # print(K.int_shape(y_pred))
-
-            # unsupervised_loss = weight * K.mean(mean_squared_error(unsupervised_target, model_pred))
             unsupervised_loss = - K.mean(weight * self.c_dice_coef(unsupervised_gt, y_pred))
-            # print('unsupervised_loss', unsupervised_loss)
-
-            # To sum over only supervised data on categorical_crossentropy, supervised_flag(1/0) is used
-
-            # supervised_loss = - K.mean(
-            #    K.sum(supervised_label * K.log(K.clip(model_pred, epsilon, 1.0 - epsilon)), axis=1) * supervised_flag)
-
             supervised_loss = - K.mean(self.dice_coef(y_true, y_pred) * supervised_flag[:, 0, 0, 0])
 
             return supervised_loss + unsupervised_loss
@@ -226,7 +215,7 @@ class weighted_model:
     # optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
         optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
 
-        if (gpu_id is None):
+        if (nb_gpus is None):
             p_model = Model([input_img, unsupervised_label, supervised_flag, unsupervised_weight],
                         [pz_sm_out, cz_sm_out, us_sm_out, afs_sm_out, bg_sm_out])
             if trained_model is not None:
