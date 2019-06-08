@@ -495,7 +495,7 @@ def removeIslands(predictedArray):
 
 def postprocesAndEvaluateFiles(name, GT_array, csvName, eval=True):
     prediction = np.load(name + '.npy')
-    prediction = np.transpose(prediction, (4, 0, 1, 2, 3))
+    # prediction = np.transpose(prediction, (4, 0, 1, 2, 3))
     # print(GT_array.shape)
     print(prediction.shape)
 
@@ -507,6 +507,7 @@ def postprocesAndEvaluateFiles(name, GT_array, csvName, eval=True):
     for i in range(0, prediction.shape[1]):
         print(i)
         array = removeIslands(prediction[:, i, :, :, :])
+        np.save(outDir + 'predicted_' + str(i) + '.npy', array)
         print(array.shape)
         out_arr[i] = np.transpose(array, (1, 2, 3, 0))
         # print('preditction', prediction.shape)
@@ -518,10 +519,10 @@ def postprocesAndEvaluateFiles(name, GT_array, csvName, eval=True):
 
 
 if __name__ == '__main__':
-    name = '/home/suhita/zonals/data/training/trainArray_unlabeled_GT_fold1'
-    # GT_array_name = '/home/suhita/zonals/data/training/trainArray_unlabeled_GT_fold1'
-    # csvName = 'temporal_final.csv'
-    #GT_array = np.load(GT_array_name)
+    name = '/home/suhita/zonals/temporal/model/predicted'
+    GT_array_name = '/home/suhita/zonals/data/test_anneke/final_test_array_GT.npy'
+    csvName = 'temporal_final.csv'
+    GT_array = np.load(GT_array_name)
 
     # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
-    postprocesAndEvaluateFiles(name, None, None, eval=False)
+    postprocesAndEvaluateFiles(name, GT_array, eval=True, csvName=csvName)

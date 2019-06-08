@@ -2,10 +2,11 @@ import os
 
 import numpy as np
 
-from lib.segmentation.model_WN_MCdropout import build_model
+from lib.segmentation.model_WN_MCdropout import weighted_model
 
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
-model = build_model(num_class=5, use_dice_cl=True, learning_rate=4.5e-5)
+w = weighted_model()
+model = w.build_model(num_class=5, use_dice_cl=True, learning_rate=4.5e-5)
 print('load_weights')
 model.load_weights('/home/suhita/zonals/data/model.h5')
 unl_x = np.load('/home/suhita/zonals/data/training/bad_prediction_arr.npy')

@@ -4,10 +4,11 @@ from keras.callbacks import Callback
 from keras.layers import concatenate, Input, Conv3D, MaxPooling3D, Conv3DTranspose, Lambda, \
     BatchNormalization, Dropout
 from keras.models import Model
+from keras.optimizers import Adam
 from keras.utils import multi_gpu_model
 
-# from keras.optimizers import Adam
-from lib.segmentation.weight_norm import AdamWithWeightnorm
+
+# from lib.segmentation.weight_norm import AdamWithWeightnorm
 
 
 class weighted_model:
@@ -55,15 +56,19 @@ class weighted_model:
             weight = input[:, :, :, :, 2]  # last elem are weights
 
             # model_pred = y_pred
-
-            unsupervised_loss = - K.mean(weight * K.square(unsupervised_gt - y_pred))
+            unsupervised_gt = tf.where(unsupervised_gt >= 0.9, K.ones_like(unsupervised_gt),
+                                       K.zeros_like(unsupervised_gt))
+            unsupervised_loss = - K.mean(weight * self.dice_coef(unsupervised_gt, y_pred))
+            tf.summary.scalar("unsupervised_loss", unsupervised_loss)
             # print('unsupervised_loss', unsupervised_loss)
 
             supervised_loss = - K.mean(self.dice_coef(y_true, y_pred) * supervised_flag[:, 0, 0, 0])
+            tf.summary.scalar("supervised_loss", supervised_loss)
 
             return supervised_loss + unsupervised_loss
 
         return loss_func
+
 
     def semi_supervised_loss_dice(self, input, alpha=0.6):
         """custom loss function"""
@@ -77,10 +82,14 @@ class weighted_model:
             """
             unsupervised_gt = input[:, :, :, :, 0]
             unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
+            # threshold dice
+            unsupervised_gt = tf.where(unsupervised_gt >= 0.9, 1., 0.)
+
             supervised_flag = input[:, :, :, :, 1]
             weight = input[:, :, :, :, 2]  # last elem are weights
 
-            unsupervised_loss = - K.mean(weight * self.c_dice_coef(unsupervised_gt, y_pred))
+            # unsupervised_loss = - K.mean(weight * self.c_dice_coef(unsupervised_gt, y_pred))
+            unsupervised_loss = - K.mean(weight * self.dice_coef(unsupervised_gt, y_pred))
             supervised_loss = - K.mean(self.dice_coef(y_true, y_pred) * supervised_flag[:, 0, 0, 0])
 
             return supervised_loss + unsupervised_loss
@@ -213,7 +222,7 @@ class weighted_model:
         bg = concatenate([bg_ensemble_pred, supervised_flag, bg_wt], name='bg_c')
 
     # optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
-        optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
+        optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999)
 
         if (nb_gpus is None):
             p_model = Model([input_img, unsupervised_label, supervised_flag, unsupervised_weight],
@@ -237,13 +246,14 @@ class weighted_model:
                             )
             else:
                 p_model.compile(optimizer=optimizer,
-                                loss={'pz': self.semi_supervised_loss_mse(pz), 'cz': self.semi_supervised_loss_mse(cz),
+                                loss={'pz': self.semi_supervised_loss_mse(pz),
+                                      'cz': self.semi_supervised_loss_mse(cz),
                                       'us': self.semi_supervised_loss_mse(us),
                                       'afs': self.semi_supervised_loss_mse(afs),
                                       'bg': self.semi_supervised_loss_mse(bg)},
                                 metrics={'pz': self.dice_coef, 'cz': self.dice_coef, 'us': self.dice_coef,
                                          'afs': self.dice_coef, 'bg': self.dice_coef}
-                            )
+                                )
         else:
             with tf.device(gpu_id):
                 model = Model([input_img, unsupervised_label, supervised_flag, unsupervised_weight],

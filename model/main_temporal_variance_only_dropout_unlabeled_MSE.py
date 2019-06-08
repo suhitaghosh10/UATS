@@ -12,8 +12,8 @@ from lib.segmentation.utils import get_complete_array, get_array, save_array
 from zonal_utils.AugmentationGenerator import *
 
 # 294 Training 58 have gt
-
-TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/mse_trial3/'
+learning_rate = 2.5e-5
+TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/mse_trial4_0.99dice_thw' + str(learning_rate) + '/'
 MODEL_NAME = '/home/suhita/zonals/temporal/temporal_mse.h5'
 
 TRAIN_IMGS_PATH = '/home/suhita/zonals/data/training/imgs/'
@@ -23,10 +23,11 @@ TRAIN_GT_PATH = '/home/suhita/zonals/data/training/gt/'
 VAL_IMGS_PATH = '/home/suhita/zonals/data/test_anneke/imgs/'
 VAL_GT_PATH = '/home/suhita/zonals/data/test_anneke/gt/'
 
-TRAINED_MODEL_PATH = '/home/suhita/zonals/data/model.h5'
+# TRAINED_MODEL_PATH = '/home/suhita/zonals/data/model.h5'
+TRAINED_MODEL_PATH = MODEL_NAME
 
-WEIGHT_PATH = '/home/suhita/zonals/temporal/mse/wt/'
-ENS_GT_PATH = '/home/suhita/zonals/temporal/mse/ens_gt/'
+WEIGHT_PATH = '/home/suhita/zonals/temporal/mseww/wt/'
+ENS_GT_PATH = '/home/suhita/zonals/temporal/msewww/ens_gt/'
 
 NUM_CLASS = 5
 num_epoch = 351
@@ -36,13 +37,13 @@ IMGS_PER_ENS_BATCH = 100
 
 # hyper-params
 #UPDATE_WTS_AFTER_EPOCH = 1
-ENSEMBLE_NO = 3
+ENSEMBLE_NO = 1
 SAVE_WTS_AFTR_EPOCH = 0
-ramp_up_period = 200
+ramp_up_period = 50
 ramp_down_period = 50
 # weight_max = 40
 weight_max = 30
-learning_rate = 5e-6
+
 alpha = 0.6
 VAR_THRESHOLD = 0.5
 
@@ -104,7 +105,7 @@ def train(gpu_id, nb_gpus):
 
                 for patient in np.arange(num_train_data):
                     np.save(self.weight_path + str(patient) + '.npy',
-                            np.zeros((32, 168, 168, NUM_CLASS)).astype('float32'))
+                            np.ones((32, 168, 168, NUM_CLASS)).astype('float32'))
                     np.save(self.ensemble_path + str(patient) + '.npy', unsupervised_target[patient])
                 del unsupervised_target
 
@@ -133,9 +134,9 @@ def train(gpu_id, nb_gpus):
             def on_epoch_end(self, epoch, logs={}):
 
                 # if epoch >= ramp_up_period - 5:
-                if epoch >= SAVE_WTS_AFTR_EPOCH:
-                    next_weight = next(gen_weight)
-                    print('rampup wt', next_weight)
+                # if epoch >= SAVE_WTS_AFTR_EPOCH:
+                #    next_weight = next(gen_weight)
+                #   print('rampup wt', next_weight)
 
                 if epoch >= 0:
                     # update unsupervised weight one step b4 update weights for prev
@@ -158,8 +159,8 @@ def train(gpu_id, nb_gpus):
                         cur_pred = np.zeros((actual_batch_size, 32, 168, 168, NUM_CLASS))
 
                         model_out = model.predict(inp, batch_size=2, verbose=1)  # 1
-                        model_out = np.add(model_out, model.predict(inp, batch_size=2, verbose=1))  # 2
-                        model_out = np.add(model_out, model.predict(inp, batch_size=2, verbose=1))  # 3
+                        # model_out = np.add(model_out, model.predict(inp, batch_size=2, verbose=1))  # 2
+                        #model_out = np.add(model_out, model.predict(inp, batch_size=2, verbose=1))  # 3
                         del inp
 
                         cur_pred[:, :, :, :, 0] = model_out[0] / ENSEMBLE_NO
@@ -176,15 +177,16 @@ def train(gpu_id, nb_gpus):
                         save_array(self.ensemble_path, ensemble_prediction, start, end)
                         # del ensemble_prediction
 
-                        if epoch >= SAVE_WTS_AFTR_EPOCH:
-                            var = np.abs(cur_pred - ensemble_prediction)
-                            mean_along_zone = np.mean(var, axis=(0, 1, 2, 3))
-
-                            unsupervised_weight = np.where(var >= mean_along_zone,
-                                                           0., 1.) * next_weight
-                            del mean_along_zone, var
-                            save_array(self.weight_path, unsupervised_weight, start, end)
-                            del unsupervised_weight, ensemble_prediction
+                        # if epoch >= SAVE_WTS_AFTR_EPOCH:
+                        # var = np.abs(cur_pred - ensemble_prediction)
+                        # mean_along_zone = np.mean(var, axis=(0, 1, 2, 3))
+                        # next_weight = np.clip(next_weight, a_max=5, a_min=2)
+                        # unsupervised_weight = np.where(var >= mean_along_zone,0., 1.) * next_weight
+                        # unsupervised_weight = np.where(var >= mean_along_zone,1., 1.)
+                        # del mean_along_zone, var
+                        # save_array(self.weight_path, unsupervised_weight, start, end)
+                        # del unsupervised_weight, ensemble_prediction
+                        #del ensemble_prediction
 
                     if 'cur_pred' in locals(): del cur_pred
 
@@ -206,7 +208,7 @@ def train(gpu_id, nb_gpus):
                                                verbose=1,
                                                mode='min')
 
-        tensorboard = TensorBoard(log_dir=TB_LOG_DIR, write_graph=False, write_grads=True, histogram_freq=0,
+        tensorboard = TensorBoard(log_dir=TB_LOG_DIR, write_graph=False, write_grads=True, histogram_freq=1,
                                   batch_size=2, write_images=False)
 
         # tcb = TemporalCallback(imgs, unsupervised_target, unsupervised_weight, train_id_list)
@@ -236,6 +238,7 @@ def train(gpu_id, nb_gpus):
 
         del supervised_flag
         steps = num_train_data / batch_size
+        #steps=2
 
         val_supervised_flag = np.ones((num_val_data, 32, 168, 168, 1), dtype='int8')
         val_unsupervised_weight = np.zeros((num_val_data, 32, 168, 168, 5), dtype='float32')
@@ -276,7 +279,7 @@ def predict(val_x_arr, val_y_arr):
     x_val = [val_x_arr, val_y_arr, val_supervised_flag, val_unsupervised_weight]
     wm = weighted_model()
     model = wm.build_model(num_class=NUM_CLASS, use_dice_cl=False, learning_rate=learning_rate, gpu_id=None,
-                        nb_gpus=None, trained_model='/home/suhita/zonals/temporal/temporal_mse.h5')
+                           nb_gpus=None, trained_model='/home/suhita/zonals/temporal/temporal_sl.h5')
     print('load_weights')
     #model.load_weights()
     print('predict')
@@ -289,10 +292,10 @@ def predict(val_x_arr, val_y_arr):
 
 if __name__ == '__main__':
     # gpu = '/CPU:0'
-    gpu = '/GPU:0'
+    #gpu = '/GPU:0'
     batch_size = 2
-    # gpu_id = '2, 3'
-    gpu_id = '0'
+    gpu_id = '3'
+    #gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
     # os.environ["CUDA_VISIBLE_DEVICES"] = '2'
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
@@ -302,15 +305,17 @@ if __name__ == '__main__':
     config.allow_soft_placement = True
     set_session(tf.Session(config=config))
 
+
     nb_gpus = len(gpu_id.split(','))
     assert np.mod(batch_size, nb_gpus) == 0, \
         'batch_size should be a multiple of the nr. of gpus. ' + \
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
-    train(gpu, None)
-    val_x = np.load('/home/suhita/zonals/data/validation/valArray_imgs_fold1.npy')
-    val_y = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy').astype('int8')
+    # train(gpu, nb_gpus)
+    # train(None, None)
+    # val_x = np.load('/home/suhita/zonals/data/validation/valArray_imgs_fold1.npy')
+    #val_y = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy').astype('int8')
 
     val_x = np.load('/home/suhita/zonals/data/test_anneke/final_test_array_imgs.npy')
     val_y = np.load('/home/suhita/zonals/data/test_anneke/final_test_array_GT.npy').astype('int8')
-    #predict(val_x, val_y)
+    predict(val_x, val_y)
