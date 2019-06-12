@@ -42,8 +42,10 @@ class weighted_model:
 
         return ((2. * size_of_A_intersect_B) + smooth) / ((c * size_of_A) + size_of_B + smooth)
 
-    def focal_loss(self, y_true, y_pred, gamma=2):
+    def focal_loss(self, y_true, y_pred, weight, gamma=2):
 
+        y_true = y_true * weight
+        y_pred = y_pred * weight
         pt = y_pred * y_true + (1 - y_pred) * (1 - y_true)
         pt = K.clip(pt, K.epsilon(), 1 - K.epsilon())
         CE = -K.log(pt)
@@ -98,13 +100,13 @@ class weighted_model:
             unsupervised_gt = input[:, :, :, :, 0]
             unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
             # threshold dice
-            unsupervised_gt = tf.where(unsupervised_gt >= 0.9, 1., 0.)
+            # unsupervised_gt = tf.where(unsupervised_gt >= 0.9, 1., 0.)
 
             supervised_flag = input[:, :, :, :, 1]
             weight = input[:, :, :, :, 2]  # last elem are weights
 
             # unsupervised_loss = - K.mean(weight * self.c_dice_coef(unsupervised_gt, y_pred))
-            unsupervised_loss = - K.mean(weight * self.focal_loss(unsupervised_gt, y_pred))
+            unsupervised_loss = - K.mean(weight * self.focal_loss(unsupervised_gt, y_pred, weight))
             supervised_loss = - K.mean(self.dice_coef(y_true, y_pred) * supervised_flag[:, 0, 0, 0])
 
             return supervised_loss + unsupervised_loss

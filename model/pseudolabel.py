@@ -9,8 +9,8 @@ from lib.segmentation.utils import get_complete_array
 from zonal_utils.AugmentationGenerator import *
 
 # 294 Training 58 have gt
-learning_rate = 5e-6
-TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/ps' + str(learning_rate) + '/'
+learning_rate = 2.5e-5
+TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/psedo_simple' + str(learning_rate) + '/'
 MODEL_NAME = '/home/suhita/zonals/temporal/p.h5'
 
 TRAIN_IMGS_PATH = '/home/suhita/zonals/data/training/imgs/'
@@ -78,7 +78,7 @@ def train(gpu_id, nb_gpus, trained_model=None):
     # del unsupervised_target, unsupervised_weight, supervised_flag, imgs
     # del supervised_flag
     maskcb = wm.NewCallback(.99, 25)
-    cb = [model_checkpoint, tensorboard]
+    cb = [model_checkpoint, tensorboard, maskcb]
 
     print('BATCH Size = ', batch_size)
 
@@ -159,7 +159,7 @@ if __name__ == '__main__':
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
     # train(gpu, nb_gpus, trained_model= TRAINED_MODEL_PATH)
-    train(gpu, nb_gpus)
+    train(gpu, nb_gpus, trained_model=TRAINED_MODEL_PATH)
     # val_x = np.load('/home/suhita/zonals/data/validation/valArray_imgs_fold1.npy')
     # val_y = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy').astype('int8')
 
