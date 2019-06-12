@@ -1,5 +1,6 @@
 import keras
-import numpy as np
+
+from generator.AugmentationGenerator import *
 
 NPY = '.npy'
 class DataGenerator(keras.utils.Sequence):
@@ -35,9 +36,17 @@ class DataGenerator(keras.utils.Sequence):
 
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
+            aug_type = np.random.randint(0, 4)
+            img[i, :, :, :, :], gt, ensemble_pred[i] = get_single_image_augmentation_with_ensemble(
+                aug_type,
+                np.load(self.imgs_path + ID + '.npy'),
+                np.load(self.gt_path + ID + '.npy'),
+                np.load(self.ensemble_path + ID + '.npy').astype(np.float),
+                img_no=ID)
+
             img[i] = np.load(self.imgs_path + ID + NPY)
-            ensemble_pred[i] = np.load(self.ensemble_path + ID + NPY)
-            gt = np.load(self.gt_path + ID + NPY).astype('int8')
+            # ensemble_pred[i] = np.load(self.ensemble_path + ID + NPY)
+            # gt = np.load(self.gt_path + ID + NPY).astype('int8')
             flag[i] = self.supervised_flag[int(ID)]
             wt[i] = np.load(self.weight_path + ID + NPY)
 

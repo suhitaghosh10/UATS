@@ -6,15 +6,15 @@ from keras.callbacks import ModelCheckpoint, TensorBoard
 
 from generator.data_gen_optim import DataGenerator
 from lib.segmentation.model_WN_MCdropout import weighted_model
-from lib.segmentation.ops import ramp_down_weight
+from lib.segmentation.ops import ramp_down_weight, ramp_up_weight
 from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
 from lib.segmentation.utils import get_complete_array, get_array, save_array
 from zonal_utils.AugmentationGenerator import *
 
 # 294 Training 58 have gt
-learning_rate = 2.5e-5
-TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/sl2' + str(learning_rate) + '/'
-MODEL_NAME = '/home/suhita/zonals/temporal/temporal_sl2.h5'
+learning_rate = 5e-6
+TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/sl2' + str(learning_rate) + '_wt/'
+MODEL_NAME = '/home/suhita/zonals/temporal/temporal_sl2_fold2.h5'
 
 TRAIN_IMGS_PATH = '/home/suhita/zonals/data/training/imgs/'
 TRAIN_GT_PATH = '/home/suhita/zonals/data/training/gt/'
@@ -24,7 +24,7 @@ VAL_IMGS_PATH = '/home/suhita/zonals/data/test_anneke/imgs/'
 VAL_GT_PATH = '/home/suhita/zonals/data/test_anneke/gt/'
 
 # TRAINED_MODEL_PATH = '/home/suhita/zonals/data/model.h5'
-TRAINED_MODEL_PATH = '/home/suhita/zonals/temporal/temporal_sl.h5'
+TRAINED_MODEL_PATH = '/home/suhita/zonals/temporal/temporal_sl2.h5'
 
 WEIGHT_PATH = '/home/suhita/zonals/temporal/sad/wt/'
 ENS_GT_PATH = '/home/suhita/zonals/temporal/sad/ens_gt/'
@@ -58,7 +58,7 @@ def train(gpu_id, nb_gpus):
         'int8')
 
     # prepare weights and arrays for updates
-    # gen_weight = ramp_up_weight(ramp_up_period, weight_max * (num_labeled_train / num_train_data))
+    gen_weight = ramp_up_weight(ramp_up_period, weight_max * (num_labeled_train / num_train_data))
     gen_lr_weight = ramp_down_weight(ramp_down_period)
 
     # prepare dataset
@@ -94,10 +94,10 @@ def train(gpu_id, nb_gpus):
             self.train_idx_list = train_idx_list  # list of indexes of training eg
             self.variance_th = variance_threshold
 
-            unsupervised_target = get_complete_array(TRAIN_GT_PATH, data_type='int8')
+            unsupervised_target = get_complete_array(TRAIN_GT_PATH, dtype='float32')
 
             for patient in np.arange(num_train_data):
-                np.save(self.weight_path + str(patient) + '.npy', np.ones((32, 168, 168, NUM_CLASS)).astype('float32'))
+                np.save(self.weight_path + str(patient) + '.npy', np.zeros((32, 168, 168, NUM_CLASS)).astype('float32'))
                 np.save(self.ensemble_path + str(patient) + '.npy', unsupervised_target[patient])
             del unsupervised_target
 
@@ -105,7 +105,7 @@ def train(gpu_id, nb_gpus):
             pass
 
         def on_epoch_begin(self, epoch, logs=None):
-
+            tf.summary.scalar("labeled_pixels", np.count_nonzero(self.supervised_flag))
             if epoch > num_epoch - ramp_down_period:
                 weight_down = next(gen_lr_weight)
                 K.set_value(model.optimizer.lr, weight_down * learning_rate)
@@ -116,9 +116,9 @@ def train(gpu_id, nb_gpus):
 
             # if epoch >= ramp_up_period - 5:
             # if epoch >= SAVE_WTS_AFTR_EPOCH:
-            # next_weight = next(gen_weight)
+            next_weight = next(gen_weight)
             #   print('rampup wt', next_weight)
-            sup_no = 0.
+
             if epoch <= 100:
                 THRESHOLD = 0.9
             else:
@@ -135,9 +135,9 @@ def train(gpu_id, nb_gpus):
                     actual_batch_size = patients_per_batch if b_no < num_batches - 1 else remainder
                     start = b_no * patients_per_batch
                     end = (start + actual_batch_size)
-                    imgs = get_array(self.imgs_path, start, end, data_type='float64')
-                    ensemble_prediction = get_array(self.ensemble_path, start, end, data_type='float64')
-                    wt = get_array(self.weight_path, start, end, data_type='float32')
+                    imgs = get_array(self.imgs_path, start, end)
+                    ensemble_prediction = get_array(self.ensemble_path, start, end, dtype='float32')
+                    wt = get_array(self.weight_path, start, end, dtype='float32')
 
                     inp = [imgs, ensemble_prediction, self.supervised_flag[start:end], wt]
                     del imgs, wt
@@ -146,14 +146,13 @@ def train(gpu_id, nb_gpus):
 
                     model_out = model.predict(inp, batch_size=2, verbose=1)  # 1
                     # model_out = np.add(model_out, model.predict(inp, batch_size=2, verbose=1))  # 2
-                    # model_out = np.add(model_out, model.predict(inp, batch_size=2, verbose=1))  # 3
                     del inp
 
-                    cur_pred[:, :, :, :, 0] = model_out[0] / ENSEMBLE_NO
-                    cur_pred[:, :, :, :, 1] = model_out[1] / ENSEMBLE_NO
-                    cur_pred[:, :, :, :, 2] = model_out[2] / ENSEMBLE_NO
-                    cur_pred[:, :, :, :, 3] = model_out[3] / ENSEMBLE_NO
-                    cur_pred[:, :, :, :, 4] = model_out[4] / ENSEMBLE_NO
+                    cur_pred[:, :, :, :, 0] = model_out[0]
+                    cur_pred[:, :, :, :, 1] = model_out[1]
+                    cur_pred[:, :, :, :, 2] = model_out[2]
+                    cur_pred[:, :, :, :, 3] = model_out[3]
+                    cur_pred[:, :, :, :, 4] = model_out[4]
 
                     del model_out
 
@@ -177,17 +176,15 @@ def train(gpu_id, nb_gpus):
                                         np.ones_like(flag), np.zeros_like(flag))
                         self.supervised_flag[start:end] = flag
                         del flag
-                    sup_no = sup_no + np.count_nonzero(self.supervised_flag)
-                    tf.summary.scalar("labeled_pixels", sup_no)
 
                     if epoch >= SAVE_WTS_AFTR_EPOCH:
                         var = np.abs(cur_pred - ensemble_prediction)
                         mean_along_zone = np.mean(var, axis=(0, 1, 2, 3))
-                        # next_weight = np.clip(next_weight, a_max=5, a_min=1)
-                        unsupervised_weight = np.where(var >= mean_along_zone, np.ones_like(ensemble_prediction),
+                        # next_weight = np.clip(next_weight, a_max=5, a_min=0.5)
+                        unsupervised_weight = np.where(var <= mean_along_zone, np.ones_like(ensemble_prediction),
                                                        np.zeros_like(ensemble_prediction))  # consider hard labels
                         del ensemble_prediction
-                        unsupervised_weight[:, :, :, :, 4] = unsupervised_weight[:, :, :, :, 4] * 4
+                        # unsupervised_weight[:, :, :, :, 3] = unsupervised_weight[:, :, :, :, 3] * 4
                         # unsupervised_weight = np.where(var >= mean_along_zone,1., 1.)
                         # del mean_along_zone, var
                         save_array(self.weight_path, unsupervised_weight, start, end)
@@ -260,8 +257,8 @@ def train(gpu_id, nb_gpus):
 
     val_supervised_flag = np.ones((num_val_data, 32, 168, 168, 1), dtype='int8')
     val_unsupervised_weight = np.zeros((num_val_data, 32, 168, 168, 5), dtype='float32')
-    val_x_arr = get_complete_array(VAL_IMGS_PATH, data_type='float64')
-    val_y_arr = get_complete_array(VAL_GT_PATH, data_type='int8')
+    val_x_arr = get_complete_array(VAL_IMGS_PATH)
+    val_y_arr = get_complete_array(VAL_GT_PATH, dtype='int8')
 
     pz = val_y_arr[:, :, :, :, 0]
     cz = val_y_arr[:, :, :, :, 1]
@@ -296,16 +293,16 @@ def predict(val_x_arr, val_y_arr):
     y_val = [pz, cz, us, afs, bg]
     x_val = [val_x_arr, val_y_arr, val_supervised_flag, val_unsupervised_weight]
     wm = weighted_model()
-    model = wm.build_model(num_class=NUM_CLASS, use_dice_cl=False, learning_rate=learning_rate, gpu_id=None,
-                           nb_gpus=None, trained_model='/home/suhita/zonals/temporal/temporal_mse.h5')
+    model = wm.build_model(num_class=NUM_CLASS, use_dice_cl=True, learning_rate=learning_rate, gpu_id=None,
+                           nb_gpus=None, trained_model=MODEL_NAME)
     print('load_weights')
     # model.load_weights()
     print('predict')
-    # out = model.predict(x_val, batch_size=1, verbose=1)
+    out = model.predict(x_val, batch_size=1, verbose=1)
 
     print(model.evaluate(x_val, y_val, batch_size=1, verbose=1))
 
-    # np.save(name + '.npy', out)
+    np.save('predicted_sl2' + '.npy', out)
 
 
 if __name__ == '__main__':

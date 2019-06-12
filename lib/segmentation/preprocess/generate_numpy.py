@@ -32,10 +32,9 @@ for i in np.arange(start=58, stop=stop):
 vimgs = np.load('/home/suhita/zonals/data/test_anneke/final_test_array_imgs.npy')
 print(vimgs.shape)
 # vgt = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy')
-vgt = np.load('/home/suhita/zonals/data/test_anneke/final_test_array_GT.npy')
-vgt = vgt.astype('int8')
+vgt = np.load('/home/suhita/zonals/data/test_anneke/final_test_array_GT.npy').astype('int8')
 
 for i in np.arange(vimgs.shape[0]):
-    np.save('/home/suhita/zonals/data/test_anneke/imgs/' + str(i), vimgs[i])
-    np.save('/home/suhita/zonals/data/test_anneke/gt/' + str(i), vgt[i])
+    np.save('/home/suhita/zonals/data/test_anneke/imgs/' + str(i), vimgs[i, :, :, :, :])
+    np.save('/home/suhita/zonals/data/test_anneke/gt/' + str(i), vgt[i, :, :, :, :])
     print(i)

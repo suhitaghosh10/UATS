@@ -42,7 +42,16 @@ class weighted_model:
 
         return ((2. * size_of_A_intersect_B) + smooth) / ((c * size_of_A) + size_of_B + smooth)
 
-    def semi_supervised_loss_mse(self, input, alpha=0.6):
+    def focal_loss(self, y_true, y_pred, gamma=2):
+
+        pt = y_pred * y_true + (1 - y_pred) * (1 - y_true)
+        pt = K.clip(pt, K.epsilon(), 1 - K.epsilon())
+        CE = -K.log(pt)
+        FL = K.pow(1 - pt, gamma) * CE
+
+        return FL
+
+    def semi_supervised_loss_dice(self, input, alpha=0.6):
 
         def loss_func(y_true, y_pred):
             print(K.eval(self.epoch_ctr))
@@ -55,22 +64,28 @@ class weighted_model:
             supervised_flag = input[:, :, :, :, 1]
             weight = input[:, :, :, :, 2]  # last elem are weights
 
-            # model_pred = y_pred
-            unsupervised_gt = tf.where(unsupervised_gt >= 0.9, K.ones_like(unsupervised_gt),
-                                       K.zeros_like(unsupervised_gt))
-            unsupervised_loss = - K.mean(weight * self.dice_coef(unsupervised_gt, y_pred))
-            tf.summary.scalar("unsupervised_loss", unsupervised_loss)
-            # print('unsupervised_loss', unsupervised_loss)
-
             supervised_loss = - K.mean(self.dice_coef(y_true, y_pred) * supervised_flag[:, 0, 0, 0])
             tf.summary.scalar("supervised_loss", supervised_loss)
+
+            unsupervised_gt = tf.where(unsupervised_gt >= 0.9, K.ones_like(unsupervised_gt),
+                                       K.zeros_like(unsupervised_gt))
+            # unsupervised_gt = tf.where(supervised_flag > 0., unsupervised_gt, K.zeros_like(unsupervised_gt))
+            # y_pred_cons = tf.where(supervised_flag > 0., y_pred, K.zeros_like(y_pred))
+
+            # unsupervised_loss = - tf.divide(K.sum(weight * self.dice_coef(unsupervised_gt, y_pred)), wt_nonzero)
+            # unsupervised_loss = -K.mean(weight * self.focal_loss_softmax(unsupervised_gt, y_pred))
+            # unsupervised_loss = - (1- K.mean(self.dice_coef(unsupervised_gt, y_pred)))
+            unsupervised_loss = -  K.mean(weight * (1 - self.dice_coef(unsupervised_gt, y_pred)))
+            tf.summary.scalar("unsupervised_loss", unsupervised_loss)
+
+
+
 
             return supervised_loss + unsupervised_loss
 
         return loss_func
 
-
-    def semi_supervised_loss_dice(self, input, alpha=0.6):
+    def semi_supervised_loss_focalLoss(self, input, alpha=0.6):
         """custom loss function"""
         epsilon = 1e-08
         smooth = 1.
@@ -89,7 +104,7 @@ class weighted_model:
             weight = input[:, :, :, :, 2]  # last elem are weights
 
             # unsupervised_loss = - K.mean(weight * self.c_dice_coef(unsupervised_gt, y_pred))
-            unsupervised_loss = - K.mean(weight * self.dice_coef(unsupervised_gt, y_pred))
+            unsupervised_loss = - K.mean(weight * self.focal_loss(unsupervised_gt, y_pred))
             supervised_loss = - K.mean(self.dice_coef(y_true, y_pred) * supervised_flag[:, 0, 0, 0])
 
             return supervised_loss + unsupervised_loss

@@ -170,24 +170,30 @@ def make_dataset(train_x, train_y, train_ux, train_uy, val_x, val_y, num_class):
     return ret_dic
 
 
-def get_complete_array(folder_path, data_type='float32'):
+def get_complete_array(folder_path, dtype=None):
     files = os.listdir(folder_path)
     total_arr = None
     for idx in np.arange(len(files)):
         if (idx == 0):
-            arr = np.load(folder_path + files[idx])
-            total_arr = np.zeros((len(files), *arr.shape), dtype=data_type)
+            arr = np.load(folder_path + str(idx) + '.npy')
+            if (dtype is None):
+                total_arr = np.zeros((len(files), *arr.shape))
+            else:
+                total_arr = np.zeros((len(files), *arr.shape), dtype=dtype)
             total_arr[0] = arr
         else:
-            total_arr[idx] = np.load(folder_path + '/' + files[idx])
+            total_arr[idx] = np.load(folder_path + str(idx) + '.npy')
     return total_arr
 
 
-def get_array(folder_path, start, end, data_type='float64'):
-    arr = np.load(folder_path + '/1.npy')
-    total_arr = np.zeros((end - start, *arr.shape), dtype=data_type)
+def get_array(folder_path, start, end, dtype=None):
+    arr = np.load(folder_path + '/0.npy')
+    if dtype is None:
+        total_arr = np.zeros((end - start, *arr.shape))
+    else:
+        total_arr = np.zeros((end - start, *arr.shape), dtype=dtype)
     for idx in np.arange(start, end):
-        arr_idx = start - idx
+        arr_idx = idx - start
         total_arr[arr_idx] = np.load(folder_path + '/' + str(idx) + '.npy')
 
     return total_arr
@@ -195,7 +201,7 @@ def get_array(folder_path, start, end, data_type='float64'):
 
 def save_array(path, arr, start, end):
     for idx in np.arange(start, end):
-        arr_idx = start - idx
+        arr_idx = idx - start
         np.save(path + str(idx) + '.npy', arr[arr_idx])
 
 
@@ -245,4 +251,6 @@ def whiten_zca(x_train, x_test):
 
 
 if __name__ == '__main__':
-    get_complete_array('/home/suhita/zonals/data/validation/imgs/')
+    a = get_array('/home/suhita/zonals/data/validation/gt/', start=0, end=20, data_type='int8')
+    b = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy')
+    print(np.count_nonzero(a - b))
