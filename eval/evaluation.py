@@ -519,7 +519,7 @@ def postprocesAndEvaluateFiles(name, GT_array, csvName, eval=True):
 
 
 if __name__ == '__main__':
-    name = '/home/suhita/zonals/temporal/model/predicted_sl2'
+    name = '/home/suhita/zonals/temporal/model/predicted'
     GT_array_name = '/home/suhita/zonals/data/test_anneke/final_test_array_GT.npy'
     csvName = 'temporal_final.csv'
     from lib.segmentation.utils import get_complete_array

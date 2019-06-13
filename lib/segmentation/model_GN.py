@@ -13,47 +13,34 @@ smooth = 1.
 
 
 class weighted_model:
-    alpha_sl = K.variable(1., name='alpha_sl')
-
-    class NewCallback(Callback):
-        def __init__(self, alpha_sl, patience=10, ctr=0):
-            self.alpha_sl = alpha_sl
+    class LossCallback(Callback):
+        def __init__(self, loss_alpha, patience=10, ctr=0):
+            self.loss_alpha = loss_alpha
             self.patience = patience
             self.ctr = ctr
 
         def on_epoch_end(self, epoch, patience=10, logs={}):
-            with tf.Session() as sess:
-                sess.run(tf.global_variables_initializer())
+            patience = self.patience
+            min_val = 0.60
+            cur_val = self.loss_alpha
 
-                patience = self.patience
-                min_val = tf.constant(0.60, dtype='float32')
-                cur_val = self.alpha_sl
+            print(cur_val)
+            ctr = self.ctr
+            # c1 = np.floormod(ctr, patience)) == 0
+            # c2 = sess.run(tf.math.greater(cur_val, min_val))
+            self.loss_alpha = cur_val - 0.025
+            print(self.loss_alpha)
 
-                print(self.alpha_sl)
-                ctr = self.ctr
-                c1 = sess.run(tf.floormod(ctr, patience)) == 0
-                c2 = sess.run(tf.math.greater(cur_val, min_val))
+            ctr = self.ctr + 1
+            self.ctr = ctr
 
-                # print('am here')
-                print('c1', c1)
-                print('c2', c2)
-
-                if (c1 and c2):
-                    print('am here 2')
-                    self.alpha_sl = cur_val - 0.025
-
-                ctr = self.ctr + 1
-                self.ctr = ctr
+        def get_alpha(self):
+            return self.loss_alpha
 
     def complex_loss(self, mask):
         """custom loss function"""
 
-        print(mask.shape)
-        epsilon = 1e-08
         smooth = 1.0
-        ce_epsilon = 1e-12
-        gamma = 2.
-        alpha = .25
         '''
 
         def loss(y_true, y_pred, axis=(-4, -3, -2) , smooth=1.):
@@ -81,6 +68,7 @@ class weighted_model:
 
         def weighted_binary_cross_entropy(y_true, y_pred):
 
+            loss_alpha = 0.7
             dice_loss = -K.mean(self.dice_coef(y_true, y_pred))
 
             size_of_A_intersect_B = K.sum(y_true * y_pred * mask)
@@ -93,9 +81,9 @@ class weighted_model:
                 c = 1
 
             cDC = -K.mean((2. * size_of_A_intersect_B) + smooth) / ((c * size_of_A) + size_of_B + smooth)
-            tf.summary.scalar("cdc_loss", (1 - self.alpha_sl) * cDC)
-            tf.summary.scalar("dc_loss", (self.alpha_sl) * dice_loss)
-            return (1 - self.alpha_sl) * cDC + self.alpha_sl * dice_loss
+            tf.summary.scalar("cdc_loss", (1 - loss_alpha) * cDC)
+            tf.summary.scalar("dc_loss", loss_alpha * dice_loss)
+            return (1 - loss_alpha) * cDC + loss_alpha * dice_loss
 
         return weighted_binary_cross_entropy
 
@@ -120,7 +108,8 @@ class weighted_model:
         return ((2. * size_of_A_intersect_B) + smooth) / ((c * size_of_A) + size_of_B + smooth)
         # downsampling, analysis path
 
-    def downLayer(self, inputLayer, filterSize, i, bn=False):
+    def downLayer(self, inputLayer, filterSize, i, bn=False, axis=4):
+
         conv = Conv3D(filterSize, (3, 3, 3), activation='relu', padding='same', name='conv' + str(i) + '_1')(inputLayer)
         if bn:
             conv = BatchNormalization()(conv)

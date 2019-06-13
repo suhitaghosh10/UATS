@@ -20,13 +20,37 @@ class weighted_model:
             weighted_model.epoch_ctr = epoch
             print(weighted_model.epoch_ctr)
 
-    def dice_coef(self, y_true, y_pred, smooth=1., axis=(-3, -2, -1)):
-        # intersection = K.sum(y_true * y_pred, axis=axis)
-        # return (2. * intersection + smooth) / (K.sum(y_true, axis=axis) + K.sum(y_pred, axis=axis) + smooth)
+    def dice_coef(self, y_true, y_pred, smooth=1.):
+
         y_true_f = K.flatten(y_true)
         y_pred_f = K.flatten(y_pred)
         intersection = K.sum(y_true_f * y_pred_f)
+
         return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
+
+    def sup_dice_coef(self, y_true, y_pred, flag, smooth=1., axis=(-3, -2, -1)):
+        intersection = K.sum(y_true * y_pred * flag, axis=(1, 2, 3))
+        sum_gt = K.sum(y_true * flag, axis=(1, 2, 3))
+        sum_pred = K.sum(y_pred * flag, axis=(1, 2, 3))
+
+        return (2. * intersection + smooth) / (sum_gt + sum_pred + smooth)
+
+    def unsup_dice_coef(self, y_true, y_pred, weight, smooth=1., axis=(-3, -2, -1), gamma=2):
+        # intersection = K.sum(y_true * y_pred, axis=axis)
+        # return (2. * intersection + smooth) / (K.sum(y_true, axis=axis) + K.sum(y_pred, axis=axis) + smooth)
+        # y_true_f = K.flatten(y_true)
+        # y_pred_f = K.flatten(y_pred)
+        # intersection = K.sum(y_true * y_pred * weight, axis=(1,2,3))
+        # sum_gt = K.sum(y_true * weight, axis=(1,2,3))
+        # sum_pred = K.sum(y_pred * weight, axis=(1, 2, 3))
+
+        # return (2. * intersection + smooth) / (sum_gt + sum_pred + smooth)
+        y_true = y_true * weight
+        y_pred = y_pred * weight
+        pt = y_pred * y_true + (1 - y_pred) * (1 - y_true)
+        pt = K.clip(pt, K.epsilon(), 1 - K.epsilon())
+        CE = -K.log(pt)
+        FL = K.pow(1 - pt, gamma) * CE
 
     def c_dice_coef(self, y_true, y_pred, smooth=1.):
         # y_true_f = K.flatten(y_true)
@@ -42,7 +66,7 @@ class weighted_model:
 
         return ((2. * size_of_A_intersect_B) + smooth) / ((c * size_of_A) + size_of_B + smooth)
 
-    def focal_loss(self, y_true, y_pred, weight, gamma=2):
+    def focal_loss(self, y_true, y_pred, weight, gamma=1.5):
 
         y_true = y_true * weight
         y_pred = y_pred * weight
@@ -66,22 +90,18 @@ class weighted_model:
             supervised_flag = input[:, :, :, :, 1]
             weight = input[:, :, :, :, 2]  # last elem are weights
 
-            supervised_loss = - K.mean(self.dice_coef(y_true, y_pred) * supervised_flag[:, 0, 0, 0])
+            supervised_loss = - K.mean(self.sup_dice_coef(y_true, y_pred, supervised_flag))
             tf.summary.scalar("supervised_loss", supervised_loss)
 
-            unsupervised_gt = tf.where(unsupervised_gt >= 0.9, K.ones_like(unsupervised_gt),
-                                       K.zeros_like(unsupervised_gt))
+            #unsupervised_gt = tf.where(unsupervised_gt >= 0.9, K.ones_like(unsupervised_gt), K.zeros_like(unsupervised_gt))
             # unsupervised_gt = tf.where(supervised_flag > 0., unsupervised_gt, K.zeros_like(unsupervised_gt))
             # y_pred_cons = tf.where(supervised_flag > 0., y_pred, K.zeros_like(y_pred))
 
             # unsupervised_loss = - tf.divide(K.sum(weight * self.dice_coef(unsupervised_gt, y_pred)), wt_nonzero)
             # unsupervised_loss = -K.mean(weight * self.focal_loss_softmax(unsupervised_gt, y_pred))
             # unsupervised_loss = - (1- K.mean(self.dice_coef(unsupervised_gt, y_pred)))
-            unsupervised_loss = -  K.mean(weight * (1 - self.dice_coef(unsupervised_gt, y_pred)))
+            unsupervised_loss = K.mean(self.focal_loss(unsupervised_gt, y_pred, weight))
             tf.summary.scalar("unsupervised_loss", unsupervised_loss)
-
-
-
 
             return supervised_loss + unsupervised_loss
 
@@ -134,7 +154,7 @@ class weighted_model:
         if bn:
             conv = BatchNormalization()(conv)
         if do:
-            conv = Dropout(0.5, seed=3, name='Dropout_' + str(i))(conv, training=True)
+            conv = Dropout(0.5, seed=3, name='Dropout_' + str(i))(conv)
         conv = Conv3D(int(filterSize / 2), (3, 3, 3), activation='relu', padding='same', name='conv' + str(i) + '_2')(
             conv)
         if bn:
@@ -173,7 +193,7 @@ class weighted_model:
         if bn:
             conv4 = BatchNormalization()(conv4)
         if do:
-            conv4 = Dropout(0.5, seed=4, name='Dropout_' + str(4))(conv4, training=True)
+            conv4 = Dropout(0.5, seed=4, name='Dropout_' + str(4))(conv4)
         conv4 = Conv3D(sfs * 16, (3, 3, 3), activation='relu', padding='same', kernel_initializer=kernel_init,
                    name='conv4_2')(conv4)
         if bn:
@@ -188,7 +208,7 @@ class weighted_model:
         if bn:
             conv5 = BatchNormalization()(conv5)
         if do:
-            conv5 = Dropout(0.5, seed=5, name='Dropout_' + str(5))(conv5, training=True)
+            conv5 = Dropout(0.5, seed=5, name='Dropout_' + str(5))(conv5)
         conv5 = Conv3D(int(sfs * 8), (3, 3, 3), activation='relu', padding='same', kernel_initializer=kernel_init,
                    name='conv' + str(5) + '_2')(conv5)
         if bn:
@@ -263,11 +283,11 @@ class weighted_model:
                             )
             else:
                 p_model.compile(optimizer=optimizer,
-                                loss={'pz': self.semi_supervised_loss_mse(pz),
-                                      'cz': self.semi_supervised_loss_mse(cz),
-                                      'us': self.semi_supervised_loss_mse(us),
-                                      'afs': self.semi_supervised_loss_mse(afs),
-                                      'bg': self.semi_supervised_loss_mse(bg)},
+                                loss={'pz': self.semi_supervised_loss_dice(pz),
+                                      'cz': self.semi_supervised_loss_dice(cz),
+                                      'us': self.semi_supervised_loss_dice(us),
+                                      'afs': self.semi_supervised_loss_dice(afs),
+                                      'bg': self.semi_supervised_loss_dice(bg)},
                                 metrics={'pz': self.dice_coef, 'cz': self.dice_coef, 'us': self.dice_coef,
                                          'afs': self.dice_coef, 'bg': self.dice_coef}
                                 )
@@ -296,14 +316,14 @@ class weighted_model:
                                 )
                 else:
                     p_model.compile(optimizer=optimizer,
-                                    loss={'pz': self.semi_supervised_loss_mse(pz),
-                                          'cz': self.semi_supervised_loss_mse(cz),
-                                          'us': self.semi_supervised_loss_mse(us),
-                                          'afs': self.semi_supervised_loss_mse(afs),
-                                          'bg': self.semi_supervised_loss_mse(bg)},
+                                    loss={'pz': self.semi_supervised_loss_dice(pz),
+                                          'cz': self.semi_supervised_loss_dice(cz),
+                                          'us': self.semi_supervised_loss_dice(us),
+                                          'afs': self.semi_supervised_loss_dice(afs),
+                                          'bg': self.semi_supervised_loss_dice(bg)},
                                     metrics={'pz': self.dice_coef, 'cz': self.dice_coef, 'us': self.dice_coef,
                                              'afs': self.dice_coef, 'bg': self.dice_coef}
-                                )
+                                    )
 
         return p_model
     # return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg])

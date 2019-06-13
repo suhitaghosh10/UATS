@@ -1,7 +1,7 @@
 import tensorflow as tf
 from keras import backend as K
 from keras.backend.tensorflow_backend import set_session
-from keras.callbacks import Callback
+from keras.callbacks import Callback, ReduceLROnPlateau
 from keras.callbacks import ModelCheckpoint, TensorBoard
 
 from generator.data_gen_optim import DataGenerator
@@ -12,8 +12,8 @@ from lib.segmentation.utils import get_complete_array, get_array, save_array
 from zonal_utils.AugmentationGenerator import *
 
 # 294 Training 58 have gt
-learning_rate = 5e-6
-TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/sl2' + str(learning_rate) + '_wt/'
+learning_rate = 2.5e-5
+TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/sl2' + str(learning_rate) + '_wt_v2/'
 MODEL_NAME = '/home/suhita/zonals/temporal/temporal_sl2_fold2.h5'
 
 TRAIN_IMGS_PATH = '/home/suhita/zonals/data/training/imgs/'
@@ -28,6 +28,7 @@ TRAINED_MODEL_PATH = '/home/suhita/zonals/temporal/temporal_sl2.h5'
 
 WEIGHT_PATH = '/home/suhita/zonals/temporal/sad/wt/'
 ENS_GT_PATH = '/home/suhita/zonals/temporal/sad/ens_gt/'
+FLAG_PATH = '/home/suhita/zonals/temporal/sad/flag/'
 
 NUM_CLASS = 5
 num_epoch = 351
@@ -53,9 +54,7 @@ def train(gpu_id, nb_gpus):
     num_un_labeled_train = num_train_data - num_labeled_train
     num_val_data = len(os.listdir(VAL_IMGS_PATH))
 
-    supervised_flag = np.concatenate(
-        (np.ones((num_labeled_train, 32, 168, 168, 1)), np.zeros((num_un_labeled_train, 32, 168, 168, 1)))).astype(
-        'int8')
+
 
     # prepare weights and arrays for updates
     gen_weight = ramp_up_weight(ramp_up_period, weight_max * (num_labeled_train / num_train_data))
@@ -84,28 +83,33 @@ def train(gpu_id, nb_gpus):
 
     class TemporalCallback(Callback):
 
-        def __init__(self, imgs_path, gt_path, ensemble_path, weight_path, supervised_flag,
+        def __init__(self, imgs_path, gt_path, ensemble_path, weight_path, supervised_flag_path,
                      variance_threshold, train_idx_list):
             self.imgs_path = imgs_path
             self.gt_path = gt_path
             self.ensemble_path = ensemble_path
             self.weight_path = weight_path
-            self.supervised_flag = supervised_flag.astype('int8')
+            self.supervised_flag_path = supervised_flag_path
             self.train_idx_list = train_idx_list  # list of indexes of training eg
             self.variance_th = variance_threshold
-
             unsupervised_target = get_complete_array(TRAIN_GT_PATH, dtype='float32')
 
             for patient in np.arange(num_train_data):
-                np.save(self.weight_path + str(patient) + '.npy', np.zeros((32, 168, 168, NUM_CLASS)).astype('float32'))
+                np.save(self.weight_path + str(patient) + '.npy', np.ones((32, 168, 168, NUM_CLASS)).astype('float32'))
                 np.save(self.ensemble_path + str(patient) + '.npy', unsupervised_target[patient])
+                if patient < num_labeled_train:
+                    np.save(self.supervised_flag_path + str(patient) + '.npy',
+                            np.ones((32, 168, 168, 1)).astype('int8'))
+                else:
+                    np.save(self.supervised_flag_path + str(patient) + '.npy',
+                            np.zeros((32, 168, 168, 1)).astype('int8'))
             del unsupervised_target
 
         def on_batch_begin(self, batch, logs=None):
             pass
 
         def on_epoch_begin(self, epoch, logs=None):
-            tf.summary.scalar("labeled_pixels", np.count_nonzero(self.supervised_flag))
+            # tf.summary.scalar("labeled_pixels", np.count_nonzero(self.supervised_flag))
             if epoch > num_epoch - ramp_down_period:
                 weight_down = next(gen_lr_weight)
                 K.set_value(model.optimizer.lr, weight_down * learning_rate)
@@ -138,8 +142,9 @@ def train(gpu_id, nb_gpus):
                     imgs = get_array(self.imgs_path, start, end)
                     ensemble_prediction = get_array(self.ensemble_path, start, end, dtype='float32')
                     wt = get_array(self.weight_path, start, end, dtype='float32')
+                    supervised_flag = get_array(self.supervised_flag_path, start, end, dtype='int8')
 
-                    inp = [imgs, ensemble_prediction, self.supervised_flag[start:end], wt]
+                    inp = [imgs, ensemble_prediction, supervised_flag, wt]
                     del imgs, wt
 
                     cur_pred = np.zeros((actual_batch_size, 32, 168, 168, NUM_CLASS))
@@ -162,20 +167,22 @@ def train(gpu_id, nb_gpus):
                     save_array(self.ensemble_path, ensemble_prediction, start, end)
                     # del ensemble_prediction
                     if b_no == 0:
-                        flag = self.supervised_flag[num_labeled_train:actual_batch_size]
+                        flag = supervised_flag[num_labeled_train:actual_batch_size]
                         # flag = np.where(np.reshape(np.max(cur_pred[num_labeled_train:actual_batch_size], axis=-1), flag.shape)  >= 0.99, np.ones_like(flag), flag)
                         flag = np.where(
                             np.reshape(np.max(ensemble_prediction[num_labeled_train:actual_batch_size], axis=-1),
                                        flag.shape) >= THRESHOLD, np.ones_like(flag), np.zeros_like(flag))
-                        self.supervised_flag[num_labeled_train:actual_batch_size] = flag
-                        del flag
+                        save_array(self.supervised_flag_path, flag, num_labeled_train, actual_batch_size)
+
                     else:
-                        flag = self.supervised_flag[start:end]
                         # flag = np.where(np.reshape(np.max(cur_pred, axis=-1),flag.shape) >= 0.99, np.ones_like(flag), flag)
-                        flag = np.where(np.reshape(np.max(ensemble_prediction, axis=-1), flag.shape) >= THRESHOLD,
-                                        np.ones_like(flag), np.zeros_like(flag))
-                        self.supervised_flag[start:end] = flag
-                        del flag
+                        flag = np.where(
+                            np.reshape(np.max(ensemble_prediction, axis=-1),
+                                       supervised_flag.shape) >= THRESHOLD, np.ones_like(supervised_flag),
+                            np.zeros_like(supervised_flag))
+                        save_array(self.supervised_flag_path, flag, start, end)
+                    del flag
+                    del supervised_flag
 
                     if epoch >= SAVE_WTS_AFTR_EPOCH:
                         var = np.abs(cur_pred - ensemble_prediction)
@@ -200,7 +207,7 @@ def train(gpu_id, nb_gpus):
                               self.gt_path,
                               self.ensemble_path,
                               self.weight_path,
-                              self.supervised_flag,
+                              self.supervised_flag_path,
                               self.train_idx_list,
                               **params)
 
@@ -222,18 +229,20 @@ def train(gpu_id, nb_gpus):
                                            verbose=1,
                                            mode='min')
 
-    tensorboard = TensorBoard(log_dir=TB_LOG_DIR, write_graph=False, write_grads=True, histogram_freq=1,
+    tensorboard = TensorBoard(log_dir=TB_LOG_DIR, write_graph=False, write_grads=True, histogram_freq=0,
                               batch_size=2, write_images=False)
 
     # datagen listmake_dataset
     train_id_list = [str(i) for i in np.arange(0, num_train_data)]
 
-    tcb = TemporalCallback(TRAIN_IMGS_PATH, TRAIN_GT_PATH, ENS_GT_PATH, WEIGHT_PATH, supervised_flag,
+    tcb = TemporalCallback(TRAIN_IMGS_PATH, TRAIN_GT_PATH, ENS_GT_PATH, WEIGHT_PATH, FLAG_PATH,
                            VAR_THRESHOLD, train_id_list)
+    LRDecay = ReduceLROnPlateau(monitor='val_loss', factor=0.8, patience=20, verbose=1, mode='min', min_lr=1e-8,
+                                epsilon=0.01)
     lcb = wm.LossCallback()
     # del unsupervised_target, unsupervised_weight, supervised_flag, imgs
     # del supervised_flag
-    cb = [model_checkpoint, tcb, tensorboard, lcb]
+    cb = [model_checkpoint, tcb, tensorboard, lcb, LRDecay]
 
     print('BATCH Size = ', batch_size)
 
@@ -248,12 +257,11 @@ def train(gpu_id, nb_gpus):
                                        TRAIN_GT_PATH,
                                        ENS_GT_PATH,
                                        WEIGHT_PATH,
-                                       supervised_flag,
+                                       FLAG_PATH,
                                        train_id_list)
 
-    del supervised_flag
-    steps = num_train_data / batch_size
-    # steps=2
+    # = num_train_data / batch_size
+    steps =2
 
     val_supervised_flag = np.ones((num_val_data, 32, 168, 168, 1), dtype='int8')
     val_unsupervised_weight = np.zeros((num_val_data, 32, 168, 168, 5), dtype='float32')
@@ -309,7 +317,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = 2
-    gpu_id = '0, 1'
+    gpu_id = '3'
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
     # os.environ["CUDA_VISIBLE_DEVICES"] = '2'
@@ -325,8 +333,8 @@ if __name__ == '__main__':
         'batch_size should be a multiple of the nr. of gpus. ' + \
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
-    # train(None, None)
-    train(gpu, nb_gpus)
+    train(None, None)
+    #train(gpu, nb_gpus)
     # val_x = np.load('/home/suhita/zonals/data/validation/valArray_imgs_fold1.npy')
     # val_y = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy').astype('int8')
 

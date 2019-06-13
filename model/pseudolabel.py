@@ -1,8 +1,9 @@
 import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
-from keras.callbacks import ModelCheckpoint, TensorBoard
+from keras.callbacks import ModelCheckpoint, TensorBoard, ReduceLROnPlateau
 
 from generator.augment_mask_data_gen import AugmentDataGenerator
+from generator.val_augment_mask_data_gen import ValAugmentDataGenerator
 from lib.segmentation.model_GN import weighted_model
 from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
 from lib.segmentation.utils import get_complete_array
@@ -10,16 +11,21 @@ from zonal_utils.AugmentationGenerator import *
 
 # 294 Training 58 have gt
 learning_rate = 2.5e-5
-TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/psedo_simple' + str(learning_rate) + '/'
+TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/ps_0.5alpha' + str(learning_rate) + '/'
 MODEL_NAME = '/home/suhita/zonals/temporal/p.h5'
 
 TRAIN_IMGS_PATH = '/home/suhita/zonals/data/training/imgs/'
 TRAIN_GT_PATH = '/home/suhita/zonals/data/training/gt/'
-# TRAIN_UNLABELED_DATA_PRED_PATH = '/home/suhita/zonals/data/training/ul_gt/'
 
-VAL_IMGS_PATH = '/home/suhita/zonals/data/test_anneke/imgs/'
-VAL_GT_PATH = '/home/suhita/zonals/data/test_anneke/gt/'
+VAL_IMGS_PATH = '/home/suhita/zonals/data/validation/imgs/'
+VAL_GT_PATH = '/home/suhita/zonals/data/validation/gt/'
+
+TEST_IMGS_PATH = '/home/suhita/zonals/data/test_anneke/imgs/'
+TEST_GT_PATH = '/home/suhita/zonals/data/test_anneke/gt/'
+
+
 TRAINED_MODEL_PATH = '/home/suhita/zonals/data/model.h5'
+
 
 NUM_CLASS = 5
 num_epoch = 351
@@ -69,16 +75,19 @@ def train(gpu_id, nb_gpus, trained_model=None):
                                            verbose=1,
                                            mode='min')
 
-    tensorboard = TensorBoard(log_dir=TB_LOG_DIR, write_graph=False, write_grads=True, histogram_freq=1,
+    tensorboard = TensorBoard(log_dir=TB_LOG_DIR, write_graph=False, write_grads=True, histogram_freq=0,
                               batch_size=2, write_images=False)
+    LRDecay = ReduceLROnPlateau(monitor='val_loss', factor=0.8, patience=20, verbose=1, mode='min', min_lr=1e-8,
+                                epsilon=0.01)
 
     # datagen listmake_dataset
     train_id_list = [str(i) for i in np.arange(294)]
 
     # del unsupervised_target, unsupervised_weight, supervised_flag, imgs
     # del supervised_flag
-    maskcb = wm.NewCallback(.99, 25)
-    cb = [model_checkpoint, tensorboard, maskcb]
+
+    # maskcb = wm.LossCallback(0.99, 25)
+    cb = [model_checkpoint, tensorboard, LRDecay]
 
     print('BATCH Size = ', batch_size)
 
@@ -97,15 +106,20 @@ def train(gpu_id, nb_gpus, trained_model=None):
     steps = 294 / batch_size
     # steps=2
 
-    val_imgs = get_complete_array(VAL_IMGS_PATH)
-    val_gt = get_complete_array(VAL_GT_PATH, dtype='int8')
-    val_mask = np.zeros_like(val_gt)
-    val_gt = val_gt.astype(np.uint8)
-    val_gt_list = [val_gt[:, :, :, :, 0], val_gt[:, :, :, :, 1], val_gt[:, :, :, :, 2], val_gt[:, :, :, :, 3],
-                   val_gt[:, :, :, :, 4]]
+    # val_imgs = get_complete_array(TEST_IMGS_PATH)
+    # val_gt = get_complete_array(TEST_GT_PATH, dtype='int8')
+    # val_mask = np.zeros_like(val_gt)
+    # val_gt = val_gt.astype(np.uint8)
+    # val_gt_list = [val_gt[:, :, :, :, 0], val_gt[:, :, :, :, 1], val_gt[:, :, :, :, 2], val_gt[:, :, :, :, 3],val_gt[:, :, :, :, 4]]
+    val_id_list = [str(i) for i in np.arange(20)]
+    val_generator = ValAugmentDataGenerator(TEST_IMGS_PATH,
+                                            TEST_GT_PATH,
+                                            val_id_list,
+                                            **params)
+
     history = model.fit_generator(generator=training_generator,
                                   steps_per_epoch=steps,
-                                  validation_data=[[val_imgs, val_mask], val_gt_list],
+                                  validation_data=val_generator,
                                   epochs=num_epoch,
                                   callbacks=cb
                                   )
@@ -158,11 +172,11 @@ if __name__ == '__main__':
         'batch_size should be a multiple of the nr. of gpus. ' + \
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
-    # train(gpu, nb_gpus, trained_model= TRAINED_MODEL_PATH)
-    train(gpu, nb_gpus, trained_model=TRAINED_MODEL_PATH)
+    train(None, None, trained_model=TRAINED_MODEL_PATH)
+    #train(gpu, nb_gpus, trained_model=TRAINED_MODEL_PATH)
     # val_x = np.load('/home/suhita/zonals/data/validation/valArray_imgs_fold1.npy')
     # val_y = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy').astype('int8')
 
-    val_x = VAL_IMGS_PATH
-    val_y = VAL_GT_PATH
+    val_x = TEST_IMGS_PATH
+    val_y = TEST_GT_PATH
     predict(val_x, val_y)
