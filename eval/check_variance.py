@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 
-from lib.segmentation.model_WN_MCdropout import weighted_model
+from lib.segmentation.model_TemporalEns import weighted_model
 
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 w = weighted_model()

@@ -5,7 +5,7 @@ from keras.callbacks import Callback
 from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, EarlyStopping, TensorBoard, CSVLogger
 
 from generator.data_gen import DataGenerator
-from lib.segmentation.model_WN_MCdropout import build_model
+from lib.segmentation.model_TemporalEns import build_model
 from lib.segmentation.ops import ramp_up_weight, ramp_down_weight
 from lib.segmentation.utils import make_train_test_dataset
 from zonal_utils.AugmentationGenerator import *

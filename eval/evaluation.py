@@ -519,13 +519,12 @@ def postprocesAndEvaluateFiles(name, GT_array, csvName, eval=True):
 
 
 if __name__ == '__main__':
-    name = '/home/suhita/zonals/temporal/model/predicted'
+    name = '/home/suhita/zonals/temporal/model/baseline/gn_predicted'
     GT_array_name = '/home/suhita/zonals/data/test_anneke/final_test_array_GT.npy'
-    csvName = 'temporal_final.csv'
-    from lib.segmentation.utils import get_complete_array
+    csvName = name + '.csv'
 
-    # GT_array = np.load(GT_array_name)
-    GT_array = get_complete_array('/home/suhita/zonals/data/test_anneke/gt/')
+    GT_array = np.load(GT_array_name)
+    # GT_array = get_complete_array('/home/suhita/zonals/data/test_anneke/gt/')
 
 
     # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
