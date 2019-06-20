@@ -369,7 +369,7 @@ if __name__ == '__main__':
 
     # train(gpu, nb_gpus)
     # train(gpu, nb_gpus)
-    # val_x = np.load('/home/suhita/zonals/data/validation/valArray_imgs_fold1.npy')
+    #val_x = np.load('/home/suhita/zonals/data/validation/valArray_imgs_fold1.npy')
     #val_y = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy').astype('int8')
 
     val_x = np.load('/home/suhita/zonals/data/test_anneke/final_test_array_imgs.npy')

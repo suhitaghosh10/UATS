@@ -23,8 +23,8 @@ TRAIN_GT_PATH = '/home/suhita/zonals/data/training/gt/'
 VAL_IMGS_PATH = '/home/suhita/zonals/data/validation/imgs/'
 VAL_GT_PATH = '/home/suhita/zonals/data/validation/gt/'
 
-TEST_IMGS_PATH = '/home/suhita/zonals/data/val/imgs/'
-TEST_GT_PATH = '/home/suhita/zonals/data/val/gt/'
+TEST_IMGS_PATH = '/home/suhita/zonals/data/validation/imgs/'
+TEST_GT_PATH = '/home/suhita/zonals/data/validation/gt/'
 
 
 TRAINED_MODEL_PATH = '/home/suhita/zonals/data/model.h5'

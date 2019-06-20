@@ -14,16 +14,19 @@ learning_rate = 5e-5
 TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/supervised_gn' + str(learning_rate) + '/'
 MODEL_NAME = '/home/suhita/zonals/temporal/supervised_gn.h5'
 
+
 TRAIN_IMGS_PATH = '/home/suhita/zonals/data/training/supervised/imgs/'
 TRAIN_GT_PATH = '/home/suhita/zonals/data/training/supervised/gt/'
 
-VAL_IMGS_PATH = '/home/suhita/zonals/data/validation/imgs/'
-VAL_GT_PATH = '/home/suhita/zonals/data/validation/gt/'
+VAL_IMGS_PATH = '/home/suhita/zonals/data/val/imgs/'
+VAL_GT_PATH = '/home/suhita/zonals/data/val/gt/'
 
-TEST_IMGS_PATH = '/home/suhita/zonals/data/test_anneke/imgs/'
-TEST_GT_PATH = '/home/suhita/zonals/data/test_anneke/gt/'
+TEST_IMGS_PATH = '/home/suhita/zonals/data/val/imgs/'
+TEST_GT_PATH = '/home/suhita/zonals/data/val/gt/'
+
 
 TRAINED_MODEL_PATH = MODEL_NAME
+
 
 NUM_CLASS = 5
 num_epoch = 351
@@ -108,8 +111,8 @@ def train(gpu_id, nb_gpus, trained_model=None):
     # val_gt = val_gt.astype(np.uint8)
     # val_gt_list = [val_gt[:, :, :, :, 0], val_gt[:, :, :, :, 1], val_gt[:, :, :, :, 2], val_gt[:, :, :, :, 3],val_gt[:, :, :, :, 4]]
     val_id_list = [str(i) for i in np.arange(20)]
-    val_generator = val_gen(VAL_IMGS_PATH,
-                            VAL_GT_PATH,
+    val_generator = val_gen(TEST_IMGS_PATH,
+                            TEST_GT_PATH,
                             val_id_list,
                             **params)
 
@@ -173,4 +176,4 @@ if __name__ == '__main__':
 
     val_x = TEST_IMGS_PATH
     val_y = TEST_GT_PATH
-    # predict(TRAINED_MODEL_PATH, eval=False)
+    #predict(val_x, val_y, TRAINED_MODEL_PATH)

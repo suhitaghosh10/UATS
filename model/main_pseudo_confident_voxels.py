@@ -45,8 +45,6 @@ alpha = 0.6
 VAR_THRESHOLD = 0.5
 
 AFS = 3
-
-
 def train(gpu_id, nb_gpus, trained_model=TRAINED_MODEL_PATH):
     num_labeled_train = 58
     num_train_data = len(os.listdir(TRAIN_IMGS_PATH))
@@ -166,9 +164,9 @@ def train(gpu_id, nb_gpus, trained_model=TRAINED_MODEL_PATH):
                         logs['pz_dice_coef'] = K.eval(self.dice_coef(y_true[:, :, :, :, 0], cur_pred[0:58, :, :, :, 0]))
                         logs['cz_dice_coef'] = K.eval(self.dice_coef(y_true[:, :, :, :, 1], cur_pred[0:58, :, :, :, 1]))
                         logs['us_dice_coef'] = K.eval(self.dice_coef(y_true[:, :, :, :, 2], cur_pred[0:58, :, :, :, 2]))
-                        logs['afs_dice_coef'] = K.eval(
-                            self.dice_coef(y_true[:, :, :, :, 3], cur_pred[0:58, :, :, :, 3]))
+                        logs['afs_dice_coef'] = K.eval(self.dice_coef(y_true[:, :, :, :, 3], cur_pred[0:58, :, :, :, 3]))
                         logs['bg_dice_coef'] = K.eval(self.dice_coef(y_true[:, :, :, :, 4], cur_pred[0:58, :, :, :, 4]))
+
 
                         flag = supervised_flag[num_labeled_train:actual_batch_size]
                         flag = np.where(
@@ -316,7 +314,7 @@ if __name__ == '__main__':
         '''
 
     train(None, None, trained_model=TRAINED_MODEL_PATH)
-    # train(gpu, nb_gpus)
+    #train(gpu, nb_gpus)
     # val_x = np.load('/home/suhita/zonals/data/validation/valArray_imgs_fold1.npy')
     # val_y = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy').astype('int8')
 

@@ -208,8 +208,7 @@ def train(gpu_id, nb_gpus):
                             self.dice_coef(y_true[:, :, :, :, 2], model_out[2][0:58, :, :, :]))
                         logs['afs_dice_coef'] = K.eval(
                             self.dice_coef(y_true[:, :, :, :, 3], model_out[3][0:58, :, :, :]))
-                        logs['bg_dice_coef'] = K.eval(
-                            self.dice_coef(y_true[:, :, :, :, 4], model_out[4][0:58, :, :, :]))
+                        logs['bg_dice_coef'] = K.eval(self.dice_coef(y_true[:, :, :, :, 4], model_out[4][0:58, :, :, :]))
 
                         gt = get_array(self.gt_path, 0, 58, dtype='int8')
                         cur_pred[0:58, :, :, :, 0] = model_out[0][0:58, :, :, :]
