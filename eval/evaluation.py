@@ -519,7 +519,7 @@ def postprocesAndEvaluateFiles(name, GT_array, csvName, eval=True):
 
 
 if __name__ == '__main__':
-    name = '/home/suhita/zonals/temporal/model/baseline/gn_predicted'
+    name = '/home/suhita/zonals/temporal/model/predicted1'
     GT_array_name = '/home/suhita/zonals/data/test_anneke/final_test_array_GT.npy'
     csvName = name + '.csv'
 

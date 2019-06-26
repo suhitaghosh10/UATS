@@ -3,6 +3,8 @@ import keras
 from generator.AugmentationGenerator import *
 
 NPY = '.npy'
+
+
 class DataGenerator(keras.utils.Sequence):
     def __init__(self, imgs_path, gt_path, ensemble_path, supervised_flag_path, id_list, batch_size=2,
                  dim=(32, 168, 168)):
@@ -23,7 +25,8 @@ class DataGenerator(keras.utils.Sequence):
         'Generates data containing batch_size samples'
         img = np.empty((self.batch_size, *self.dim, 1))
         ensemble_pred = np.zeros((self.batch_size, *self.dim, 5))
-        flag = np.zeros((self.batch_size, *self.dim, 1), dtype='int8')
+        flag = np.zeros((self.batch_size, *self.dim), dtype='float16')
+
         pz_gt = np.zeros((self.batch_size, *self.dim), dtype='int8')
         cz_gt = np.zeros((self.batch_size, *self.dim), dtype='int8')
         us_gt = np.zeros((self.batch_size, *self.dim), dtype='int8')
@@ -55,6 +58,7 @@ class DataGenerator(keras.utils.Sequence):
 
         x_t = [img, ensemble_pred, flag]
         y_t = [pz_gt, cz_gt, us_gt, afs_gt, bg_gt]
+        del gt, img, ensemble_pred, flag
 
         return x_t, y_t
 
@@ -71,6 +75,6 @@ class DataGenerator(keras.utils.Sequence):
         list_IDs_temp = [self.id_list[k] for k in indexes]
 
         # Generate data
-        [img, ensemble_pred, flag], [pz, cz, us, afs, bg] = self.__data_generation(list_IDs_temp)
+        [img, ensemble_pred, flag], [pz_gt, cz_gt, us_gt, afs_gt, bg_gt] = self.__data_generation(list_IDs_temp)
 
-        return [img, ensemble_pred, flag], [pz, cz, us, afs, bg]
+        return [img, ensemble_pred, flag], [pz_gt, cz_gt, us_gt, afs_gt, bg_gt]

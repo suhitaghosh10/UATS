@@ -19,8 +19,8 @@ MODEL_NAME = '/home/suhita/zonals/temporal/pseudo_conf_voxel.h5'
 TRAIN_IMGS_PATH = '/home/suhita/zonals/data/training/imgs/'
 TRAIN_GT_PATH = '/home/suhita/zonals/data/training/gt/'
 
-VAL_IMGS_PATH = '/home/suhita/zonals/data/val/imgs/'
-VAL_GT_PATH = '/home/suhita/zonals/data/val/gt/'
+VAL_IMGS_PATH = '/home/suhita/zonals/data/test_anneke/imgs/'
+VAL_GT_PATH = '/home/suhita/zonals/data/test_anneke/gt/'
 
 TRAINED_MODEL_PATH = '/home/suhita/zonals/data/model.h5'
 # TRAINED_MODEL_PATH = '/home/suhita/zonals/temporal/temporal_sl2.h5'
@@ -124,7 +124,7 @@ def train(gpu_id, nb_gpus, trained_model=TRAINED_MODEL_PATH):
         def on_epoch_end(self, epoch, logs={}):
 
             if epoch <= 100:
-                THRESHOLD = 0.9
+                THRESHOLD = 0.99
             else:
                 THRESHOLD = 0.99
 
@@ -295,7 +295,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = batch_size
-    gpu_id = '0'
+    gpu_id = '2'
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
     # os.environ["CUDA_VISIBLE_DEVICES"] = '2'

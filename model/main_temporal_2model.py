@@ -6,15 +6,15 @@ from keras.callbacks import ModelCheckpoint, TensorBoard
 
 from generator.data_gen_optim import DataGenerator
 from lib.segmentation.model_TemporalEns import weighted_model
-from lib.segmentation.ops import ramp_down_weight, ramp_up_weight
+from lib.segmentation.ops import ramp_down_weight
 from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
 from lib.segmentation.utils import get_complete_array, get_array, save_array
 from zonal_utils.AugmentationGenerator import *
 
 # 294 Training 58 have gt
 learning_rate = 2.5e-5
-TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/dice_focal_loss' + str(learning_rate) + '_wt_v3/'
-MODEL_NAME = '/home/suhita/zonals/temporal/temporal_sl2_fold2.h5'
+TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/dice_dice_loss' + str(learning_rate) + '_wt_v4/'
+MODEL_NAME = '/home/suhita/zonals/temporal/temporal_sl_v4.h5'
 
 TRAIN_IMGS_PATH = '/home/suhita/zonals/data/training/imgs/'
 TRAIN_GT_PATH = '/home/suhita/zonals/data/training/gt/'
@@ -26,13 +26,13 @@ VAL_GT_PATH = '/home/suhita/zonals/data/test_anneke/gt/'
 TRAINED_MODEL_PATH = '/home/suhita/zonals/data/model.h5'
 # TRAINED_MODEL_PATH = '/home/suhita/zonals/temporal/temporal_sl2.h5'
 
-WEIGHT_PATH = '/home/suhita/zonals/temporal/sad/wt/'
-ENS_GT_PATH = '/home/suhita/zonals/temporal/sad/ens_gt/'
-FLAG_PATH = '/home/suhita/zonals/temporal/sad/flag/'
+WEIGHT_PATH = '/home/suhita/zonals/temporal/sadv2/wt/'
+ENS_GT_PATH = '/home/suhita/zonals/temporal/sadv2/ens_gt/'
+FLAG_PATH = '/home/suhita/zonals/temporal/sadv2/flag/'
 
 NUM_CLASS = 5
 num_epoch = 351
-batch_size = 1
+batch_size = 2
 IMGS_PER_ENS_BATCH = 100
 
 # hyper-params
@@ -48,16 +48,16 @@ alpha = 0.6
 VAR_THRESHOLD = 0.5
 
 AFS = 3
+
+
 def train(gpu_id, nb_gpus):
     num_labeled_train = 58
     num_train_data = len(os.listdir(TRAIN_IMGS_PATH))
     num_un_labeled_train = num_train_data - num_labeled_train
     num_val_data = len(os.listdir(VAL_IMGS_PATH))
 
-
-
     # prepare weights and arrays for updates
-    gen_weight = ramp_up_weight(ramp_up_period, weight_max * (num_labeled_train / num_train_data))
+    # gen_weight = ramp_up_weight(ramp_up_period, weight_max * (num_labeled_train / num_train_data))
     gen_lr_weight = ramp_down_weight(ramp_down_period)
 
     # prepare dataset
@@ -85,6 +85,14 @@ def train(gpu_id, nb_gpus):
 
         def __init__(self, imgs_path, gt_path, ensemble_path, weight_path, supervised_flag_path,
                      variance_threshold, train_idx_list):
+
+            self.val_afs_dice_coef = 0.
+            self.val_bg_dice_coef = 0.
+            self.val_cz_dice_coef = 0.
+            self.val_pz_dice_coef = 0.
+            self.val_us_dice_coef = 0.
+            # self.dice_coef = 0.
+
             self.imgs_path = imgs_path
             self.gt_path = gt_path
             self.ensemble_path = ensemble_path
@@ -95,7 +103,7 @@ def train(gpu_id, nb_gpus):
             unsupervised_target = get_complete_array(TRAIN_GT_PATH, dtype='float32')
             flag = np.ones((32, 168, 168, 1)).astype('int8')
             wt = np.ones((32, 168, 168, 5)).astype('int8')
-            #wt[:, :, :, AFS] = 2
+            # wt[:, :, :, AFS] = 2
             for patient in np.arange(num_train_data):
                 np.save(self.weight_path + str(patient) + '.npy', wt)
                 np.save(self.ensemble_path + str(patient) + '.npy', unsupervised_target[patient])
@@ -109,6 +117,16 @@ def train(gpu_id, nb_gpus):
         def on_batch_begin(self, batch, logs=None):
             pass
 
+        def shall_save(self, cur_val, prev_val):
+            flag_save = False
+            val_save = prev_val
+
+            if cur_val > prev_val:
+                flag_save = True
+                val_save = cur_val
+
+            return flag_save, val_save
+
         def on_epoch_begin(self, epoch, logs=None):
             # tf.summary.scalar("labeled_pixels", np.count_nonzero(self.supervised_flag))
             if epoch > num_epoch - ramp_down_period:
@@ -121,9 +139,20 @@ def train(gpu_id, nb_gpus):
 
             # if epoch >= ramp_up_period - 5:
             # if epoch >= SAVE_WTS_AFTR_EPOCH:
-            next_weight = next(gen_weight)
+            # next_weight = next(gen_weight)
             #   print('rampup wt', next_weight)
 
+            pz_save, self.val_pz_dice_coef = self.shall_save(logs['val_pz_dice_coef'], self.val_pz_dice_coef)
+            cz_save, self.val_cz_dice_coef = self.shall_save(logs['val_cz_dice_coef'], self.val_cz_dice_coef)
+            us_save, self.val_us_dice_coef = self.shall_save(logs['val_us_dice_coef'], self.val_us_dice_coef)
+            afs_save, self.val_afs_dice_coef = self.shall_save(logs['val_afs_dice_coef'], self.val_afs_dice_coef)
+            bg_save, self.val_bg_dice_coef = self.shall_save(logs['val_bg_dice_coef'], self.val_bg_dice_coef)
+
+            '''
+            prev_dice_coef = self.dice_coef
+            dice_coef = (logs['val_pz_dice_coef'] + logs['val_cz_dice_coef'] + 2*logs['val_us_dice_coef'] + 2*logs['val_afs_dice_coef'] + 0.5*['val_bg_dice_coef']) / 6.5
+            save_flag = True if dice_coef >= prev_dice_coef else False
+            '''
             if epoch <= 100:
                 THRESHOLD = 0.9
             else:
@@ -154,11 +183,11 @@ def train(gpu_id, nb_gpus):
                     # model_out = np.add(model_out, model.predict(inp, batch_size=2, verbose=1))  # 2
                     del inp
 
-                    cur_pred[:, :, :, :, 0] = model_out[0]
-                    cur_pred[:, :, :, :, 1] = model_out[1]
-                    cur_pred[:, :, :, :, 2] = model_out[2]
-                    cur_pred[:, :, :, :, 3] = model_out[3]
-                    cur_pred[:, :, :, :, 4] = model_out[4]
+                    cur_pred[:, :, :, :, 0] = model_out[0] if pz_save else ensemble_prediction[:, :, :, :, 0]
+                    cur_pred[:, :, :, :, 1] = model_out[1] if cz_save else ensemble_prediction[:, :, :, :, 1]
+                    cur_pred[:, :, :, :, 2] = model_out[2] if us_save else ensemble_prediction[:, :, :, :, 2]
+                    cur_pred[:, :, :, :, 3] = model_out[3] if afs_save else ensemble_prediction[:, :, :, :, 3]
+                    cur_pred[:, :, :, :, 4] = model_out[4] if bg_save else ensemble_prediction[:, :, :, :, 4]
 
                     del model_out
 
@@ -263,7 +292,7 @@ def train(gpu_id, nb_gpus):
                                        train_id_list)
 
     steps = num_train_data / batch_size
-    #steps =2
+    # steps =2
 
     val_supervised_flag = np.ones((num_val_data, 32, 168, 168, 1), dtype='int8')
     val_unsupervised_weight = np.ones((num_val_data, 32, 168, 168, 5), dtype='float32')
@@ -319,7 +348,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = batch_size
-    gpu_id = '3'
+    gpu_id = '1, 2'
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
     # os.environ["CUDA_VISIBLE_DEVICES"] = '2'
@@ -335,8 +364,8 @@ if __name__ == '__main__':
         'batch_size should be a multiple of the nr. of gpus. ' + \
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
-    train(None, None)
-    #train(gpu, nb_gpus)
+    # train(gpu, nb_gpus)
+    # train(gpu, nb_gpus)
     # val_x = np.load('/home/suhita/zonals/data/validation/valArray_imgs_fold1.npy')
     # val_y = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy').astype('int8')
 

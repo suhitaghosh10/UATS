@@ -1,20 +1,23 @@
+import csv
+
 import tensorflow as tf
 from keras import backend as K
 from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import Callback, ReduceLROnPlateau
 from keras.callbacks import ModelCheckpoint, TensorBoard
 
-from generator.data_gen_optim import DataGenerator
-from lib.segmentation.model_TemporalEns import weighted_model
-from lib.segmentation.ops import ramp_down_weight, ramp_up_weight
+from generator.data_gen_optim_reg import DataGenerator
+from lib.segmentation.model_TemporalEns_ContDice_Regression_v2 import weighted_model
+from lib.segmentation.ops import ramp_down_weight
 from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
 from lib.segmentation.utils import get_complete_array, get_array, save_array
 from zonal_utils.AugmentationGenerator import *
 
 # 294 Training 58 have gt
+CSV = '/home/suhita/zonals/temporal/suppixel_reg888.csv'
 learning_rate = 2.5e-5
-TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/dice_focal_loss' + str(learning_rate) + '_wt_v3/'
-MODEL_NAME = '/home/suhita/zonals/temporal/temporal_sl2_fold2.h5'
+TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/cont_dice_reg_save_best' + str(learning_rate) + '/'
+MODEL_NAME = '/home/suhita/zonals/temporal/cont_dice_reg_save_best'
 
 TRAIN_IMGS_PATH = '/home/suhita/zonals/data/training/imgs/'
 TRAIN_GT_PATH = '/home/suhita/zonals/data/training/gt/'
@@ -26,14 +29,13 @@ VAL_GT_PATH = '/home/suhita/zonals/data/test_anneke/gt/'
 TRAINED_MODEL_PATH = '/home/suhita/zonals/data/model.h5'
 # TRAINED_MODEL_PATH = '/home/suhita/zonals/temporal/temporal_sl2.h5'
 
-WEIGHT_PATH = '/home/suhita/zonals/temporal/sad/wt/'
 ENS_GT_PATH = '/home/suhita/zonals/temporal/sad/ens_gt/'
 FLAG_PATH = '/home/suhita/zonals/temporal/sad/flag/'
 
 NUM_CLASS = 5
 num_epoch = 351
-batch_size = 1
-IMGS_PER_ENS_BATCH = 100
+batch_size = 2
+IMGS_PER_ENS_BATCH = 60
 
 # hyper-params
 # UPDATE_WTS_AFTER_EPOCH = 1
@@ -48,16 +50,16 @@ alpha = 0.6
 VAR_THRESHOLD = 0.5
 
 AFS = 3
+
+
 def train(gpu_id, nb_gpus):
     num_labeled_train = 58
     num_train_data = len(os.listdir(TRAIN_IMGS_PATH))
     num_un_labeled_train = num_train_data - num_labeled_train
     num_val_data = len(os.listdir(VAL_IMGS_PATH))
 
-
-
     # prepare weights and arrays for updates
-    gen_weight = ramp_up_weight(ramp_up_period, weight_max * (num_labeled_train / num_train_data))
+    # gen_weight = ramp_up_weight(ramp_up_period, weight_max * (num_labeled_train / num_train_data))
     gen_lr_weight = ramp_down_weight(ramp_down_period)
 
     # prepare dataset
@@ -83,47 +85,79 @@ def train(gpu_id, nb_gpus):
 
     class TemporalCallback(Callback):
 
-        def __init__(self, imgs_path, gt_path, ensemble_path, weight_path, supervised_flag_path,
-                     variance_threshold, train_idx_list):
+        def __init__(self, imgs_path, gt_path, ensemble_path, supervised_flag_path, train_idx_list):
+
+            self.val_afs_dice_coef = 0.
+            self.val_bg_dice_coef = 0.
+            self.val_cz_dice_coef = 0.
+            self.val_pz_dice_coef = 0.
+            self.val_us_dice_coef = 0.
+
+            count = 58 * 168 * 168 * 32
+
+            with open(CSV, 'w') as csvfile:
+                writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                writer.writerow([str(0), str(count)])
+
             self.imgs_path = imgs_path
             self.gt_path = gt_path
             self.ensemble_path = ensemble_path
-            self.weight_path = weight_path
             self.supervised_flag_path = supervised_flag_path
             self.train_idx_list = train_idx_list  # list of indexes of training eg
-            self.variance_th = variance_threshold
+
             unsupervised_target = get_complete_array(TRAIN_GT_PATH, dtype='float32')
-            flag = np.ones((32, 168, 168, 1)).astype('int8')
-            wt = np.ones((32, 168, 168, 5)).astype('int8')
-            #wt[:, :, :, AFS] = 2
+            flag = np.ones((32, 168, 168)).astype('float16')
             for patient in np.arange(num_train_data):
-                np.save(self.weight_path + str(patient) + '.npy', wt)
                 np.save(self.ensemble_path + str(patient) + '.npy', unsupervised_target[patient])
                 if patient < num_labeled_train:
                     np.save(self.supervised_flag_path + str(patient) + '.npy', flag)
                 else:
                     np.save(self.supervised_flag_path + str(patient) + '.npy',
-                            np.zeros((32, 168, 168, 1)).astype('int8'))
+                            np.zeros((32, 168, 168)).astype('float16'))
             del unsupervised_target
 
         def on_batch_begin(self, batch, logs=None):
             pass
 
+        def shall_save(self, cur_val, prev_val):
+            flag_save = False
+            val_save = prev_val
+
+            if cur_val > prev_val:
+                flag_save = True
+                val_save = cur_val
+
+            return flag_save, val_save
+
         def on_epoch_begin(self, epoch, logs=None):
             # tf.summary.scalar("labeled_pixels", np.count_nonzero(self.supervised_flag))
-            if epoch > num_epoch - ramp_down_period:
+            if epoch > 80:
                 weight_down = next(gen_lr_weight)
                 K.set_value(model.optimizer.lr, weight_down * learning_rate)
                 K.set_value(model.optimizer.beta_1, 0.4 * weight_down + 0.5)
                 print('LR: alpha-', K.eval(model.optimizer.lr), K.eval(model.optimizer.beta_1))
 
+        def dice_coef(self, y_true, y_pred, smooth=1.):
+
+            y_true_f = tf.to_float(K.flatten(y_true))
+            y_pred_f = K.flatten(y_pred)
+            intersection = K.sum(y_true_f * y_pred_f)
+
+            return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
+
         def on_epoch_end(self, epoch, logs={}):
+            sup_count = 0
+            pz_save, self.val_pz_dice_coef = self.shall_save(logs['val_pz_dice_coef'], self.val_pz_dice_coef)
+            cz_save, self.val_cz_dice_coef = self.shall_save(logs['val_cz_dice_coef'], self.val_cz_dice_coef)
+            us_save, self.val_us_dice_coef = self.shall_save(logs['val_us_dice_coef'], self.val_us_dice_coef)
+            afs_save, self.val_afs_dice_coef = self.shall_save(logs['val_afs_dice_coef'], self.val_afs_dice_coef)
+            bg_save, self.val_bg_dice_coef = self.shall_save(logs['val_bg_dice_coef'], self.val_bg_dice_coef)
 
-            # if epoch >= ramp_up_period - 5:
-            # if epoch >= SAVE_WTS_AFTR_EPOCH:
-            next_weight = next(gen_weight)
-            #   print('rampup wt', next_weight)
-
+            '''
+            prev_dice_coef = self.dice_coef
+            dice_coef = (logs['val_pz_dice_coef'] + logs['val_cz_dice_coef'] + 2*logs['val_us_dice_coef'] + 2*logs['val_afs_dice_coef'] + 0.5*['val_bg_dice_coef']) / 6.5
+            save_flag = True if dice_coef >= prev_dice_coef else False
+            '''
             if epoch <= 100:
                 THRESHOLD = 0.9
             else:
@@ -137,28 +171,43 @@ def train(gpu_id, nb_gpus):
                 num_batches = num_batches if remainder is 0 else num_batches + 1
 
                 for b_no in np.arange(num_batches):
+
                     actual_batch_size = patients_per_batch if b_no < num_batches - 1 else remainder
                     start = b_no * patients_per_batch
                     end = (start + actual_batch_size)
                     imgs = get_array(self.imgs_path, start, end)
                     ensemble_prediction = get_array(self.ensemble_path, start, end, dtype='float32')
-                    wt = get_array(self.weight_path, start, end, dtype='float32')
-                    supervised_flag = get_array(self.supervised_flag_path, start, end, dtype='int8')
+                    supervised_flag = get_array(self.supervised_flag_path, start, end, dtype='float16')
 
-                    inp = [imgs, ensemble_prediction, supervised_flag, wt]
-                    del imgs, wt
+                    inp = [imgs, ensemble_prediction, supervised_flag]
+                    del imgs
 
                     cur_pred = np.zeros((actual_batch_size, 32, 168, 168, NUM_CLASS))
+                    cur_sigmoid_pred = np.zeros((actual_batch_size, 32, 168, 168, NUM_CLASS))
 
                     model_out = model.predict(inp, batch_size=2, verbose=1)  # 1
                     # model_out = np.add(model_out, model.predict(inp, batch_size=2, verbose=1))  # 2
                     del inp
 
-                    cur_pred[:, :, :, :, 0] = model_out[0]
-                    cur_pred[:, :, :, :, 1] = model_out[1]
-                    cur_pred[:, :, :, :, 2] = model_out[2]
-                    cur_pred[:, :, :, :, 3] = model_out[3]
-                    cur_pred[:, :, :, :, 4] = model_out[4]
+                    cur_pred[:, :, :, :, 0] = model_out[0] if pz_save else ensemble_prediction[:, :, :, :, 0]
+                    cur_pred[:, :, :, :, 1] = model_out[1] if cz_save else ensemble_prediction[:, :, :, :, 1]
+                    cur_pred[:, :, :, :, 2] = model_out[2] if us_save else ensemble_prediction[:, :, :, :, 2]
+                    cur_pred[:, :, :, :, 3] = model_out[3] if afs_save else ensemble_prediction[:, :, :, :, 3]
+                    cur_pred[:, :, :, :, 4] = model_out[4] if bg_save else ensemble_prediction[:, :, :, :, 4]
+
+                    cur_sigmoid_pred[:, :, :, :, 0] = model_out[5]
+                    cur_sigmoid_pred[:, :, :, :, 1] = model_out[6]
+                    cur_sigmoid_pred[:, :, :, :, 2] = model_out[7]
+                    cur_sigmoid_pred[:, :, :, :, 3] = model_out[8]
+                    cur_sigmoid_pred[:, :, :, :, 4] = model_out[4]
+
+                    # if b_no == 0:
+                    # y_true = get_array(TRAIN_GT_PATH, 0, 58, dtype='int8')
+                    # logs['pz_dice_coef'] = K.eval(self.dice_coef(y_true[:,:,:,:,0], model_out[0][0:58, :, :, :]))
+                    # logs['cz_dice_coef'] = K.eval(self.dice_coef(y_true[:,:,:,:,1], model_out[1][0:58, :, :, :]))
+                    # logs['us_dice_coef'] = K.eval(self.dice_coef(y_true[:,:,:,:,2], model_out[2][0:58, :, :, :]))
+                    # logs['afs_dice_coef'] = K.eval(self.dice_coef(y_true[:,:,:,:,3], model_out[3][0:58, :, :, :]))
+                    # logs['bg_dice_coef'] = K.eval(self.dice_coef(y_true[:,:,:,:,4], model_out[4][0:58, :, :, :]))
 
                     del model_out
 
@@ -166,52 +215,32 @@ def train(gpu_id, nb_gpus):
                     ensemble_prediction = alpha * ensemble_prediction + (1 - alpha) * cur_pred
                     # del cur_pred
                     save_array(self.ensemble_path, ensemble_prediction, start, end)
-                    # del ensemble_prediction
+                    del ensemble_prediction
+
                     if b_no == 0:
                         flag = supervised_flag[num_labeled_train:actual_batch_size]
-                        # flag = np.where(np.reshape(np.max(cur_pred[num_labeled_train:actual_batch_size], axis=-1), flag.shape)  >= 0.99, np.ones_like(flag), flag)
-                        flag = np.where(
-                            np.reshape(np.max(ensemble_prediction[num_labeled_train:actual_batch_size], axis=-1),
-                                       flag.shape) >= THRESHOLD, np.ones_like(flag), np.zeros_like(flag))
+                        max = np.max(cur_sigmoid_pred[num_labeled_train:actual_batch_size], axis=-1)
+                        flag = np.where(np.reshape(max, flag.shape) >= THRESHOLD, max, np.zeros_like(flag))
                         save_array(self.supervised_flag_path, flag, num_labeled_train, actual_batch_size)
 
                     else:
                         # flag = np.where(np.reshape(np.max(cur_pred, axis=-1),flag.shape) >= 0.99, np.ones_like(flag), flag)
+                        max = np.max(cur_sigmoid_pred, axis=-1)
                         flag = np.where(
-                            np.reshape(np.max(ensemble_prediction, axis=-1),
-                                       supervised_flag.shape) >= THRESHOLD, np.ones_like(supervised_flag),
-                            np.zeros_like(supervised_flag))
+                            np.reshape(max, supervised_flag.shape) >= THRESHOLD, max, np.zeros_like(supervised_flag))
                         save_array(self.supervised_flag_path, flag, start, end)
+
+                    sup_count = sup_count + np.count_nonzero(flag)
                     del flag
                     del supervised_flag
-                    '''
-                    if epoch >= SAVE_WTS_AFTR_EPOCH:
-                        var = np.abs(cur_pred - ensemble_prediction)
-                        mean_along_zone = np.mean(var, axis=(0, 1, 2, 3))
-                        # next_weight = np.clip(next_weight, a_max=5, a_min=0.5)
-                        unsupervised_weight = np.where(var <= mean_along_zone, np.ones_like(ensemble_prediction),
-                                                       np.zeros_like(ensemble_prediction))  # consider hard labels
-                        del ensemble_prediction
-                        # unsupervised_weight[:, :, :, :, 3] = unsupervised_weight[:, :, :, :, 3] * 4
-                        # unsupervised_weight = np.where(var >= mean_along_zone,1., 1.)
-                        # del mean_along_zone, var
-                        save_array(self.weight_path, unsupervised_weight, start, end)
-                        del unsupervised_weight
-                    # del unsupervised_weight, ensemble_prediction
-                    # del ensemble_prediction
-                    '''
+
+                with open(CSV, 'a') as csvfile:
+                    writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                    writer.writerow([str(epoch + 1), str(sup_count)])
 
                 if 'cur_pred' in locals(): del cur_pred
 
                 # shuffle and init datagen again
-                np.random.shuffle(self.train_idx_list)
-                DataGenerator(self.imgs_path,
-                              self.gt_path,
-                              self.ensemble_path,
-                              self.weight_path,
-                              self.supervised_flag_path,
-                              self.train_idx_list,
-                              **params)
 
     # callbacks
     print('-' * 30)
@@ -237,8 +266,7 @@ def train(gpu_id, nb_gpus):
     # datagen listmake_dataset
     train_id_list = [str(i) for i in np.arange(0, num_train_data)]
 
-    tcb = TemporalCallback(TRAIN_IMGS_PATH, TRAIN_GT_PATH, ENS_GT_PATH, WEIGHT_PATH, FLAG_PATH,
-                           VAR_THRESHOLD, train_id_list)
+    tcb = TemporalCallback(TRAIN_IMGS_PATH, TRAIN_GT_PATH, ENS_GT_PATH, FLAG_PATH, train_id_list)
     LRDecay = ReduceLROnPlateau(monitor='val_loss', factor=0.8, patience=20, verbose=1, mode='min', min_lr=1e-8,
                                 epsilon=0.01)
     lcb = wm.LossCallback()
@@ -258,15 +286,13 @@ def train(gpu_id, nb_gpus):
     training_generator = DataGenerator(TRAIN_IMGS_PATH,
                                        TRAIN_GT_PATH,
                                        ENS_GT_PATH,
-                                       WEIGHT_PATH,
                                        FLAG_PATH,
                                        train_id_list)
 
     steps = num_train_data / batch_size
-    #steps =2
+    # steps =2
 
-    val_supervised_flag = np.ones((num_val_data, 32, 168, 168, 1), dtype='int8')
-    val_unsupervised_weight = np.ones((num_val_data, 32, 168, 168, 5), dtype='float32')
+    val_supervised_flag = np.ones((num_val_data, 32, 168, 168), dtype='int8')
     val_x_arr = get_complete_array(VAL_IMGS_PATH)
     val_y_arr = get_complete_array(VAL_GT_PATH, dtype='int8')
 
@@ -277,8 +303,8 @@ def train(gpu_id, nb_gpus):
     bg = val_y_arr[:, :, :, :, 4]
 
     y_val = [pz, cz, us, afs, bg]
-    x_val = [val_x_arr, val_y_arr, val_supervised_flag, val_unsupervised_weight]
-    del val_supervised_flag, val_unsupervised_weight, pz, cz, us, afs, bg, val_y_arr, val_x_arr
+    x_val = [val_x_arr, val_y_arr, val_supervised_flag]
+    del val_supervised_flag, pz, cz, us, afs, bg, val_y_arr, val_x_arr
     history = model.fit_generator(generator=training_generator,
                                   steps_per_epoch=steps,
                                   validation_data=[x_val, y_val],
@@ -316,7 +342,7 @@ def predict(val_x_arr, val_y_arr):
 
 
 if __name__ == '__main__':
-    gpu = '/GPU:0'
+    gpu = '/CPU:0'
     # gpu = '/GPU:0'
     batch_size = batch_size
     gpu_id = '3'
@@ -336,7 +362,7 @@ if __name__ == '__main__':
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
     train(None, None)
-    #train(gpu, nb_gpus)
+    # train(gpu, nb_gpus)
     # val_x = np.load('/home/suhita/zonals/data/validation/valArray_imgs_fold1.npy')
     # val_y = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy').astype('int8')
 

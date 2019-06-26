@@ -20,8 +20,8 @@ TRAIN_IMGS_PATH = '/home/suhita/zonals/data/training/imgs/'
 TRAIN_GT_PATH = '/home/suhita/zonals/data/training/gt/'
 # TRAIN_UNLABELED_DATA_PRED_PATH = '/home/suhita/zonals/data/training/ul_gt/'
 
-VAL_IMGS_PATH = '/home/suhita/zonals/data/val/imgs/'
-VAL_GT_PATH = '/home/suhita/zonals/data/val/gt/'
+VAL_IMGS_PATH = '/home/suhita/zonals/data/test_anneke/imgs/'
+VAL_GT_PATH = '/home/suhita/zonals/data/test_anneke/gt/'
 
 TRAINED_MODEL_PATH = '/home/suhita/zonals/data/model.h5'
 # TRAINED_MODEL_PATH = '/home/suhita/zonals/temporal/temporal_sl2.h5'
@@ -368,7 +368,7 @@ if __name__ == '__main__':
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
     # train(gpu, nb_gpus)
-    # train(gpu, nb_gpus)
+    #train(gpu, nb_gpus)
     #val_x = np.load('/home/suhita/zonals/data/validation/valArray_imgs_fold1.npy')
     #val_y = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy').astype('int8')
 
