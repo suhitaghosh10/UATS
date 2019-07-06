@@ -200,10 +200,11 @@ class weighted_model:
 
     def build_model(self, img_shape=(32, 168, 168), use_dice_cl=None, num_class=5, learning_rate=5e-5, gpu_id=None,
                     nb_gpus=None,
-                    trained_model=None, temp=1.5):
+                    trained_model=None):
         input_img = Input((*img_shape, 1), name='img_inp')
         unsupervised_label = Input((*img_shape, 5), name='unsup_label_inp')
         supervised_flag = Input(shape=img_shape, name='flag_inp')
+        dice = Input((1, 1, 1, 5), name='dice_factor')
 
         kernel_init = 'he_normal'
         sfs = 16  # start filter size
@@ -254,34 +255,20 @@ class weighted_model:
 
         conv_out = Conv3D(5, (1, 1, 1), name='conv_final_softmax')(conv7)
 
-        # conv_out = Conv3D(5, (1, 1, 1), activation='softmax', name='conv_final_softmax')(conv7)
+        # conv_out_sm = Conv3D(5, (1, 1, 1), activation='softmax', name='conv_final_softmax_out')(conv7)
 
-        # conv_out_pz_sig = Lambda(lambda x: x[:, :, :, :, 0])(conv_out)
-        # conv_out_pz_sig = Activation('sigmoid')(conv_out_pz_sig)
+        conv_out = Lambda(lambda x: x * dice, name='scale')(conv_out)
 
-        # conv_out_cz_sig = Lambda(lambda x: x[:, :, :, :, 1])(conv_out)
-        # conv_out_cz_sig = Activation('sigmoid')(conv_out_cz_sig)
+        conv_out_sm = Activation('softmax', name='softmx_finally')(conv_out)
 
-        # conv_out_us_sig = Lambda(lambda x: x[:, :, :, :, 2])(conv_out)
-        # conv_out_us_sig = Activation('sigmoid')(conv_out_us_sig)
-
-        # conv_out_afs_sig = Lambda(lambda x: x[:, :, :, :, 3])(conv_out)
-        # conv_out_afs_sig = Activation('sigmoid')(conv_out_afs_sig)
-
-        conv_out = Lambda(lambda x: x / temp, name='scaling')(conv_out)
-        conv_out_sm = Activation('softmax')(conv_out)
+        # conv_out = Lambda(lambda x: x/1.5, name='scaling')(conv_out)
+        # conv_out_sm = Activation('softmax')(conv_out)
 
         pz_sm_out = Lambda(lambda x: x[:, :, :, :, 0], name='pz')(conv_out_sm)
         cz_sm_out = Lambda(lambda x: x[:, :, :, :, 1], name='cz')(conv_out_sm)
         us_sm_out = Lambda(lambda x: x[:, :, :, :, 2], name='us')(conv_out_sm)
         afs_sm_out = Lambda(lambda x: x[:, :, :, :, 3], name='afs')(conv_out_sm)
         bg_sm_out = Lambda(lambda x: x[:, :, :, :, 4], name='bg')(conv_out_sm)
-
-        # pz_flag = Lambda(lambda x: x[:, :, :, :, 0], name='pz')(supervised_flag)
-        # cz_flag = Lambda(lambda x: x[:, :, :, :, 1], name='cz')(supervised_flag)
-        # us_flag = Lambda(lambda x: x[:, :, :, :, 2], name='us')(supervised_flag)
-        # afs_flag = Lambda(lambda x: x[:, :, :, :, 3], name='afs')(supervised_flag)
-        # bg_flag = Lambda(lambda x: x[:, :, :, :, 4], name='bg')(supervised_flag)
 
         pz_ensemble_pred = Lambda(lambda x: x[:, :, :, :, 0], name='pzu')(
             unsupervised_label)
@@ -304,7 +291,7 @@ class weighted_model:
         optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999)
 
         if (nb_gpus is None):
-            p_model = Model([input_img, unsupervised_label, supervised_flag],
+            p_model = Model([input_img, unsupervised_label, supervised_flag, dice],
                             [pz_sm_out, cz_sm_out, us_sm_out, afs_sm_out, bg_sm_out])
             if trained_model is not None:
                 p_model.load_weights(trained_model, by_name=True)
@@ -331,7 +318,7 @@ class weighted_model:
                             )
         else:
             with tf.device(gpu_id):
-                model = Model([input_img, unsupervised_label, supervised_flag],
+                model = Model([input_img, unsupervised_label, supervised_flag, dice],
                               [pz_sm_out, cz_sm_out, us_sm_out, afs_sm_out, bg_sm_out])
                 if trained_model is not None:
                     model.load_weights(trained_model, by_name=True)

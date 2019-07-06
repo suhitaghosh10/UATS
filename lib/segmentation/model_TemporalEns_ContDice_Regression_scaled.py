@@ -7,6 +7,8 @@ from keras.models import Model
 from keras.optimizers import Adam
 from keras.utils import multi_gpu_model
 
+from TemperatureScalingLayer import MyLayer
+
 
 # from lib.segmentation.weight_norm import AdamWithWeightnorm
 
@@ -200,7 +202,7 @@ class weighted_model:
 
     def build_model(self, img_shape=(32, 168, 168), use_dice_cl=None, num_class=5, learning_rate=5e-5, gpu_id=None,
                     nb_gpus=None,
-                    trained_model=None, temp=1.5):
+                    trained_model=None):
         input_img = Input((*img_shape, 1), name='img_inp')
         unsupervised_label = Input((*img_shape, 5), name='unsup_label_inp')
         supervised_flag = Input(shape=img_shape, name='flag_inp')
@@ -253,23 +255,21 @@ class weighted_model:
         conv7 = self.upLayer(conv6, conv1_b_m, sfs * 4, 7, bn, do)
 
         conv_out = Conv3D(5, (1, 1, 1), name='conv_final_softmax')(conv7)
-
+        conv_out_scaled = MyLayer(conv_out, trainable=True)
+        conv_out_sm = Activation('softmax')(conv_out)
         # conv_out = Conv3D(5, (1, 1, 1), activation='softmax', name='conv_final_softmax')(conv7)
 
-        # conv_out_pz_sig = Lambda(lambda x: x[:, :, :, :, 0])(conv_out)
-        # conv_out_pz_sig = Activation('sigmoid')(conv_out_pz_sig)
+        conv_out_pz_sig = Lambda(lambda x: x[:, :, :, :, 0])(conv_out)
+        conv_out_pz_sig = Activation('sigmoid')(conv_out_pz_sig)
 
-        # conv_out_cz_sig = Lambda(lambda x: x[:, :, :, :, 1])(conv_out)
-        # conv_out_cz_sig = Activation('sigmoid')(conv_out_cz_sig)
+        conv_out_cz_sig = Lambda(lambda x: x[:, :, :, :, 1])(conv_out)
+        conv_out_cz_sig = Activation('sigmoid')(conv_out_cz_sig)
 
-        # conv_out_us_sig = Lambda(lambda x: x[:, :, :, :, 2])(conv_out)
-        # conv_out_us_sig = Activation('sigmoid')(conv_out_us_sig)
+        conv_out_us_sig = Lambda(lambda x: x[:, :, :, :, 2])(conv_out)
+        conv_out_us_sig = Activation('sigmoid')(conv_out_us_sig)
 
-        # conv_out_afs_sig = Lambda(lambda x: x[:, :, :, :, 3])(conv_out)
-        # conv_out_afs_sig = Activation('sigmoid')(conv_out_afs_sig)
-
-        conv_out = Lambda(lambda x: x / temp, name='scaling')(conv_out)
-        conv_out_sm = Activation('softmax')(conv_out)
+        conv_out_afs_sig = Lambda(lambda x: x[:, :, :, :, 3])(conv_out)
+        conv_out_afs_sig = Activation('sigmoid')(conv_out_afs_sig)
 
         pz_sm_out = Lambda(lambda x: x[:, :, :, :, 0], name='pz')(conv_out_sm)
         cz_sm_out = Lambda(lambda x: x[:, :, :, :, 1], name='cz')(conv_out_sm)
@@ -305,7 +305,8 @@ class weighted_model:
 
         if (nb_gpus is None):
             p_model = Model([input_img, unsupervised_label, supervised_flag],
-                            [pz_sm_out, cz_sm_out, us_sm_out, afs_sm_out, bg_sm_out])
+                            [pz_sm_out, cz_sm_out, us_sm_out, afs_sm_out, bg_sm_out, conv_out_pz_sig, conv_out_cz_sig,
+                             conv_out_us_sig, conv_out_afs_sig])
             if trained_model is not None:
                 p_model.load_weights(trained_model, by_name=True)
 
@@ -332,7 +333,8 @@ class weighted_model:
         else:
             with tf.device(gpu_id):
                 model = Model([input_img, unsupervised_label, supervised_flag],
-                              [pz_sm_out, cz_sm_out, us_sm_out, afs_sm_out, bg_sm_out])
+                              [pz_sm_out, cz_sm_out, us_sm_out, afs_sm_out, bg_sm_out, conv_out_pz_sig, conv_out_cz_sig,
+                               conv_out_us_sig, conv_out_afs_sig])
                 if trained_model is not None:
                     model.load_weights(trained_model, by_name=True)
 

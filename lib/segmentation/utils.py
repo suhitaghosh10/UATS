@@ -205,6 +205,28 @@ def save_array(path, arr, start, end):
         np.save(path + str(idx) + '.npy', arr[arr_idx])
 
 
+def save_dice_array(path, cur_pred, ens_pred, start, end, T=1.5):
+    axis = (1, 2, 3)
+    smooth = 1.
+    img_num = cur_pred.shape[0]
+    cur_pred = np.where(cur_pred > 0.9, np.ones_like(cur_pred), np.zeros_like(cur_pred))
+    ens_pred = np.where(ens_pred > 0.9, np.ones_like(ens_pred), np.zeros_like(ens_pred))
+
+    y_true_sum = np.sum(ens_pred, axis=axis)
+    y_pred_sum = np.sum(cur_pred, axis=axis)
+    intersection = np.sum(cur_pred * ens_pred, axis=axis)
+    dice = (2. * intersection + smooth) / ((y_pred_sum) + y_true_sum + smooth)
+    dice = np.reshape(dice, (img_num, 1, 1, 1, 5))
+    dice[:, :, :, :, 0:2] = 1 / T
+    dice[:, :, :, :, 4] = 1 / T
+    print(np.unique(dice[:, :, :, :, 3]))
+    del y_pred_sum, y_true_sum, intersection, cur_pred, ens_pred
+
+    for idx in np.arange(start, end):
+        arr_idx = idx - start
+        np.save(path + str(idx) + '.npy', dice[arr_idx])
+
+
 
 
 def data_augmentation_tempen(inputs, trans_range):
@@ -251,6 +273,6 @@ def whiten_zca(x_train, x_test):
 
 
 if __name__ == '__main__':
-    a = get_array('/home/suhita/zonals/data/validation/gt/', start=0, end=20, data_type='int8')
-    b = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy')
+    a = get_array('/home/suhita/zonals/data/test_anneke/imgs/', start=0, end=20)
+    b = np.load('/home/suhita/zonals/data/test_anneke/final_test_array_imgs.npy')
     print(np.count_nonzero(a - b))

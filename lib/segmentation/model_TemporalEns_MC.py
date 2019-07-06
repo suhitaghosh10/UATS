@@ -2,7 +2,7 @@ import tensorflow as tf
 from keras import backend as K
 from keras.callbacks import Callback
 from keras.layers import concatenate, Input, Conv3D, MaxPooling3D, Conv3DTranspose, Lambda, \
-    BatchNormalization, Dropout, Activation
+    BatchNormalization, Dropout
 from keras.models import Model
 from keras.optimizers import Adam
 from keras.utils import multi_gpu_model
@@ -190,7 +190,7 @@ class weighted_model:
         if bn:
             conv = BatchNormalization()(conv)
         if do:
-            conv = Dropout(0.5, seed=3, name='Dropout_' + str(i))(conv)
+            conv = Dropout(0.5, seed=3, name='Dropout_' + str(i))(conv, training=True)
         conv = Conv3D(int(filterSize / 2), (3, 3, 3), activation='relu', padding='same', name='conv' + str(i) + '_2')(
             conv)
         if bn:
@@ -200,7 +200,7 @@ class weighted_model:
 
     def build_model(self, img_shape=(32, 168, 168), use_dice_cl=None, num_class=5, learning_rate=5e-5, gpu_id=None,
                     nb_gpus=None,
-                    trained_model=None, temp=1.5):
+                    trained_model=None):
         input_img = Input((*img_shape, 1), name='img_inp')
         unsupervised_label = Input((*img_shape, 5), name='unsup_label_inp')
         supervised_flag = Input(shape=img_shape, name='flag_inp')
@@ -209,6 +209,7 @@ class weighted_model:
         sfs = 16  # start filter size
         bn = True
         do = True
+
         conv1, conv1_b_m = self.downLayer(input_img, sfs, 1, bn)
         conv2, conv2_b_m = self.downLayer(conv1, sfs * 2, 2, bn)
 
@@ -228,7 +229,7 @@ class weighted_model:
         if bn:
             conv4 = BatchNormalization()(conv4)
         if do:
-            conv4 = Dropout(0.5, seed=4, name='Dropout_' + str(4))(conv4)
+            conv4 = Dropout(0.5, seed=4, name='Dropout_' + str(4))(conv4, training=True)
         conv4 = Conv3D(sfs * 16, (3, 3, 3), activation='relu', padding='same', kernel_initializer=kernel_init,
                        name='conv4_2')(conv4)
         if bn:
@@ -243,7 +244,7 @@ class weighted_model:
         if bn:
             conv5 = BatchNormalization()(conv5)
         if do:
-            conv5 = Dropout(0.5, seed=5, name='Dropout_' + str(5))(conv5)
+            conv5 = Dropout(0.5, seed=5, name='Dropout_' + str(5))(conv5, training=True)
         conv5 = Conv3D(int(sfs * 8), (3, 3, 3), activation='relu', padding='same', kernel_initializer=kernel_init,
                        name='conv' + str(5) + '_2')(conv5)
         if bn:
@@ -252,36 +253,16 @@ class weighted_model:
         conv6 = self.upLayer(conv5, conv2_b_m, sfs * 8, 6, bn, do)
         conv7 = self.upLayer(conv6, conv1_b_m, sfs * 4, 7, bn, do)
 
-        conv_out = Conv3D(5, (1, 1, 1), name='conv_final_softmax')(conv7)
+        conv_out_sm = Conv3D(5, (1, 1, 1), activation='softmax', name='conv_final_softmax')(conv7)
 
-        # conv_out = Conv3D(5, (1, 1, 1), activation='softmax', name='conv_final_softmax')(conv7)
-
-        # conv_out_pz_sig = Lambda(lambda x: x[:, :, :, :, 0])(conv_out)
-        # conv_out_pz_sig = Activation('sigmoid')(conv_out_pz_sig)
-
-        # conv_out_cz_sig = Lambda(lambda x: x[:, :, :, :, 1])(conv_out)
-        # conv_out_cz_sig = Activation('sigmoid')(conv_out_cz_sig)
-
-        # conv_out_us_sig = Lambda(lambda x: x[:, :, :, :, 2])(conv_out)
-        # conv_out_us_sig = Activation('sigmoid')(conv_out_us_sig)
-
-        # conv_out_afs_sig = Lambda(lambda x: x[:, :, :, :, 3])(conv_out)
-        # conv_out_afs_sig = Activation('sigmoid')(conv_out_afs_sig)
-
-        conv_out = Lambda(lambda x: x / temp, name='scaling')(conv_out)
-        conv_out_sm = Activation('softmax')(conv_out)
+        # conv_out = Lambda(lambda x: x/1.5, name='scaling')(conv_out)
+        # conv_out_sm = Activation('softmax')(conv_out)
 
         pz_sm_out = Lambda(lambda x: x[:, :, :, :, 0], name='pz')(conv_out_sm)
         cz_sm_out = Lambda(lambda x: x[:, :, :, :, 1], name='cz')(conv_out_sm)
         us_sm_out = Lambda(lambda x: x[:, :, :, :, 2], name='us')(conv_out_sm)
         afs_sm_out = Lambda(lambda x: x[:, :, :, :, 3], name='afs')(conv_out_sm)
         bg_sm_out = Lambda(lambda x: x[:, :, :, :, 4], name='bg')(conv_out_sm)
-
-        # pz_flag = Lambda(lambda x: x[:, :, :, :, 0], name='pz')(supervised_flag)
-        # cz_flag = Lambda(lambda x: x[:, :, :, :, 1], name='cz')(supervised_flag)
-        # us_flag = Lambda(lambda x: x[:, :, :, :, 2], name='us')(supervised_flag)
-        # afs_flag = Lambda(lambda x: x[:, :, :, :, 3], name='afs')(supervised_flag)
-        # bg_flag = Lambda(lambda x: x[:, :, :, :, 4], name='bg')(supervised_flag)
 
         pz_ensemble_pred = Lambda(lambda x: x[:, :, :, :, 0], name='pzu')(
             unsupervised_label)

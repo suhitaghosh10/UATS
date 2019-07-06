@@ -16,8 +16,9 @@ from zonal_utils.AugmentationGenerator import *
 # 294 Training 58 have gt
 CSV = '/home/suhita/zonals/temporal/suppixel_reg888.csv'
 learning_rate = 2.5e-5
-TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/cont_dice_reg_save_best' + str(learning_rate) + '/'
-MODEL_NAME = '/home/suhita/zonals/temporal/cont_dice_reg_save_best'
+TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/cont_dice_reg_save_best_fold2' + str(
+    learning_rate) + '/'
+MODEL_NAME = '/home/suhita/zonals/temporal/cont_dice_reg_save_best2'
 
 TRAIN_IMGS_PATH = '/home/suhita/zonals/data/training/imgs/'
 TRAIN_GT_PATH = '/home/suhita/zonals/data/training/gt/'
@@ -42,7 +43,7 @@ IMGS_PER_ENS_BATCH = 60
 ENSEMBLE_NO = 1
 SAVE_WTS_AFTR_EPOCH = 0
 ramp_up_period = 50
-ramp_down_period = 50
+ramp_down_period = 300
 # weight_max = 40
 weight_max = 30
 
@@ -52,7 +53,7 @@ VAR_THRESHOLD = 0.5
 AFS = 3
 
 
-def train(gpu_id, nb_gpus):
+def train(gpu_id, nb_gpus, model=TRAINED_MODEL_PATH):
     num_labeled_train = 58
     num_train_data = len(os.listdir(TRAIN_IMGS_PATH))
     num_un_labeled_train = num_train_data - num_labeled_train
@@ -71,7 +72,7 @@ def train(gpu_id, nb_gpus):
 
     wm = weighted_model()
     model = wm.build_model(num_class=NUM_CLASS, use_dice_cl=False, learning_rate=learning_rate, gpu_id=gpu_id,
-                           nb_gpus=nb_gpus, trained_model=TRAINED_MODEL_PATH)
+                           nb_gpus=nb_gpus, trained_model=model)
 
     print("Images Size:", num_train_data)
     print("Unlabeled Size:", num_un_labeled_train)
@@ -131,7 +132,7 @@ def train(gpu_id, nb_gpus):
 
         def on_epoch_begin(self, epoch, logs=None):
             # tf.summary.scalar("labeled_pixels", np.count_nonzero(self.supervised_flag))
-            if epoch > 80:
+            if epoch > num_epoch - ramp_down_period:
                 weight_down = next(gen_lr_weight)
                 K.set_value(model.optimizer.lr, weight_down * learning_rate)
                 K.set_value(model.optimizer.beta_1, 0.4 * weight_down + 0.5)
@@ -317,8 +318,7 @@ def train(gpu_id, nb_gpus):
 
 
 def predict(val_x_arr, val_y_arr):
-    val_supervised_flag = np.ones((val_x_arr.shape[0], 32, 168, 168, 1), dtype='int8')
-    val_unsupervised_weight = np.ones((val_x_arr.shape[0], 32, 168, 168, 5), dtype='int8')
+    val_supervised_flag = np.ones((val_x_arr.shape[0], 32, 168, 168), dtype='int8')
 
     pz = val_y_arr[:, :, :, :, 0]
     cz = val_y_arr[:, :, :, :, 1]
@@ -327,7 +327,7 @@ def predict(val_x_arr, val_y_arr):
     bg = val_y_arr[:, :, :, :, 4]
 
     y_val = [pz, cz, us, afs, bg]
-    x_val = [val_x_arr, val_y_arr, val_supervised_flag, val_unsupervised_weight]
+    x_val = [val_x_arr, val_y_arr, val_supervised_flag]
     wm = weighted_model()
     model = wm.build_model(num_class=NUM_CLASS, use_dice_cl=True, learning_rate=learning_rate, gpu_id=None,
                            nb_gpus=None, trained_model=MODEL_NAME)
@@ -345,7 +345,7 @@ if __name__ == '__main__':
     gpu = '/CPU:0'
     # gpu = '/GPU:0'
     batch_size = batch_size
-    gpu_id = '3'
+    gpu_id = '0'
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
     # os.environ["CUDA_VISIBLE_DEVICES"] = '2'
@@ -361,7 +361,7 @@ if __name__ == '__main__':
         'batch_size should be a multiple of the nr. of gpus. ' + \
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
-    train(None, None)
+    # train(None, None, model=MODEL_NAME)
     # train(gpu, nb_gpus)
     # val_x = np.load('/home/suhita/zonals/data/validation/valArray_imgs_fold1.npy')
     # val_y = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy').astype('int8')
