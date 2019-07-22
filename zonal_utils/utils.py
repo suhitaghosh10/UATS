@@ -1,5 +1,6 @@
-import numpy as np
 import SimpleITK as sitk
+import numpy as np
+
 
 def similarity3D_parameter_space_regular_sampling(thetaX, thetaY, thetaZ, tx, ty, tz, scale):
     '''
@@ -137,3 +138,31 @@ def augment_images_spatial(original_image, reference_image, T0, T_aug, transform
         #                     '_'.join(str(param) for param in current_parameters) + '.' + output_suffix)
 
         return aug_image
+
+
+def get_train_id_list(fold_num):
+    if fold_num == 1:
+        return np.arange(0, 58)
+    elif fold_num == 2:
+        return np.arange(20, 78)
+    elif fold_num == 3:
+        return np.concatenate((np.arange(40, 78), np.arange(0, 20)))
+    elif fold_num == 4:
+        return np.concatenate((np.arange(60, 78), np.arange(0, 40)))
+    else:
+        print('wrong fold number')
+        return None
+
+
+def get_val_id_list(fold_num):
+    if fold_num == 1:
+        return np.arange(58, 78)
+    elif fold_num == 2:
+        return np.arange(0, 20)
+    elif fold_num == 3:
+        return np.arange(20, 40)
+    elif fold_num == 4:
+        return np.arange(40, 60)
+    else:
+        print('wrong fold number')
+        return None

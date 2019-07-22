@@ -6,8 +6,8 @@ import SimpleITK as sitk
 import numpy as np
 
 rn.seed(1235)
-write_flag = False
-OUTPUT_DIR = '../../augment_out/'
+write_flag = True
+OUTPUT_DIR = '/home/suhita/zonals/temporal/model/'
 
 reference_size = [168, 168, 32]
 reference_spacing = [0.5, 0.5, 3.0]
@@ -227,14 +227,58 @@ def get_augmentation_transform(img, reference_image, augmentation_type):
 def get_transformed_gt(orig_gt, augmentation_type, centered_transform, aug_transform, transformation_parameters_list):
     gt_distances = np.zeros(gt_shape)
     res_gt = np.zeros(gt_shape, dtype=np.uint8)
+    original_gt = orig_gt
 
     for zone in range(0, zones_num):
         orig_img_gt = sitk.GetImageFromArray(orig_gt[:, :, :, zone])
         orig_img_gt.SetSpacing(reference_spacing)
 
+
         write_image(orig_img_gt, os.path.join(OUTPUT_DIR, 'orig_gt' + str(zone) + '.nrrd'), orig_img_gt, is_image=True)
 
         gt_dist = sitk.SignedMaurerDistanceMap(orig_img_gt, insideIsPositive=True, squaredDistance=False,
+                                               useImageSpacing=True)
+
+        resampled_dist = augment_images_spatial(gt_dist, orig_img_gt, augmentation_type, centered_transform,
+                                                aug_transform, transformation_parameters_list,
+                                                default_intensity_value=-3000,
+                                                binary=True, interpolator=sitk.sitkLinear)
+
+        gt_distances[:, :, :, zone] = sitk.GetArrayFromImage(resampled_dist)
+
+    # assign the final GT array the zone of the lowest distance
+    for x in range(0, orig_img_gt.GetSize()[0]):
+        for y in range(0, orig_img_gt.GetSize()[1]):
+            for z in range(0, orig_img_gt.GetSize()[2]):
+                array = [gt_distances[z, y, x, 0], gt_distances[z, y, x, 1], gt_distances[z, y, x, 2],
+                         gt_distances[z, y, x, 3], gt_distances[z, y, x, 4]]
+                maxValue = max(array)
+                if maxValue == -3000:
+                    res_gt[z, y, x, 4] = 1
+                else:
+                    max_index = array.index(maxValue)
+                    res_gt[z, y, x, max_index] = 1
+    return res_gt
+
+
+def get_transformed_ensemble_gt(orig_gt, augmentation_type, centered_transform, aug_transform,
+                                transformation_parameters_list, threshold=0.5):
+    gt_distances = np.zeros(gt_shape)
+    res_gt = np.zeros(gt_shape, dtype=np.uint8)
+    # original_gt_copy = orig_gt
+
+    orig_gt_thresholded = np.where(orig_gt > threshold, np.ones_like(orig_gt), np.zeros_like(orig_gt)).astype('int64')
+
+    for zone in range(0, zones_num):
+        orig_img_gt = sitk.GetImageFromArray(orig_gt[:, :, :, zone])
+        orig_img_gt.SetSpacing(reference_spacing)
+
+        orig_img_gt_th = sitk.GetImageFromArray(orig_gt_thresholded[:, :, :, zone])
+        orig_img_gt_th.SetSpacing(reference_spacing)
+
+        write_image(orig_img_gt, os.path.join(OUTPUT_DIR, 'orig_gt' + str(zone) + '.nrrd'), orig_img_gt, is_image=True)
+
+        gt_dist = sitk.SignedMaurerDistanceMap(orig_img_gt_th, insideIsPositive=True, squaredDistance=False,
                                                useImageSpacing=True)
 
         resampled_dist = augment_images_spatial(gt_dist, orig_img_gt, augmentation_type, centered_transform,
@@ -328,6 +372,7 @@ def get_image_augmentations(augmentation_type, orig_image, orig_gt, img_no=0, nr
         # transform gt
         res_gt = get_transformed_gt(orig_gt, augmentation_type, centered_transform, aug_transform,
                                     transformation_parameters_list)
+
 
         gt_ref = sitk.GetImageFromArray(orig_gt)
         gt_ref.SetSpacing(reference_spacing)
@@ -455,10 +500,91 @@ def get_single_image_augmentation_with_ensemble(augmentation_type, orig_image, o
 
     out_gt = get_transformed_gt(orig_gt, augmentation_type, centered_transform, aug_transform,
                                 transformation_parameters_list)
-    out_ens_gt = get_transformed_gt(orig_gt, augmentation_type, centered_transform, aug_transform,
-                                    transformation_parameters_list)
 
-    return out_img, out_gt, out_ens_gt
+    ens_gt_th = np.where(ens_gt < 0.6, np.zeros_like(orig_gt), np.ones_like(orig_gt)).astype('int')
+    out_gt = get_transformed_gt(ens_gt_th, augmentation_type, centered_transform, aug_transform,
+                                transformation_parameters_list)
+
+    img = sitk.GetImageFromArray(out_gt[:, :, :, 0])
+    img.CopyInformation(gt_ref)
+    write_image(img, os.path.join(OUTPUT_DIR, 'gtf' + str(0) + '_' + str(img_no) + '_' + AugmentTypes(
+        augmentation_type).name + '.nrrd'), reference_image, is_image=True)
+    img = sitk.GetImageFromArray(out_gt[:, :, :, 1])
+    img.CopyInformation(gt_ref)
+    write_image(img, os.path.join(OUTPUT_DIR, 'gtf' + str(1) + '_' + str(img_no) + '_' + AugmentTypes(
+        augmentation_type).name + '.nrrd'), reference_image, is_image=True)
+    img = sitk.GetImageFromArray(out_gt[:, :, :, 2])
+    img.CopyInformation(gt_ref)
+    write_image(img, os.path.join(OUTPUT_DIR, 'gtf' + str(2) + '_' + str(img_no) + '_' + AugmentTypes(
+        augmentation_type).name + '.nrrd'), reference_image, is_image=True)  #
+    img = sitk.GetImageFromArray(out_gt[:, :, :, 3])
+    img.CopyInformation(gt_ref)
+    write_image(img, os.path.join(OUTPUT_DIR, 'gtf' + str(3) + '_' + str(img_no) + '_' + AugmentTypes(
+        augmentation_type).name + '.nrrd'), reference_image, is_image=True)
+    img = sitk.GetImageFromArray(out_gt[:, :, :, 4])
+    img.CopyInformation(gt_ref)
+    write_image(img, os.path.join(OUTPUT_DIR, 'gtf' + str(4) + '_' + str(img_no) + '_' + AugmentTypes(
+        augmentation_type).name + '.nrrd'), reference_image, is_image=True)
+
+    res_gt = np.empty_like(out_gt).astype('float64')
+
+    img = sitk.GetImageFromArray(ens_gt[:, :, :, 0])
+    img.SetSpacing(reference_spacing)
+    res_gt[:, :, :, 0] = sitk.GetArrayFromImage(augment_images_spatial(img, reference_image, augmentation_type,
+                                                                       centered_transform,
+                                                                       aug_transform, transformation_parameters_list,
+                                                                       binary=False))
+    gt0 = sitk.GetImageFromArray(res_gt[:, :, :, 0])
+    gt0.SetSpacing(reference_spacing)
+    write_image(gt0, os.path.join(OUTPUT_DIR, 'gt' + str(0) + '_' + str(img_no) + '_' + AugmentTypes(
+        augmentation_type).name + '.nrrd'), reference_image, is_image=True)
+
+    img = sitk.GetImageFromArray(ens_gt[:, :, :, 1])
+    img.SetSpacing(reference_spacing)
+    res_gt[:, :, :, 1] = sitk.GetArrayFromImage(augment_images_spatial(img, reference_image, augmentation_type,
+                                                                       centered_transform,
+                                                                       aug_transform, transformation_parameters_list,
+                                                                       binary=False))
+    gt0 = sitk.GetImageFromArray(ens_gt[:, :, :, 1])
+    gt0.SetSpacing(reference_spacing)
+
+    write_image(gt0, os.path.join(OUTPUT_DIR, 'gt' + str(1) + '_' + str(img_no) + '_' + AugmentTypes(
+        augmentation_type).name + '.nrrd'), reference_image, is_image=True)
+
+    img = sitk.GetImageFromArray(ens_gt[:, :, :, 2])
+    img.SetSpacing(reference_spacing)
+    res_gt[:, :, :, 2] = sitk.GetArrayFromImage(augment_images_spatial(img, reference_image, augmentation_type,
+                                                                       centered_transform,
+                                                                       aug_transform, transformation_parameters_list,
+                                                                       binary=False))
+    gt0 = sitk.GetImageFromArray(ens_gt[:, :, :, 2])
+    gt0.SetSpacing(reference_spacing)
+    write_image(gt0, os.path.join(OUTPUT_DIR, 'gt' + str(2) + '_' + str(img_no) + '_' + AugmentTypes(
+        augmentation_type).name + '.nrrd'), reference_image, is_image=True)
+
+    img = sitk.GetImageFromArray(ens_gt[:, :, :, 3])
+    img.SetSpacing(reference_spacing)
+    res_gt[:, :, :, 3] = sitk.GetArrayFromImage(augment_images_spatial(img, reference_image, augmentation_type,
+                                                                       centered_transform,
+                                                                       aug_transform, transformation_parameters_list,
+                                                                       binary=False))
+    gt0 = sitk.GetImageFromArray(ens_gt[:, :, :, 3])
+    gt0.SetSpacing(reference_spacing)
+    write_image(gt0, os.path.join(OUTPUT_DIR, 'gt' + str(3) + '_' + str(img_no) + '_' + AugmentTypes(
+        augmentation_type).name + '.nrrd'), reference_image, is_image=True)
+
+    img = sitk.GetImageFromArray(ens_gt[:, :, :, 4])
+    img.SetSpacing(reference_spacing)
+    res_gt[:, :, :, 4] = sitk.GetArrayFromImage(augment_images_spatial(img, reference_image, augmentation_type,
+                                                                       centered_transform,
+                                                                       aug_transform, transformation_parameters_list,
+                                                                       binary=False))
+    gt0 = sitk.GetImageFromArray(res_gt[:, :, :, 4])
+    gt0.SetSpacing(reference_spacing)
+    write_image(gt0, os.path.join(OUTPUT_DIR, 'gt' + str(4) + '_' + str(img_no) + '_' + AugmentTypes(
+        augmentation_type).name + '.nrrd'), reference_image, is_image=True)
+
+    return out_img, out_gt, res_gt
 
 
 def get_mask(gt_arr_inp, write=False):
@@ -491,25 +617,13 @@ def get_mask(gt_arr_inp, write=False):
 
 
 if __name__ == '__main__':
-    img_path = '../data/final_test_array_imgs.npy'
-    gt_path = '../data/final_test_array_GT.npy'
-    img_path = 'C:/Users/kukul/PycharmProjects/Zonal_Segmentation/data/trainArray_imgs_fold1.npy'
-    gt_path = 'C:/Users/kukul/PycharmProjects/Zonal_Segmentation/data/trainArray_GT_fold1.npy'
-    img_array_aniso = np.load(img_path)
-    gt_array_aniso = np.load(gt_path)
+    img_path = '/home/suhita/zonals/data/training/imgs/'
+    gt_path = '/home/suhita/zonals/data/training/gt/'
+    ens_gt = '/home/suhita/zonals/temporal/sadv2/ens_gt/'
+    img_no = 120
+    img = np.load(img_path + str(img_no) + '.npy')
+    gt = np.load(gt_path + str(img_no) + '.npy')
+    ens_gt = np.load(ens_gt + str(img_no) + '.npy')
     augmentation_type = AugmentTypes.FLIP_HORIZ.value
 
-    image = img_array_aniso[0, :, :, :, :]
-    gt = gt_array_aniso[0, :, :, :, :]
-    # get_image_augmentations(image,gt, nr_augm=2, save_orig=True)
-
-    # img_array_aniso = img_array_aniso[0:3, :, :, :, :]
-    # gt_array_aniso = gt_array_aniso[0:3, :, :, :, :]
-
-    output_img_npy_name = os.path.basename(img_path).split('.')[0] + '_aug.npy'
-    output_gt_npyname = os.path.basename(gt_path).split('.')[0] + '_aug.npy'
-    # img_no = 0
-    # aug_img, aug_gt = get_image_augmentations(img_array_aniso[img_no], gt_array_aniso[img_no], img_no)
-    # aug_img, aug_gt = get_image_augmentations_all(augmentation_type, img_array_aniso[0:2], gt_array_aniso[0:2], 1, output_img_npy_name, output_gt_npyname, save_orig=False)
-
-    get_single_image_augmentation_with_mask(AugmentTypes.FLIP_HORIZ.value, image, gt, 0)
+    get_single_image_augmentation_with_ensemble(augmentation_type, img, gt, ens_gt, img_no)

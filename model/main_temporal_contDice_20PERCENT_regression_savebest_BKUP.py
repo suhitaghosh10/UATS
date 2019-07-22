@@ -16,7 +16,7 @@ from zonal_utils.AugmentationGenerator import *
 # 294 Training 58 have gt
 learning_rate = 2.5e-5
 TEMP = 3
-TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/cont_dice_loss_5PER_save_best_fold22' + str(
+TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/cont_dice_loss_5PER_save_best_fold2' + str(
     learning_rate) + '_temp' + str(TEMP) + '/'
 MODEL_NAME = '/home/suhita/zonals/temporal/cont_dice_loss_20P_save_best'
 
@@ -35,7 +35,6 @@ FLAG_PATH = '/home/suhita/zonals/temporal/sadv2/flag/'
 
 CSV = '/home/suhita/zonals/temporal/suppixelreg_percent.csv'
 PERCENTAGE_OF_PIXELS = 5
-
 
 NUM_CLASS = 5
 num_epoch = 351
@@ -156,7 +155,7 @@ def train(gpu_id, nb_gpus):
 
                 for b_no in np.arange(num_batches):
                     actual_batch_size = patients_per_batch if (
-                                b_no <= num_batches - 1 and remainder == 0) else remainder
+                            b_no <= num_batches - 1 and remainder == 0) else remainder
                     start = (b_no * patients_per_batch) + num_labeled_train
                     end = (start + actual_batch_size)
                     imgs = get_array(self.imgs_path, start, end)
@@ -183,7 +182,7 @@ def train(gpu_id, nb_gpus):
                     # cur_sigmoid_pred[:, :, :, :, 1] = model_out[6]
                     # cur_sigmoid_pred[:, :, :, :, 2] = model_out[7]
                     # cur_sigmoid_pred[:, :, :, :, 3] = model_out[8]
-                    #cur_sigmoid_pred[:, :, :, :, 4] = model_out[4]
+                    # cur_sigmoid_pred[:, :, :, :, 4] = model_out[4]
 
                     '''
                     if b_no == 0:
@@ -204,21 +203,20 @@ def train(gpu_id, nb_gpus):
 
                     # flag = np.where(np.reshape(np.max(ensemble_prediction, axis=-1),supervised_flag.shape) >= THRESHOLD, np.ones_like(supervised_flag),np.zeros_like(supervised_flag))
                     # dont consider background
-                    #cur_pred[:, :, :, :, 4] = np.zeros((actual_batch_size, 32, 168, 168))
+                    # cur_pred[:, :, :, :, 4] = np.zeros((actual_batch_size, 32, 168, 168))
                     argmax_pred_ravel = np.ravel(np.argmax(cur_pred, axis=-1))
                     max_pred_ravel = np.ravel(np.max(cur_pred, axis=-1))
                     indices = None
                     del cur_pred
                     for zone in np.arange(4):
-                        final_max_ravel = np.where(argmax_pred_ravel == zone, np.zeros_like(max_pred_ravel),
-                                                   max_pred_ravel)
+                        final_max_ravel = np.where(argmax_pred_ravel == zone, max_pred_ravel,
+                                                   np.zeros_like(max_pred_ravel))
                         zone_indices = np.argpartition(final_max_ravel, -self.confident_pixels_no)[
                                        -self.confident_pixels_no:]
                         if zone == 0:
                             indices = zone_indices
                         else:
                             indices = np.unique(np.concatenate((zone_indices, indices)))
-
 
                     mask = np.ones(max_pred_ravel.shape, dtype=bool)
                     mask[indices] = False
@@ -288,7 +286,7 @@ def train(gpu_id, nb_gpus):
                                        train_id_list)
 
     steps = num_train_data / batch_size
-    #steps =2
+    # steps =2
 
     val_supervised_flag = np.ones((num_val_data, 32, 168, 168), dtype='int8')
     val_x_arr = get_complete_array(VAL_IMGS_PATH)
@@ -359,10 +357,10 @@ if __name__ == '__main__':
         'batch_size should be a multiple of the nr. of gpus. ' + \
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
-    train(None, None)
+    # train(None, None)
     # train(gpu, nb_gpus)
     # val_x = np.load('/home/suhita/zonals/data/validation/valArray_imgs_fold1.npy')
-    #val_y = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy').astype('int8')
+    # val_y = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy').astype('int8')
 
     val_x = np.load('/home/suhita/zonals/data/test_anneke/final_test_array_imgs.npy')
     val_y = np.load('/home/suhita/zonals/data/test_anneke/final_test_array_GT.npy').astype('int8')

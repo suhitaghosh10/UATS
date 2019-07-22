@@ -1,11 +1,11 @@
 import tensorflow as tf
 from keras import backend as K
 from keras.layers import concatenate, Input, Conv3D, MaxPooling3D, Conv3DTranspose, Lambda, \
-    Dropout
+    Dropout, BatchNormalization
 from keras.models import Model
 from keras.utils import multi_gpu_model
 
-from lib.segmentation.group_norm import GroupNormalization
+# from lib.segmentation.group_norm import GroupNormalization
 from lib.segmentation.weight_norm import AdamWithWeightnorm
 
 smooth = 1.
@@ -45,29 +45,15 @@ class weighted_model:
     def dice_loss(self, y_true, y_pred):
         return -self.dice_coef(y_true, y_pred)
 
-    def c_dice_coef(self, y_true, y_pred):
-        y_true_f = K.flatten(y_true)
-        y_pred_f = K.flatten(y_pred)
-        size_of_A_intersect_B = K.sum(y_true_f * y_pred_f)
-        size_of_A = K.sum(y_true_f)
-        size_of_B = K.sum(y_pred_f)
-        sign_B = tf.where(tf.greater(y_pred_f, 0), K.ones_like(y_pred_f), K.zeros_like(y_pred_f))
-        if tf.greater(size_of_A_intersect_B, 0) is not None:
-            c = K.sum(y_true_f * y_pred_f) / K.sum(y_true_f * sign_B)
-        else:
-            c = 1
-
-        return ((2. * size_of_A_intersect_B) + smooth) / ((c * size_of_A) + size_of_B + smooth)
-        # downsampling, analysis path
 
     def downLayer(self, inputLayer, filterSize, i, bn=False, axis=4):
 
         conv = Conv3D(filterSize, (3, 3, 3), activation='relu', padding='same', name='conv' + str(i) + '_1')(inputLayer)
         if bn:
-            conv = GroupNormalization(groups=4, axis=4)(conv)
+            conv = BatchNormalization()(conv)
         conv = Conv3D(filterSize * 2, (3, 3, 3), activation='relu', padding='same', name='conv' + str(i) + '_2')(conv)
         if bn:
-            conv = GroupNormalization(groups=4, axis=4)(conv)
+            conv = BatchNormalization()(conv)
         pool = MaxPooling3D(pool_size=(1, 2, 2))(conv)
 
         return pool, conv
@@ -80,13 +66,13 @@ class weighted_model:
         conv = Conv3D(int(filterSize / 2), (3, 3, 3), activation='relu', padding='same', name='conv' + str(i) + '_1')(
             up)
         if bn:
-            conv = GroupNormalization(groups=4, axis=4)(conv)
+            conv = BatchNormalization()(conv)
         if do:
             conv = Dropout(0.5, seed=3, name='Dropout_' + str(i))(conv)
         conv = Conv3D(int(filterSize / 2), (3, 3, 3), activation='relu', padding='same', name='conv' + str(i) + '_2')(
             conv)
         if bn:
-            conv = GroupNormalization(groups=4, axis=4)(conv)
+            conv = BatchNormalization()(conv)
 
         return conv
 
@@ -104,23 +90,23 @@ class weighted_model:
         conv3 = Conv3D(sfs * 4, (3, 3, 3), activation='relu', padding='same', kernel_initializer=kernel_init,
                        name='conv' + str(3) + '_1')(conv2)
         if bn:
-            conv3 = GroupNormalization(groups=4, axis=4)(conv3)
+            conv3 = BatchNormalization()(conv3)
         conv3 = Conv3D(sfs * 8, (3, 3, 3), activation='relu', padding='same', kernel_initializer=kernel_init,
                        name='conv' + str(3) + '_2')(conv3)
         if bn:
-            conv3 = GroupNormalization(groups=4, axis=4)(conv3)
+            conv3 = BatchNormalization()(conv3)
         pool3 = MaxPooling3D(pool_size=(2, 2, 2))(conv3)
 
         conv4 = Conv3D(sfs * 16, (3, 3, 3), activation='relu', padding='same', kernel_initializer=kernel_init,
                        name='conv4_1')(pool3)
         if bn:
-            conv4 = GroupNormalization(groups=4, axis=4)(conv4)
+            conv4 = BatchNormalization()(conv4)
         if do:
             conv4 = Dropout(0.5, seed=4, name='Dropout_' + str(4))(conv4)
         conv4 = Conv3D(sfs * 16, (3, 3, 3), activation='relu', padding='same', kernel_initializer=kernel_init,
                        name='conv4_2')(conv4)
         if bn:
-            conv4 = GroupNormalization(groups=4, axis=4)(conv4)
+            conv4 = BatchNormalization()(conv4)
 
         # conv5 = upLayer(conv4, conv3_b_m, sfs*16, 5, bn, do)
         up1 = Conv3DTranspose(sfs * 16, (2, 2, 2), strides=(2, 2, 2), activation='relu', padding='same',
@@ -129,13 +115,13 @@ class weighted_model:
         conv5 = Conv3D(int(sfs * 8), (3, 3, 3), activation='relu', padding='same', kernel_initializer=kernel_init,
                        name='conv' + str(5) + '_1')(up1)
         if bn:
-            conv5 = GroupNormalization(groups=4, axis=4)(conv5)
+            conv5 = BatchNormalization()(conv5)
         if do:
             conv5 = Dropout(0.5, seed=5, name='Dropout_' + str(5))(conv5)
         conv5 = Conv3D(int(sfs * 8), (3, 3, 3), activation='relu', padding='same', kernel_initializer=kernel_init,
                        name='conv' + str(5) + '_2')(conv5)
         if bn:
-            conv5 = GroupNormalization(groups=4, axis=4)(conv5)
+            conv5 = BatchNormalization()(conv5)
 
         conv6 = self.upLayer(conv5, conv2_b_m, sfs * 8, 6, bn, do)
         conv7 = self.upLayer(conv6, conv1_b_m, sfs * 4, 7, bn, do)

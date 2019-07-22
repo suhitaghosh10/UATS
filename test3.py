@@ -1,27 +1,37 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-imgs = np.load('D:/Thesis/numpy/test/final_test_array_imgs.npy')
-gt = np.load('D:/Thesis/numpy/test/final_test_array_GT.npy')
-pgt = np.empty((20, 32, 168, 168, 5))
-notsgt = np.empty((20, 32, 168, 168, 5))
-temp = np.load('D:/Thesis/numpy/test/predicted_sl2.npy')
+from zonal_utils.utils import get_val_id_list
 
-temp = np.transpose(temp, (1, 2, 3, 4, 0))
-pgt[:, :, :, :, 0] = temp[:, :, :, :, 0]
-pgt[:, :, :, :, 1] = temp[:, :, :, :, 1]
-pgt[:, :, :, :, 2] = temp[:, :, :, :, 2]
-pgt[:, :, :, :, 3] = temp[:, :, :, :, 3]
-pgt[:, :, :, :, 4] = temp[:, :, :, :, 4]
+TRAIN_IMGS_PATH = 'D:/Thesis/dataset_fold1/imgs/'
+TRAIN_GT_PATH = 'D:/Thesis/dataset_fold1/gt/'
+v_list = get_val_id_list(1)
 
-notsgt = np.load('D:/Thesis/numpy/test/predicted_final_5p.npy')
-print(notsgt.shape)
+
+def get_array_from_list(folder_path, imgs_no=[], dtype=None):
+    arr = np.load(folder_path + '/0.npy')
+    size = len(imgs_no)
+    if dtype is None:
+        total_arr = np.zeros((size, *arr.shape))
+    else:
+        total_arr = np.zeros((size, *arr.shape), dtype=dtype)
+    start = 0
+    for idx in imgs_no:
+        total_arr[start] = np.load(folder_path + '/' + str(idx) + '.npy')
+        start = start + 1
+
+    return total_arr
+
+
+val_x_arr = get_array_from_list(TRAIN_IMGS_PATH, v_list)
+val_y_arr = get_array_from_list(TRAIN_GT_PATH, v_list, dtype='int8')
+img_no = 5
+imgs = val_x_arr[img_no]
+gt = val_y_arr[img_no]
 
 print(gt.shape)
-img = 15
 slice = 16
-z = 3
-plt.imshow(imgs[img, slice, :, :, 0], cmap='Greys')
-plt.imshow(gt[img, 16, :, :, z], alpha=0.6, cmap='OrRd_r')
-plt.imshow(pgt[img, slice, :, :, z], alpha=0.6, cmap='coolwarm')
+z = 0
+plt.imshow(imgs[slice, :, :, 0], cmap='gray')
+plt.imshow(gt[16, :, :, z], alpha=0.6, cmap='coolwarm')
 plt.show()

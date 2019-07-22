@@ -1,13 +1,11 @@
-import csv
-
 import tensorflow as tf
 from keras import backend as K
 from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import Callback, ReduceLROnPlateau
-from keras.callbacks import ModelCheckpoint, TensorBoard
+from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger
 
 from generator.data_gen_optim_reg import DataGenerator
-from lib.segmentation.model_TemporalEns_ContDice_Regression_v2 import weighted_model
+from lib.segmentation.model_no_scaling import weighted_model
 from lib.segmentation.ops import ramp_down_weight
 from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
 from lib.segmentation.utils import get_complete_array, get_array, save_array
@@ -15,10 +13,13 @@ from zonal_utils.AugmentationGenerator import *
 
 # 294 Training 58 have gt
 learning_rate = 2.5e-5
-TEMP = 3
-TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/cont_dice_loss_5PER_save_best_fold22' + str(
-    learning_rate) + '_temp' + str(TEMP) + '/'
-MODEL_NAME = '/home/suhita/zonals/temporal/cont_dice_loss_20P_save_best'
+
+FOLD_NUM = 1
+TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/NO_scaling_F' + str(FOLD_NUM) + '_' + str(
+    learning_rate) + '/'
+MODEL_NAME = '/home/suhita/zonals/temporal/NO_scaling_F' + str(FOLD_NUM)
+
+CSV_NAME = '/home/suhita/zonals/temporal/CSV/NO_scaling_F' + str(FOLD_NUM) + '.csv'
 
 TRAIN_IMGS_PATH = '/home/suhita/zonals/data/training/imgs/'
 TRAIN_GT_PATH = '/home/suhita/zonals/data/training/gt/'
@@ -30,12 +31,9 @@ VAL_GT_PATH = '/home/suhita/zonals/data/test_anneke/gt/'
 TRAINED_MODEL_PATH = '/home/suhita/zonals/data/model.h5'
 # TRAINED_MODEL_PATH = '/home/suhita/zonals/temporal/temporal_sl2.h5'
 
-ENS_GT_PATH = '/home/suhita/zonals/temporal/sadv2/ens_gt/'
-FLAG_PATH = '/home/suhita/zonals/temporal/sadv2/flag/'
-
-CSV = '/home/suhita/zonals/temporal/suppixelreg_percent.csv'
+ENS_GT_PATH = '/home/suhita/zonals/temporal/SADV1/ens_gt/'
+FLAG_PATH = '/home/suhita/zonals/temporal/SADV1/flag/'
 PERCENTAGE_OF_PIXELS = 5
-
 
 NUM_CLASS = 5
 num_epoch = 351
@@ -69,7 +67,7 @@ def train(gpu_id, nb_gpus):
     wm = weighted_model()
 
     model = wm.build_model(num_class=NUM_CLASS, use_dice_cl=False, learning_rate=learning_rate, gpu_id=gpu_id,
-                           nb_gpus=nb_gpus, trained_model=TRAINED_MODEL_PATH, temp=TEMP)
+                           nb_gpus=nb_gpus, trained_model=TRAINED_MODEL_PATH)
     print("Images Size:", num_train_data)
     print("Unlabeled Size:", num_un_labeled_train)
 
@@ -89,10 +87,6 @@ def train(gpu_id, nb_gpus):
             self.val_pz_dice_coef = 0.
             self.val_us_dice_coef = 0.
             self.count = 58 * 168 * 168 * 32
-
-            with open(CSV, 'w') as csvfile:
-                writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-                writer.writerow([str(0), str(self.count)])
 
             self.imgs_path = imgs_path
             self.gt_path = gt_path
@@ -183,7 +177,7 @@ def train(gpu_id, nb_gpus):
                     # cur_sigmoid_pred[:, :, :, :, 1] = model_out[6]
                     # cur_sigmoid_pred[:, :, :, :, 2] = model_out[7]
                     # cur_sigmoid_pred[:, :, :, :, 3] = model_out[8]
-                    #cur_sigmoid_pred[:, :, :, :, 4] = model_out[4]
+                    # cur_sigmoid_pred[:, :, :, :, 4] = model_out[4]
 
                     '''
                     if b_no == 0:
@@ -204,12 +198,12 @@ def train(gpu_id, nb_gpus):
 
                     # flag = np.where(np.reshape(np.max(ensemble_prediction, axis=-1),supervised_flag.shape) >= THRESHOLD, np.ones_like(supervised_flag),np.zeros_like(supervised_flag))
                     # dont consider background
-                    #cur_pred[:, :, :, :, 4] = np.zeros((actual_batch_size, 32, 168, 168))
+                    # cur_pred[:, :, :, :, 4] = np.zeros((actual_batch_size, 32, 168, 168))
                     argmax_pred_ravel = np.ravel(np.argmax(cur_pred, axis=-1))
                     max_pred_ravel = np.ravel(np.max(cur_pred, axis=-1))
                     indices = None
                     del cur_pred
-                    for zone in np.arange(4):
+                    for zone in np.arange(5):
                         final_max_ravel = np.where(argmax_pred_ravel == zone, np.zeros_like(max_pred_ravel),
                                                    max_pred_ravel)
                         zone_indices = np.argpartition(final_max_ravel, -self.confident_pixels_no)[
@@ -218,7 +212,6 @@ def train(gpu_id, nb_gpus):
                             indices = zone_indices
                         else:
                             indices = np.unique(np.concatenate((zone_indices, indices)))
-
 
                     mask = np.ones(max_pred_ravel.shape, dtype=bool)
                     mask[indices] = False
@@ -232,10 +225,6 @@ def train(gpu_id, nb_gpus):
                     sup_count = sup_count + np.count_nonzero(flag)
                     del flag
 
-                with open(CSV, 'a') as csvfile:
-                    writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-                    writer.writerow([str(epoch + 1), str(sup_count)])
-
                 if 'cur_pred' in locals(): del cur_pred
 
                 # shuffle and init datagen again
@@ -244,7 +233,7 @@ def train(gpu_id, nb_gpus):
     print('-' * 30)
     print('Creating callbacks...')
     print('-' * 30)
-    # csv_logger = CSVLogger('validation.csv', append=True, separator=';')
+    csv_logger = CSVLogger(CSV_NAME, append=True, separator=';')
     # model_checkpoint = ModelCheckpoint(MODEL_NAME, monitor='val_loss', save_best_only=True,verbose=1, mode='min')
     if nb_gpus is not None and nb_gpus > 1:
         model_checkpoint = ModelCheckpointParallel(MODEL_NAME,
@@ -270,7 +259,7 @@ def train(gpu_id, nb_gpus):
     lcb = wm.LossCallback()
     # del unsupervised_target, unsupervised_weight, supervised_flag, imgs
     # del supervised_flag
-    cb = [model_checkpoint, tcb, tensorboard, lcb, LRDecay]
+    cb = [model_checkpoint, tcb, tensorboard, lcb, LRDecay, csv_logger]
 
     print('BATCH Size = ', batch_size)
 
@@ -288,7 +277,7 @@ def train(gpu_id, nb_gpus):
                                        train_id_list)
 
     steps = num_train_data / batch_size
-    #steps =2
+    # steps =2
 
     val_supervised_flag = np.ones((num_val_data, 32, 168, 168), dtype='int8')
     val_x_arr = get_complete_array(VAL_IMGS_PATH)
@@ -343,7 +332,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = batch_size
-    gpu_id = '2'
+    gpu_id = '3'
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
     # os.environ["CUDA_VISIBLE_DEVICES"] = '2'
@@ -362,7 +351,7 @@ if __name__ == '__main__':
     train(None, None)
     # train(gpu, nb_gpus)
     # val_x = np.load('/home/suhita/zonals/data/validation/valArray_imgs_fold1.npy')
-    #val_y = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy').astype('int8')
+    # val_y = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy').astype('int8')
 
     val_x = np.load('/home/suhita/zonals/data/test_anneke/final_test_array_imgs.npy')
     val_y = np.load('/home/suhita/zonals/data/test_anneke/final_test_array_GT.npy').astype('int8')

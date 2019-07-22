@@ -36,76 +36,32 @@ class weighted_model:
         def get_alpha(self):
             return self.loss_alpha
 
-    def complex_loss(self, mask):
+    def complex_loss(self):
         """custom loss function"""
 
         smooth = 1.0
-        '''
 
-        def loss(y_true, y_pred, axis=(-4, -3, -2) , smooth=1.):
+        def cont_dice_loss(y_true, y_pred, axis=(1, 2, 3)):
 
-          y_true_f = K.flatten(y_true)
-          y_pred_f = K.flatten(y_pred)
-          mask_f = K.flatten(mask)
+            intersection = K.sum(y_true * y_pred, axis=axis)
+            y_true_sum = K.sum(y_true, axis=axis)
+            y_pred_sum = K.sum(y_pred, axis=axis)
 
-
-          pt_1 = tf.where(tf.equal(y_true_f, 1), y_pred_f , mask_f)
-          pt_0 = tf.where(tf.equal(y_true_f, 0), y_pred_f, (mask_f * y_pred_f) )
-
-          epsilon = K.epsilon()
-        # clip to prevent NaN's and Inf's
-          pt_1 = K.clip(pt_1, epsilon, 1. - epsilon)
-          pt_0 = K.clip(pt_0, epsilon, 1. - epsilon)
-
-          loss =  -K.sum(alpha * K.pow(1. - pt_1, gamma) * K.log(pt_1)) \
-               -K.sum((1 - alpha) * K.pow(pt_0, gamma) * K.log(1. - pt_0))
-
-          return K.mean(loss)
-          '''
-
-        # th = 0.55
-
-        def weighted_binary_cross_entropy(y_true, y_pred):
-
-            loss_alpha = 0.7
-            dice_loss = -K.mean(self.dice_coef(y_true, y_pred))
-
-            size_of_A_intersect_B = K.sum(y_true * y_pred * mask)
-            size_of_A = K.sum(y_true * mask)
-            size_of_B = K.sum(y_pred * mask)
-            sign_B = tf.where(tf.greater(y_pred, 0), K.ones_like(mask), K.zeros_like(mask))
-            if tf.greater(size_of_A_intersect_B, 0) is not None:
-                c = K.sum(y_true * y_pred) / K.sum(y_true * sign_B)
+            sign_pred = tf.where(tf.greater(y_pred, 0), K.ones_like(y_pred), K.zeros_like(y_pred))
+            if tf.greater(intersection, 0) is not None:
+                c = K.sum(y_true * y_pred) / (K.sum(y_true * sign_pred) + K.epsilon())
             else:
                 c = 1
 
-            cDC = -K.mean((2. * size_of_A_intersect_B) + smooth) / ((c * size_of_A) + size_of_B + smooth)
-            tf.summary.scalar("cdc_loss", (1 - loss_alpha) * cDC)
-            tf.summary.scalar("dc_loss", loss_alpha * dice_loss)
-            return (1 - loss_alpha) * cDC + loss_alpha * dice_loss
+            return - K.mean((2. * intersection + smooth) / ((c * y_pred_sum) + y_true_sum + smooth))
 
-        return weighted_binary_cross_entropy
+        return cont_dice_loss
 
     def dice_coef(self, y_true, y_pred):
         y_true_f = K.flatten(y_true)
         y_pred_f = K.flatten(y_pred)
         intersection = K.sum(y_true_f * y_pred_f)
         return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
-
-    def c_dice_coef(self, y_true, y_pred):
-        y_true_f = K.flatten(y_true)
-        y_pred_f = K.flatten(y_pred)
-        size_of_A_intersect_B = K.sum(y_true_f * y_pred_f)
-        size_of_A = K.sum(y_true_f)
-        size_of_B = K.sum(y_pred_f)
-        sign_B = tf.where(tf.greater(y_pred_f, 0), K.ones_like(y_pred_f), K.zeros_like(y_pred_f))
-        if tf.greater(size_of_A_intersect_B, 0) is not None:
-            c = K.sum(y_true_f * y_pred_f) / K.sum(y_true_f * sign_B)
-        else:
-            c = 1
-
-        return ((2. * size_of_A_intersect_B) + smooth) / ((c * size_of_A) + size_of_B + smooth)
-        # downsampling, analysis path
 
     def downLayer(self, inputLayer, filterSize, i, bn=False, axis=4):
 
@@ -140,7 +96,6 @@ class weighted_model:
     def build_model(self, img_shape=(32, 168, 168), learning_rate=5e-5, gpu_id=None, nb_gpus=None, trained_model=None):
 
         input_img = Input((*img_shape, 1), name='img_inp')
-        yTrueInputs = Input((32, 168, 168, 5), name='mask')
 
         kernel_init = 'he_normal'
         sfs = 16  # start filter size
@@ -197,17 +152,11 @@ class weighted_model:
         afs = Lambda(lambda x: x[:, :, :, :, 3], name='afs')(conv_out)
         bg = Lambda(lambda x: x[:, :, :, :, 4], name='bg')(conv_out)
 
-        pzw = Lambda(lambda x: x[:, :, :, :, 0], name='pzw')(yTrueInputs)
-        czw = Lambda(lambda x: x[:, :, :, :, 1], name='czw')(yTrueInputs)
-        usw = Lambda(lambda x: x[:, :, :, :, 2], name='usw')(yTrueInputs)
-        afsw = Lambda(lambda x: x[:, :, :, :, 3], name='afsw')(yTrueInputs)
-        bgw = Lambda(lambda x: x[:, :, :, :, 4], name='bgw')(yTrueInputs)
-
         # optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
         optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
 
         if (nb_gpus is None):
-            p_model = Model([input_img, yTrueInputs], [pz, cz, us, afs, bg])
+            p_model = Model([input_img], [pz, cz, us, afs, bg])
             if trained_model is not None:
                 p_model.load_weights(trained_model)
 
@@ -216,18 +165,18 @@ class weighted_model:
             # intermediate_layer_model = Model(inputs=model.input,outputs=model.get_layer(layer_name).output)
 
             p_model.compile(optimizer=optimizer,
-                            loss={'pz': self.complex_loss(pzw),
-                                  'cz': self.complex_loss(czw),
-                                  'us': self.complex_loss(usw),
-                                  'afs': self.complex_loss(afsw),
-                                  'bg': self.complex_loss(bgw)},
+                            loss={'pz': self.complex_loss(),
+                                  'cz': self.complex_loss(),
+                                  'us': self.complex_loss(),
+                                  'afs': self.complex_loss(),
+                                  'bg': self.complex_loss()},
 
                             metrics={'pz': self.dice_coef, 'cz': self.dice_coef, 'us': self.dice_coef,
                                      'afs': self.dice_coef, 'bg': self.dice_coef}
                             )
         else:
             with tf.device(gpu_id):
-                model = Model([input_img, yTrueInputs],
+                model = Model([input_img],
                               [pz, cz, us, afs, bg])
                 if trained_model is not None:
                     model.load_weights(trained_model)
@@ -235,11 +184,11 @@ class weighted_model:
                 p_model = multi_gpu_model(model, gpus=nb_gpus)
 
                 p_model.compile(optimizer=optimizer,
-                                loss={'pz': self.complex_loss(pzw),
-                                      'cz': self.complex_loss(czw),
-                                      'us': self.complex_loss(usw),
-                                      'afs': self.complex_loss(afsw),
-                                      'bg': self.complex_loss(bgw)},
+                                loss={'pz': self.complex_loss(),
+                                      'cz': self.complex_loss(),
+                                      'us': self.complex_loss(),
+                                      'afs': self.complex_loss(),
+                                      'bg': self.complex_loss()},
                                 metrics={'pz': self.dice_coef, 'cz': self.dice_coef, 'us': self.dice_coef,
                                          'afs': self.dice_coef, 'bg': self.dice_coef}
                                 )

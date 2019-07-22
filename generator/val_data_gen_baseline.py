@@ -5,7 +5,7 @@ import numpy as np
 class DataGenerator(keras.utils.Sequence):
 
     def __init__(self, imgs_path, gt_path, list_IDs, batch_size=2, dim=(32, 168, 168), n_channels=1,
-                 n_classes=10, shuffle=True, rotation=True):
+                 n_classes=5, shuffle=True, rotation=True):
         'Initialization'
         self.dim = dim
         self.imgs_path = imgs_path

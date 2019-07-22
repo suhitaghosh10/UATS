@@ -2,6 +2,7 @@ import csv
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
+from sklearn.metrics import roc_auc_score
 
 from eval.preprocess import *
 
@@ -81,18 +82,23 @@ def evaluateFiles_zones(GT_array, pred_directory, csvName):
                                quotechar='|', quoting=csv.QUOTE_MINIMAL)
         csvwriter.writerow(
             ['Case', 'PZ Dice', 'CZ Dice', 'US Dice', 'AFS Dice', 'PZ MeanDis', 'CZ MeanDis', 'US MeanDis',
-             'AFS MeanDis'])
+             'AFS MeanDis', 'PZ H', 'CZ H', 'US H',
+             'AFS H', 'PZ auc', 'CZ auc', 'US auc', 'AFS auc'])
 
         nrImgs = GT_array.shape[0]
         dices = np.zeros((nrImgs, 4), dtype=np.float32)
         print(dices.shape)
         mad = np.zeros((nrImgs, 4), dtype=np.float32)
+        hdf = np.zeros((nrImgs, 4), dtype=np.float32)
+        auc = np.zeros((nrImgs, 4), dtype=np.float32)
 
         for imgNumber in range(0, nrImgs):
             print('Case' + str(imgNumber))
             values = ['Case' + str(imgNumber)]
             temp_dice = []
             temp_mad = []
+            temp_hdf = []
+            temp_auc = []
 
             for zoneIndex in range(0, 4):
                 pred_arr = np.load(pred_directory + 'predicted_' + str(imgNumber) + '.npy')[zoneIndex]
@@ -116,10 +122,17 @@ def evaluateFiles_zones(GT_array, pred_directory, csvName):
                 # avd = relativeAbsoluteVolumeDifference(pred_img, GT_label)
                 [hausdorff, avgDist] = getBoundaryDistances(pred_img, GT_label)
                 temp_mad.append(avgDist)
+                temp_hdf.append(hausdorff)
                 # values.append(dice)
                 # values.append(avgDist)
+
+                roc_auc = roc_auc_score(np.ravel(GT_array[imgNumber, :, :, :, zoneIndex]), np.ravel(pred_arr))
+                temp_auc.append(roc_auc)
+
                 dices[imgNumber, zoneIndex] = dice
                 mad[imgNumber, zoneIndex] = avgDist
+                hdf[imgNumber, zoneIndex] = hausdorff
+                auc[imgNumber, zoneIndex] = roc_auc
 
             values.append(temp_dice[0])
             values.append(temp_dice[1])
@@ -130,6 +143,16 @@ def evaluateFiles_zones(GT_array, pred_directory, csvName):
             values.append(temp_mad[1])
             values.append(temp_mad[2])
             values.append(temp_mad[3])
+
+            values.append(temp_hdf[0])
+            values.append(temp_hdf[1])
+            values.append(temp_hdf[2])
+            values.append(temp_hdf[3])
+
+            values.append(temp_auc[0])
+            values.append(temp_auc[1])
+            values.append(temp_auc[2])
+            values.append(temp_auc[3])
             # values.append(temp_mad)
             csvwriter.writerow(values)
 
@@ -155,6 +178,12 @@ def evaluateFiles_zones(GT_array, pred_directory, csvName):
         print(np.average(dices[:, 3]))
 
         print('Mean Dist')
+        print(np.average(mad[:, 0]))
+        print(np.average(mad[:, 1]))
+        print(np.average(mad[:, 2]))
+        print(np.average(mad[:, 3]))
+
+        print('Hausdorff 95%')
         print(np.average(mad[:, 0]))
         print(np.average(mad[:, 1]))
         print(np.average(mad[:, 2]))
@@ -519,7 +548,7 @@ def postprocesAndEvaluateFiles(name, GT_array, csvName, eval=True):
 
 
 if __name__ == '__main__':
-    name = '/home/suhita/zonals/temporal/model/predicted1'
+    name = '/home/suhita/zonals/temporal/model/final/predicted1'
     GT_array_name = '/home/suhita/zonals/data/test_anneke/final_test_array_GT.npy'
     csvName = name + '.csv'
 

@@ -199,6 +199,20 @@ def get_array(folder_path, start, end, dtype=None):
     return total_arr
 
 
+def get_array_from_list(folder_path, imgs_no=[], dtype=None):
+    arr = np.load(folder_path + '/0.npy')
+    size = len(imgs_no)
+    if dtype is None:
+        total_arr = np.zeros((size, *arr.shape))
+    else:
+        total_arr = np.zeros((size, *arr.shape), dtype=dtype)
+    start = 0
+    for idx in imgs_no:
+        total_arr[start] = np.load(folder_path + '/' + str(idx) + '.npy')
+        start = start + 1
+
+    return total_arr
+
 def save_array(path, arr, start, end):
     for idx in np.arange(start, end):
         arr_idx = idx - start

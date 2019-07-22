@@ -155,7 +155,7 @@ class weighted_model:
             print(K.eval(self.epoch_ctr))
 
             unsupervised_gt = input[0, :, :, :, :]
-            unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
+            # unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
             # unsupervised_gt = tf.where(K.greater(unsupervised_gt, K.constant(0.9)), K.ones_like(unsupervised_gt),K.zeros_like(unsupervised_gt))
             supervised_flag = input[1, :, :, :, :]
             # weight = input[:, :, :, :, 2]  # last elem are weights
@@ -200,7 +200,7 @@ class weighted_model:
 
     def build_model(self, img_shape=(32, 168, 168), use_dice_cl=None, num_class=5, learning_rate=5e-5, gpu_id=None,
                     nb_gpus=None,
-                    trained_model=None, temp=None):
+                    trained_model=None, temp=1.5):
         input_img = Input((*img_shape, 1), name='img_inp')
         unsupervised_label = Input((*img_shape, 5), name='unsup_label_inp')
         supervised_flag = Input(shape=img_shape, name='flag_inp')

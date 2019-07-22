@@ -15,7 +15,7 @@ from zonal_utils.AugmentationGenerator import *
 
 # 294 Training 58 have gt
 learning_rate = 2.5e-5
-TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/MC' + str(learning_rate) + '/'
+TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/MC2' + str(learning_rate) + '/'
 MODEL_NAME = '/home/suhita/zonals/temporal/MC'
 
 TRAIN_IMGS_PATH = '/home/suhita/zonals/data/training/imgs/'
@@ -202,7 +202,7 @@ def train(gpu_id, nb_gpus):
 
                     if update_flag:
                         self.val_loss = logs['val_loss']
-                        T = 2
+                        T = 20
                         for i in np.arange(T - 1):
                             model_out = model.predict(inp, batch_size=2, verbose=1)
 
@@ -231,7 +231,7 @@ def train(gpu_id, nb_gpus):
                         del cur_pred
                         for zone in np.arange(4):
                             var_zone = 1 - np.ravel(var[:, :, :, :, zone])
-                            final_max_ravel = np.where(argmax_pred_ravel == zone, var_zone, np.zeros_like(var_zone))
+                            final_max_ravel = np.where(argmax_pred_ravel == zone, np.zeros_like(var_zone), var_zone)
                             zone_indices = np.argpartition(final_max_ravel, -self.confident_pixels_no)[
                                            -self.confident_pixels_no:]
                             if zone == 0:
@@ -384,4 +384,4 @@ if __name__ == '__main__':
 
     val_x = np.load('/home/suhita/zonals/data/test_anneke/final_test_array_imgs.npy')
     val_y = np.load('/home/suhita/zonals/data/test_anneke/final_test_array_GT.npy').astype('int8')
-    # predict(val_x, val_y)
+    predict(val_x, val_y)
