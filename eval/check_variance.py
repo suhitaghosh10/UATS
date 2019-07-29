@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 
-from lib.segmentation.model_TemporalEns_MC import weighted_model
+from lib.segmentation.old.model_TemporalEns_MC import weighted_model
 from lib.segmentation.utils import get_complete_array
 
 MODEL_NAME = '/home/suhita/zonals/data/model.h5'

@@ -4,22 +4,22 @@ from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import Callback, ReduceLROnPlateau
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger
 
-from generator.data_gen_optim_reg import DataGenerator
-from lib.segmentation.model_no_scaling import weighted_model
+from generator.old.data_gen_optim_reg import DataGenerator
+from lib.segmentation.old.model_no_scaling import weighted_model
 from lib.segmentation.ops import ramp_down_weight
 from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
 from lib.segmentation.utils import get_complete_array, get_array, save_array
 from zonal_utils.AugmentationGenerator import *
 
 # 294 Training 58 have gt
-learning_rate = 2.5e-5
+learning_rate = 5e-5
 
 FOLD_NUM = 1
-TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/NO_scaling_F' + str(FOLD_NUM) + '_' + str(
+TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/NO_scaling_V2_F' + str(FOLD_NUM) + '_' + str(
     learning_rate) + '/'
-MODEL_NAME = '/home/suhita/zonals/temporal/NO_scaling_F' + str(FOLD_NUM)
+MODEL_NAME = '/home/suhita/zonals/temporal/NO_scaling_V2_F' + str(FOLD_NUM)
 
-CSV_NAME = '/home/suhita/zonals/temporal/CSV/NO_scaling_F' + str(FOLD_NUM) + '.csv'
+CSV_NAME = '/home/suhita/zonals/temporal/CSV/NO_scaling_V2_F' + str(FOLD_NUM) + '.csv'
 
 TRAIN_IMGS_PATH = '/home/suhita/zonals/data/training/imgs/'
 TRAIN_GT_PATH = '/home/suhita/zonals/data/training/gt/'
@@ -31,8 +31,8 @@ VAL_GT_PATH = '/home/suhita/zonals/data/test_anneke/gt/'
 TRAINED_MODEL_PATH = '/home/suhita/zonals/data/model.h5'
 # TRAINED_MODEL_PATH = '/home/suhita/zonals/temporal/temporal_sl2.h5'
 
-ENS_GT_PATH = '/home/suhita/zonals/temporal/SADV1/ens_gt/'
-FLAG_PATH = '/home/suhita/zonals/temporal/SADV1/flag/'
+ENS_GT_PATH = '/home/suhita/zonals/temporal/sadv3/ens_gt/'
+FLAG_PATH = '/home/suhita/zonals/temporal/sadv3/flag/'
 PERCENTAGE_OF_PIXELS = 5
 
 NUM_CLASS = 5
@@ -136,11 +136,6 @@ def train(gpu_id, nb_gpus):
             afs_save, self.val_afs_dice_coef = self.shall_save(logs['val_afs_dice_coef'], self.val_afs_dice_coef)
             bg_save, self.val_bg_dice_coef = self.shall_save(logs['val_bg_dice_coef'], self.val_bg_dice_coef)
 
-            if epoch <= 100:
-                THRESHOLD = 0.9
-            else:
-                THRESHOLD = 0.99
-
             if epoch >= 0:
 
                 patients_per_batch = IMGS_PER_ENS_BATCH
@@ -161,10 +156,8 @@ def train(gpu_id, nb_gpus):
                     del imgs, supervised_flag
 
                     cur_pred = np.zeros((actual_batch_size, 32, 168, 168, NUM_CLASS))
-                    # cur_sigmoid_pred = np.zeros((actual_batch_size, 32, 168, 168, NUM_CLASS))
 
-                    model_out = model.predict(inp, batch_size=2, verbose=1)  # 1
-                    # model_out = np.add(model_out, model.predict(inp, batch_size=2, verbose=1))  # 2
+                    model_out = model.predict(inp, batch_size=2, verbose=1)
                     del inp
 
                     cur_pred[:, :, :, :, 0] = model_out[0] if pz_save else ensemble_prediction[:, :, :, :, 0]
@@ -172,22 +165,6 @@ def train(gpu_id, nb_gpus):
                     cur_pred[:, :, :, :, 2] = model_out[2] if us_save else ensemble_prediction[:, :, :, :, 2]
                     cur_pred[:, :, :, :, 3] = model_out[3] if afs_save else ensemble_prediction[:, :, :, :, 3]
                     cur_pred[:, :, :, :, 4] = model_out[4] if bg_save else ensemble_prediction[:, :, :, :, 4]
-
-                    # cur_sigmoid_pred[:, :, :, :, 0] = model_out[5]
-                    # cur_sigmoid_pred[:, :, :, :, 1] = model_out[6]
-                    # cur_sigmoid_pred[:, :, :, :, 2] = model_out[7]
-                    # cur_sigmoid_pred[:, :, :, :, 3] = model_out[8]
-                    # cur_sigmoid_pred[:, :, :, :, 4] = model_out[4]
-
-                    '''
-                    if b_no == 0:
-                        y_true = get_array(TRAIN_GT_PATH, 0, 58, dtype='int8')
-                        logs['pz_dice_coef'] = K.eval(self.dice_coef(y_true[:,:,:,:,0], model_out[0][0:58, :, :, :]))
-                        logs['cz_dice_coef'] = K.eval(self.dice_coef(y_true[:,:,:,:,1], model_out[1][0:58, :, :, :]))
-                        logs['us_dice_coef'] = K.eval(self.dice_coef(y_true[:,:,:,:,2], model_out[2][0:58, :, :, :]))
-                        logs['afs_dice_coef'] = K.eval(self.dice_coef(y_true[:,:,:,:,3], model_out[3][0:58, :, :, :]))
-                        logs['bg_dice_coef'] = K.eval(self.dice_coef(y_true[:,:,:,:,4], model_out[4][0:58, :, :, :]))
-                        '''
 
                     del model_out
 
@@ -217,6 +194,8 @@ def train(gpu_id, nb_gpus):
                     mask[indices] = False
 
                     max_pred_ravel[mask] = 0
+                    max_pred_ravel = np.where(max_pred_ravel > 0, np.ones_like(max_pred_ravel) * 2,
+                                              np.zeros_like(max_pred_ravel))
                     flag = np.reshape(max_pred_ravel, (IMGS_PER_ENS_BATCH, 32, 168, 168))
                     del max_pred_ravel, indices
 
@@ -332,7 +311,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = batch_size
-    gpu_id = '3'
+    gpu_id = '1'
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
     # os.environ["CUDA_VISIBLE_DEVICES"] = '2'

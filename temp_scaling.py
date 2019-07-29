@@ -1,13 +1,10 @@
 import argparse
-import numpy as np
-import tensorflow as tf
-import argparse
 
 import numpy as np
 import tensorflow as tf
 
 slim = tf.contrib.slim
-from lib.segmentation.model_TemporalEns_ContDice_Regression_v2 import weighted_model
+from lib.segmentation.old.model_TemporalEns_ContDice_Regression_v2 import weighted_model
 
 learning_rate = 2.5e-5
 

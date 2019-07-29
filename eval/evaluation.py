@@ -6,6 +6,7 @@ from sklearn.metrics import roc_auc_score
 
 from eval.preprocess import *
 
+THRESHOLD = 0.5
 
 def getDice(prediction, groundTruth):
     filter = sitk.LabelOverlapMeasuresImageFilter()
@@ -450,11 +451,11 @@ def getConnectedComponents(predictionImage):
 def removeIslands(predictedArray):
     pred = predictedArray
     print(pred.shape)
-    pred_pz = thresholdArray(pred[0, :, :, :], 0.5)
-    pred_cz = thresholdArray(pred[1, :, :, :], 0.5)
-    pred_us = thresholdArray(pred[2, :, :, :], 0.5)
-    pred_afs = thresholdArray(pred[3, :, :, :], 0.5)
-    pred_bg = thresholdArray(pred[4, :, :, :], 0.5)
+    pred_pz = thresholdArray(pred[0, :, :, :], THRESHOLD)
+    pred_cz = thresholdArray(pred[1, :, :, :], THRESHOLD)
+    pred_us = thresholdArray(pred[2, :, :, :], THRESHOLD)
+    pred_afs = thresholdArray(pred[3, :, :, :], THRESHOLD)
+    pred_bg = thresholdArray(pred[4, :, :, :], THRESHOLD)
 
     pred_pz_img = sitk.GetImageFromArray(pred_pz)
     pred_cz_img = sitk.GetImageFromArray(pred_cz)

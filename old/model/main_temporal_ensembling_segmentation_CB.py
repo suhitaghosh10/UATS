@@ -2,8 +2,8 @@ from keras import backend as K
 from keras.callbacks import Callback
 from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, EarlyStopping, TensorBoard, CSVLogger
 
-from generator.data_gen import DataGenerator
-from lib.segmentation.model_WN import build_model
+from generator.old.data_gen import DataGenerator
+from lib.segmentation.old.model_WN import build_model
 from lib.segmentation.ops import ramp_up_weight, ramp_down_weight
 from lib.segmentation.utils import make_train_test_dataset
 from zonal_utils.AugmentationGenerator import *

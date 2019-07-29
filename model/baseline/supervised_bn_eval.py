@@ -5,9 +5,9 @@ import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import ModelCheckpoint, TensorBoard, ReduceLROnPlateau, CSVLogger
 
-from generator.train_data_gen_baseline import DataGenerator as train_gen
-from generator.val_data_gen_baseline import DataGenerator as val_gen
-from lib.segmentation.model_GN import weighted_model
+from generator.baseline_A import DataGenerator as train_gen
+from generator.old.val_data_gen_baseline import DataGenerator as val_gen
+from lib.segmentation.old.model_GN import weighted_model
 from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
 from zonal_utils.utils import get_train_id_list, get_val_id_list
 
@@ -18,7 +18,7 @@ FOLD_NUM = 2
 CSV_NAME = '/home/suhita/zonals/temporal/CSV/Supervised_F' + str(FOLD_NUM) + '.csv'
 NAME = 'supervised_F' + str(FOLD_NUM)
 TB_LOG_DIR = '/home/suhita/zonals/temporal/tb/variance_mcdropout/' + NAME + '_' + str(learning_rate) + '/'
-MODEL_NAME = '/home/suhita/zonals/temporal/' + NAME + '.h5'
+MODEL_NAME = '/home/suhita/zonals/temporal/scaling_T_3_F2'
 
 TRAIN_IMGS_PATH = '/home/suhita/zonals/data/training/supervised/imgs/'
 TRAIN_GT_PATH = '/home/suhita/zonals/data/training/supervised/gt/'
@@ -137,7 +137,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = 2
-    gpu_id = '3'
+    gpu_id = '0'
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
     # os.environ["CUDA_VISIBLE_DEVICES"] = '2'

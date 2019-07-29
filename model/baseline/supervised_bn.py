@@ -5,9 +5,9 @@ import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import ModelCheckpoint, TensorBoard, ReduceLROnPlateau, CSVLogger
 
-from generator.train_data_gen_baseline import DataGenerator as train_gen
-from generator.val_data_gen_baseline import DataGenerator as val_gen
-from lib.segmentation.model_GN import weighted_model
+from generator.baseline_A import DataGenerator as train_gen
+from generator.old.val_data_gen_baseline import DataGenerator as val_gen
+from lib.segmentation.old.model_GN import weighted_model
 from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
 from zonal_utils.utils import get_train_id_list, get_val_id_list
 

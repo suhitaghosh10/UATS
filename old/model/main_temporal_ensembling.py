@@ -92,7 +92,7 @@ def main():
 
     # Build Model
     if weight_norm_flag:
-        from lib.segmentation.model_WN import build_model
+        from lib.segmentation.old.model_WN import build_model
         from lib.segmentation.weight_norm import AdamWithWeightnorm
         optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
     else:
