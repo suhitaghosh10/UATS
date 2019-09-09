@@ -29,10 +29,15 @@ class weighted_model:
 
         return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
 
-    def dice_tb(self, input, class_wt=1.):
+    def dice_tb(self, input, class_wt=1., ):
         def dice_loss(y_true, y_pred, smooth=1., axis=(1, 2, 3)):
             supervised_flag = input[1, :, :, :, :]
-            y_true = y_true * supervised_flag
+            unsupervised_gt = input[0, :, :, :, :]
+            alpha = 0.6
+            unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
+            y_true_final = tf.where(tf.equal(supervised_flag, 2), unsupervised_gt, y_true)
+            supervised_flag = tf.where(tf.equal(supervised_flag, 2), K.ones_like(supervised_flag), supervised_flag)
+            y_true = y_true_final * supervised_flag
             y_pred = y_pred * supervised_flag
 
             intersection = K.sum(y_true * y_pred, axis=axis)
@@ -311,7 +316,7 @@ class weighted_model:
 
             # model_copy = Model([input_img, unsupervised_label, supervised_flag, unsupervised_weight],[pz_out, cz_out, us_out, afs_out, bg_out])
 
-            # intermediate_layer_model = Model(inputs=model.input,outputs=model.get_layer(layer_name).output)
+            # intermediate_layer_model = Model(inputs=model_impl.input,outputs=model_impl.get_layer(layer_name).output)
 
             p_model.compile(optimizer=optimizer,
                             loss={'pz': self.semi_supervised_loss(pz, unsup_loss_class_wt=1),
@@ -340,7 +345,7 @@ class weighted_model:
 
                 # model_copy = Model([input_img, unsupervised_label, gt, supervised_flag, unsupervised_weight],[pz_out, cz_out, us_out, afs_out, bg_out])
 
-                # intermediate_layer_model = Model(inputs=model.input,outputs=model.get_layer(layer_name).output)
+                # intermediate_layer_model = Model(inputs=model_impl.input,outputs=model_impl.get_layer(layer_name).output)
 
                 p_model.compile(optimizer=optimizer,
                                 loss={'pz': self.semi_supervised_loss(pz, unsup_loss_class_wt=1),

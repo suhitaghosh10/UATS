@@ -16,10 +16,10 @@ class DataGenerator(keras.utils.Sequence):
         self.supervised_flag_path = supervised_flag_path
         self.batch_size = batch_size
         self.id_list = id_list
+        self.id_list = id_list
         self.indexes = np.arange(len(self.id_list))
 
     def on_epoch_end(self):
-        self.indexes = np.arange(len(self.list_IDs))
         np.random.shuffle(self.indexes)
 
     def __data_generation(self, list_IDs_temp):

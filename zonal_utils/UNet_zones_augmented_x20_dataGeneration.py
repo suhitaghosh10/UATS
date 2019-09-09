@@ -1,14 +1,15 @@
-import numpy as np
 import os
 
+import numpy as np
 from keras import backend as K
+
 K.set_image_data_format('channels_last')  # TF dimension ordering in this code
 
 from keras.optimizers import Adam
-from keras.callbacks import ModelCheckpoint, LearningRateScheduler, ReduceLROnPlateau, EarlyStopping, TensorBoard
+from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, EarlyStopping, TensorBoard
 from keras.models import Model
-from keras.layers import concatenate, Input, Conv3D, MaxPooling3D, UpSampling3D, Conv3DTranspose, Lambda, \
-        BatchNormalization, Dropout
+from keras.layers import concatenate, Input, Conv3D, MaxPooling3D, Conv3DTranspose, Lambda, \
+    BatchNormalization, Dropout
 from keras.callbacks import CSVLogger
 
 import matplotlib
@@ -211,14 +212,14 @@ class weighted_model:
         print("Mask Size:", train_mask.shape)
 
         print('-' * 30)
-        print('Creating and compiling model...')
+        print('Creating and compiling model_impl...')
         print('-' * 30)
 
         model = self.get_net(1, LR, bn, do, mask)
-        #plot_model(model, to_file='model.png')
+        # plot_model(model_impl, to_file='model_impl.png')
 
         print('-' * 30)
-        print('Fitting model...')
+        print('Fitting model_impl...')
         print('-' * 30)
 
         cb=[csv_logger, model_checkpoint]
@@ -244,7 +245,7 @@ class weighted_model:
         val_id_list = [str(i) for i in np.arange(0, val_imgs.shape[0])]
         val_generator = ValDataGenerator(val_imgs, val_gt_list, val_mask, val_id_list, bs, **params)
         steps = 58/2
-      #  history = model.fit(1, train_id_list, batch_size=bs, epochs=nr_epochs, verbose=1, validation_data=[val_imgs, val_gt_list], shuffle=True, callbacks=cb)
+        #  history = model_impl.fit(1, train_id_list, batch_size=bs, epochs=nr_epochs, verbose=1, validation_data=[val_imgs, val_gt_list], shuffle=True, callbacks=cb)
         history = model.fit_generator(generator=training_generator,
                                       steps_per_epoch= steps,
                                       validation_data=val_generator,

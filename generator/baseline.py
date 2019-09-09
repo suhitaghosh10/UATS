@@ -4,22 +4,21 @@ import numpy as np
 
 class DataGenerator(keras.utils.Sequence):
 
-    def __init__(self, img_path, gt_path, list_IDs, batch_size=2, dim=(32, 168, 168), n_channels=1,
+    def __init__(self, img_path, gt_path, id_list, batch_size=2, dim=(32, 168, 168), n_channels=1,
                  n_classes=10, shuffle=True, rotation=True):
         'Initialization'
         self.dim = dim
         self.img_path = img_path
         self.gt_path = gt_path
         self.batch_size = batch_size
-        self.list_IDs = list_IDs
         self.n_channels = n_channels
         self.n_classes = n_classes
         self.shuffle = shuffle
         self.rotation = rotation
-        self.on_epoch_end()
+        self.id_list = id_list
+        self.indexes = np.arange(len(self.id_list))
 
     def on_epoch_end(self):
-        self.indexes = np.arange(len(self.list_IDs))
         np.random.shuffle(self.indexes)
 
     def __data_generation(self, list_IDs_temp):

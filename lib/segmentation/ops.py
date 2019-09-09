@@ -2,12 +2,12 @@ import numpy as np
 
 ZONE = {0: 'pz', 1: 'cz', 2: 'us', 3: 'afs', 4: 'bg'}
 
-def ramp_up_weight(ramp_period, weight_max):
+
+def ramp_up_weight(ramp_period, weight_max, cur_epoch):
     """Ramp-Up weight generator.
     The function is used in unsupervised component of loss.
     Returned weight ramps up until epoch reaches ramp_period
     """
-    cur_epoch = 0
 
     while True:
         if cur_epoch <= ramp_period - 1:
@@ -15,8 +15,6 @@ def ramp_up_weight(ramp_period, weight_max):
             yield np.exp(-5 * (1 - T) ** 2) * weight_max
         else:
             yield 1 * weight_max
-
-        cur_epoch += 1
 
 
 def ramp_down_weight(ramp_period):

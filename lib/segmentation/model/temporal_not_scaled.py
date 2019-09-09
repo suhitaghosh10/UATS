@@ -32,7 +32,12 @@ class weighted_model:
     def dice_tb(self, input, class_wt=1.):
         def dice_loss(y_true, y_pred, smooth=1., axis=(1, 2, 3)):
             supervised_flag = input[1, :, :, :, :]
-            y_true = y_true * supervised_flag
+            unsupervised_gt = input[0, :, :, :, :]
+            alpha = 0.6
+            unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
+            y_true_final = tf.where(tf.equal(supervised_flag, 2), unsupervised_gt, y_true)
+            supervised_flag = tf.where(tf.equal(supervised_flag, 2), K.ones_like(supervised_flag), supervised_flag)
+            y_true = y_true_final * supervised_flag
             y_pred = y_pred * supervised_flag
 
             intersection = K.sum(y_true * y_pred, axis=axis)

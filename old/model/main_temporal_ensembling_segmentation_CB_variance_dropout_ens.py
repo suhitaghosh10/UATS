@@ -55,13 +55,13 @@ def train(train_x, train_y, val_x, val_y):
     print("GT Size:", train_y.shape)
 
     print('-' * 30)
-    print('Creating and compiling model...')
+    print('Creating and compiling model_impl...')
     print('-' * 30)
 
     # Build Model
     model = build_model(num_class=num_class, learning_rate=learning_rate)
 
-    # model.metrics_tensors += model.outputs
+    # model_impl.metrics_tensors += model_impl.outputs
     model.summary()
 
     class TemporalCallback(Callback):
@@ -169,7 +169,7 @@ def train(train_x, train_y, val_x, val_y):
               'shuffle': True}
 
     print('-' * 30)
-    print('Fitting model...')
+    print('Fitting model_impl...')
     print('-' * 30)
     training_generator = DataGenerator(train_x, unsupervised_target, supervised_label, supervised_flag,
                                        unsupervised_weight, tcb.get_training_list(), **params)
@@ -198,7 +198,7 @@ def train(train_x, train_y, val_x, val_y):
                                   callbacks=cb
                                   )
     # workers=4)
-    # model.save('temporal_max_ramp_final.h5')
+    # model_impl.save('temporal_max_ramp_final.h5')
 
 
 def predict(val_x, val_y):

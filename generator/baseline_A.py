@@ -6,22 +6,21 @@ import generator.AugmentationGenerator as aug
 
 class DataGenerator(keras.utils.Sequence):
 
-    def __init__(self, img_path, gt_path, list_IDs, batch_size=2, dim=(32, 168, 168), n_channels=1,
+    def __init__(self, img_path, gt_path, id_list, batch_size=2, dim=(32, 168, 168), n_channels=1,
                  n_classes=10, shuffle=True, rotation=True):
         'Initialization'
         self.dim = dim
         self.img_path = img_path
         self.gt_path = gt_path
         self.batch_size = batch_size
-        self.list_IDs = list_IDs
         self.n_channels = n_channels
         self.n_classes = n_classes
         self.shuffle = shuffle
         self.rotation = rotation
-        self.on_epoch_end()
+        self.id_list = id_list
+        self.indexes = np.arange(len(self.id_list))
 
     def on_epoch_end(self):
-        self.indexes = np.arange(len(self.list_IDs))
         np.random.shuffle(self.indexes)
 
     def __data_generation(self, list_IDs_temp):
@@ -53,7 +52,7 @@ class DataGenerator(keras.utils.Sequence):
 
     def __len__(self):
         'Denotes the number of batches per epoch'
-        return int(np.floor(len(self.list_IDs) / self.batch_size))
+        return int(np.floor(len(self.id_list) / self.batch_size))
 
     def __getitem__(self, index):
         'Generate one batch of data'
@@ -63,7 +62,7 @@ class DataGenerator(keras.utils.Sequence):
         # print(indexes)
 
         # Find list of IDs
-        list_IDs_temp = [self.list_IDs[k] for k in indexes]
+        list_IDs_temp = [self.id_list[k] for k in indexes]
 
         # Generate data
         X, [y1, y2, y3, y4, y5] = self.__data_generation(list_IDs_temp)

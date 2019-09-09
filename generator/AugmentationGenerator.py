@@ -7,7 +7,7 @@ import numpy as np
 
 rn.seed(1235)
 write_flag = False
-OUTPUT_DIR = '/home/suhita/zonals/temporal/model/'
+OUTPUT_DIR = '/home/suhita/zonals/temporal/model_impl/'
 
 reference_size = [168, 168, 32]
 reference_spacing = [0.5, 0.5, 3.0]
@@ -613,7 +613,7 @@ def get_single_image_augmentation(augmentation_type, orig_image, orig_gt, img_no
 
     # transform image
     res_img = augment_images_spatial(img, reference_image, augmentation_type, centered_transform,
-                                     aug_transform, transformation_parameters_list, binary=False)
+                                     aug_transform, transformation_parameters_list)
 
     out_img[0, :, :, :, 0] = sitk.GetArrayFromImage(res_img)
 

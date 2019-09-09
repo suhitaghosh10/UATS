@@ -19,7 +19,6 @@ class DataGenerator(keras.utils.Sequence):
         self.indexes = np.arange(len(self.id_list))
 
     def on_epoch_end(self):
-        self.indexes = np.arange(len(self.list_IDs))
         np.random.shuffle(self.indexes)
 
     def __data_generation(self, list_IDs_temp):

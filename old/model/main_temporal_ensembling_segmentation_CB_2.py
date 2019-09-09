@@ -53,13 +53,13 @@ def train(train_x, train_y, val_x, val_y):
     print("GT Size:", train_y.shape)
 
     print('-' * 30)
-    print('Creating and compiling model...')
+    print('Creating and compiling model_impl...')
     print('-' * 30)
 
     # Build Model
     model = build_model(num_class=num_class, learning_rate=learning_rate)
 
-    # model.metrics_tensors += model.outputs
+    # model_impl.metrics_tensors += model_impl.outputs
     model.summary()
 
     class TemporalCallback(Callback):
@@ -92,7 +92,7 @@ def train(train_x, train_y, val_x, val_y):
                 cur_pred[:, :, :, :, 2] = model_out[2]
                 cur_pred[:, :, :, :, 3] = model_out[3]
                 cur_pred[:, :, :, :, 4] = model_out[4]
-                # print('model out', self.cur_pred[0, 0, 0, 0, :])
+                # print('model_impl out', self.cur_pred[0, 0, 0, 0, :])
                 next_weight = next(gen_weight)
                 # update ensemble_prediction and unsupervised weight when an epoch ends
                 self.unsupervised_weight = next_weight * self.ensemble_prediction
@@ -156,7 +156,7 @@ def train(train_x, train_y, val_x, val_y):
               'shuffle': True}
 
     print('-' * 30)
-    print('Fitting model...')
+    print('Fitting model_impl...')
     print('-' * 30)
     training_generator = DataGenerator(train_x, unsupervised_target, supervised_label, supervised_flag,
                                        unsupervised_weight, tcb.get_training_list(), **params)

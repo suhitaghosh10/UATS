@@ -35,7 +35,7 @@ class GroupNormalization(Layer):
     # Input shape
         Arbitrary. Use the keyword argument `input_shape`
         (tuple of integers, does not include the samples axis)
-        when using this layer as the first layer in a model.
+        when using this layer as the first layer in a model_impl.
     # Output shape
         Same shape as input.
     # References

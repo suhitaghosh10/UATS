@@ -56,7 +56,7 @@ def main(args):
 
     model = resnet_v1.resnet_v1_110
     # it's actually a 112 since there are 2 additional 1x1 conv for shortcuts
-    print("Data loaded! Building model...")
+    print("Data loaded! Building model_impl...")
 
     with slim.arg_scope(resnet_v1.resnet_arg_scope()):
         net, _ = model(dataset.images_vt, num_classes, is_training=False)
