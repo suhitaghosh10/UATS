@@ -20,8 +20,10 @@ MODEL_NAME = '/data/suhita/temporal/pseudo_5per_A_v2_F' + str(FOLD_NUM)
 TRAIN_IMGS_PATH = '/cache/suhita/data/fold1/train/imgs/'
 TRAIN_GT_PATH = '/cache/suhita/data/fold1/train/gt/'
 
-VAL_IMGS_PATH = '/cache/suhita/data/fold1/val/imgs/'
-VAL_GT_PATH = '/cache/suhita/data/fold1/val/gt/'
+# VAL_IMGS_PATH = '/cache/suhita/data/fold1/val/imgs/'
+# VAL_GT_PATH = '/cache/suhita/data/fold1/val/gt/'
+VAL_IMGS_PATH = '/cache/suhita/data/test_anneke/imgs/'
+VAL_GT_PATH = '/cache/suhita/data/test_anneke/gt/'
 
 TRAINED_MODEL_PATH = '/data/suhita/temporal/model.h5'
 

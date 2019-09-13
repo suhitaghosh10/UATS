@@ -205,6 +205,7 @@ def train(gpu_id, nb_gpus):
                             mc_pred[:, :, :, :, 3] = np.add(model_out[8], mc_pred[:, :, :, :, 3])
                             mc_pred[:, :, :, :, 4] = np.add(model_out[9], mc_pred[:, :, :, :, 4])
 
+
                         avg_pred = mc_pred / T
                         entropy = -(mc_pred / T) * np.log((mc_pred / T) + 1e-5)
                         del mc_pred, inp, model_out
@@ -291,8 +292,8 @@ def train(gpu_id, nb_gpus):
                                        train_id_list,
                                        batch_size=batch_size)
 
-    steps = num_train_data / batch_size
-    #steps =2
+    # steps = num_train_data / batch_size
+    steps = 2
 
     val_supervised_flag = np.ones((num_val_data, 32, 168, 168), dtype='int8')
     val_x_arr = get_complete_array(VAL_IMGS_PATH)

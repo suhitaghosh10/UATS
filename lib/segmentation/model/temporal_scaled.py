@@ -152,7 +152,7 @@ class weighted_model:
 
         avg_dice_coef = K.mean((2. * intersection + smooth) / ((c * y_pred_sum) + y_true_sum + smooth))
 
-        return 1 / (1 + avg_dice_coef)
+        return 1 - avg_dice_coef
 
     def semi_supervised_loss(self, input, unsup_loss_class_wt=1., alpha=0.6):
 

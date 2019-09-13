@@ -206,8 +206,15 @@ def train(gpu_id, nb_gpus):
                             mc_pred[:, :, :, :, 3] = np.add(model_out[3], mc_pred[:, :, :, :, 3])
                             mc_pred[:, :, :, :, 4] = np.add(model_out[4], mc_pred[:, :, :, :, 4])
 
-                        avg_pred = mc_pred / T
-                        entropy = -(mc_pred / T) * np.log((mc_pred / T) + 1e-5)
+                        # avg_pred = mc_pred / T#
+                        entropy = None
+                        for z in np.arange(4):
+                            if z == 0:
+                                entropy = (mc_pred[:, :, :, :, z] / T) * np.log((mc_pred[:, :, :, :, z] / T) + 1e-5)
+                            else:
+                                entropy = entropy + (mc_pred[:, :, :, :, z] / T) * np.log(
+                                    (mc_pred[:, :, :, :, z] / T) + 1e-5)
+                        entropy = -entropy
                         del mc_pred, inp, model_out
 
                         argmax_pred_ravel = np.ravel(np.argmin(cur_pred, axis=-1))

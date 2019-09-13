@@ -14,7 +14,7 @@ from zonal_utils.AugmentationGenerator import *
 # 294 Training 58 have gt
 learning_rate = 5e-5
 
-FOLD_NUM = 3
+FOLD_NUM = 2
 TB_LOG_DIR = '/data/suhita/temporal/tb/variance_mcdropout/mt2' + str(
     FOLD_NUM) + '_' + str(learning_rate) + '/'
 MODEL_NAME = '/data/suhita/temporal/mt2' + str(FOLD_NUM)
@@ -43,7 +43,7 @@ PERCENTAGE_OF_PIXELS = 5
 
 NUM_CLASS = 5
 num_epoch = 351
-batch_size = 1
+batch_size = 2
 IMGS_PER_ENS_BATCH = 59  # 236/4 = 59
 
 # hyper-params
@@ -228,7 +228,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = batch_size
-    gpu_id = '3'
+    gpu_id = '2,3'
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
     # os.environ["CUDA_VISIBLE_DEVICES"] = '2'
@@ -244,8 +244,8 @@ if __name__ == '__main__':
         'batch_size should be a multiple of the nr. of gpus. ' + \
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
-    # train(gpu, nb_gpus)
-    train(None, None)
+    train(gpu, nb_gpus)
+    # train(None, None)
     # val_x = np.load('/cache/suhita/data/validation/valArray_imgs_fold1.npy')
     # val_y = np.load('/cache/suhita/data/validation/valArray_GT_fold1.npy').astype('int8')
 
