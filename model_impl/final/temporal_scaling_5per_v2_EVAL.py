@@ -5,7 +5,7 @@ from keras.callbacks import Callback, ReduceLROnPlateau
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger
 
 from generator.temporal_A import DataGenerator as train_gen
-from lib.segmentation.model.temporal_scaled import weighted_model
+from lib.segmentation.model.temporal_scaled_2 import weighted_model
 from lib.segmentation.ops import ramp_down_weight
 from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
 from lib.segmentation.utils import get_complete_array, get_array, save_array
@@ -18,7 +18,7 @@ TEMP = 1
 FOLD_NUM = 1
 TB_LOG_DIR = '/cache/suhita/temporal/tb/variance_mcdropout/scaling_temp_A_' + str(TEMP) + '_F' + str(
     FOLD_NUM) + '_' + str(learning_rate) + '/'
-MODEL_NAME = '/data/suhita/temporal/MC_Ent_A_F_v24'
+MODEL_NAME = '/data/suhita/temporal/bai1'
 
 CSV_NAME = '/cache/suhita/temporal/CSV/scaling_temp_A_' + str(FOLD_NUM) + '.csv'
 
@@ -290,7 +290,7 @@ def train(gpu_id, nb_gpus):
     # model_impl.save('temporal_max_ramp_final.h5')
 
 
-def predict(val_x_arr, val_y_arr, model):
+def predict(val_x_arr, val_y_arr, model, path):
     val_supervised_flag = np.ones((val_x_arr.shape[0], 32, 168, 168), dtype='int8')
 
     pz = val_y_arr[:, :, :, :, 0]
@@ -311,14 +311,14 @@ def predict(val_x_arr, val_y_arr, model):
     print(model.metrics_names)
     print(model.evaluate(x_val, y_val, batch_size=1, verbose=1))
 
-    np.save('predicted_sl2' + '.npy', out)
+    np.save(path + '.npy', out)
 
 
 if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = batch_size
-    gpu_id = '0'
+    gpu_id = '1'
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
     # os.environ["CUDA_VISIBLE_DEVICES"] = '2'
@@ -341,4 +341,4 @@ if __name__ == '__main__':
 
     val_x = np.load('/cache/suhita/data/test_anneke/final_test_array_imgs.npy')
     val_y = np.load('/cache/suhita/data/test_anneke/final_test_array_GT.npy').astype('int8')
-    predict(val_x, val_y, model=MODEL_NAME)
+    predict(val_x, val_y, model=MODEL_NAME, path=MODEL_NAME)

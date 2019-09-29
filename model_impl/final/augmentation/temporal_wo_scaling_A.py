@@ -2,7 +2,7 @@ import tensorflow as tf
 from keras import backend as K
 from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import Callback, ReduceLROnPlateau
-from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger
+from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
 
 from generator.temporal_A import DataGenerator
 from lib.segmentation.model.temporal_not_scaled import weighted_model
@@ -15,11 +15,11 @@ from zonal_utils.AugmentationGenerator import *
 learning_rate = 5e-5
 
 FOLD_NUM = 4
-TB_LOG_DIR = '/data/suhita/temporal/tb/variance_mcdropout/NO_scaling_A_F' + str(FOLD_NUM) + '_' + str(
+TB_LOG_DIR = '/data/suhita/temporal/tb/variance_mcdropout/NO_scaling_A_____F' + str(FOLD_NUM) + '_' + str(
     learning_rate) + '/'
-MODEL_NAME = '/data/suhita/temporal/NO_scaling_A_F' + str(FOLD_NUM)
+MODEL_NAME = '/data/suhita/temporal/NO_scaling_A_____F' + str(FOLD_NUM)
 
-CSV_NAME = '/data/suhita/temporal/CSV/NO_scaling_A_F' + str(FOLD_NUM) + '.csv'
+CSV_NAME = '/data/suhita/temporal/CSV/NO_scaling_A_____F' + str(FOLD_NUM) + '.csv'
 
 TRAIN_IMGS_PATH = '/cache/suhita/data/training/imgs/'
 # TRAIN_GT_PATH = '/cache/suhita/data/training/gt/'
@@ -241,9 +241,10 @@ def train(gpu_id, nb_gpus):
     LRDecay = ReduceLROnPlateau(monitor='val_loss', factor=0.8, patience=20, verbose=1, mode='min', min_lr=1e-8,
                                 epsilon=0.01)
     lcb = wm.LossCallback()
+    es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=50)
     # del unsupervised_target, unsupervised_weight, supervised_flag, imgs
     # del supervised_flag
-    cb = [model_checkpoint, tcb, tensorboard, lcb, LRDecay, csv_logger]
+    cb = [model_checkpoint, tcb, tensorboard, lcb, LRDecay, csv_logger, es]
 
     print('BATCH Size = ', batch_size)
 

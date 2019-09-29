@@ -2,7 +2,7 @@ import tensorflow as tf
 from keras import backend as K
 from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import Callback, ReduceLROnPlateau
-from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger
+from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
 
 from generator.temporal_A import DataGenerator
 from lib.segmentation.model.temporalEns_MC_2model import weighted_model
@@ -15,11 +15,11 @@ from zonal_utils.AugmentationGenerator import *
 learning_rate = 5e-5
 
 FOLD_NUM = 4
-TB_LOG_DIR = '/data/suhita/temporal/tb/variance_mcdropout/MC_Ent_A_F_v2' + str(
+TB_LOG_DIR = '/data/suhita/temporal/tb/variance_mcdropout/MC_Ent_A_F_____v2' + str(
     FOLD_NUM) + '_' + str(learning_rate) + '/'
-MODEL_NAME = '/data/suhita/temporal/MC_Ent_A_F_v2' + str(FOLD_NUM)
+MODEL_NAME = '/data/suhita/temporal/MC_Ent_A_F_____v2' + str(FOLD_NUM)
 
-CSV_NAME = '/data/suhita/temporal/CSV/MC_Ent_A_F_v2' + str(FOLD_NUM) + '.csv'
+CSV_NAME = '/data/suhita/temporal/CSV/MC_Ent_A_F_____v2' + str(FOLD_NUM) + '.csv'
 
 # TRAIN_IMGS_PATH = '/cache/suhita/data/training/imgs/'
 # TRAIN_GT_PATH = '/cache/suhita/data/training/gt/'
@@ -223,7 +223,7 @@ def train(gpu_id, nb_gpus):
                         indices = None
                         del cur_pred
                         for zone in np.arange(4):
-                            entropy_zone = np.ravel(entropy[:, :, :, :, zone])
+                            entropy_zone = np.ravel(entropy[:, :, :, :])
                             final_max_ravel = np.where(argmax_pred_ravel == zone, np.zeros_like(entropy_zone),
                                                        entropy_zone)
                             zone_indices = np.argpartition(final_max_ravel, -self.confident_pixels_no)[
@@ -279,9 +279,10 @@ def train(gpu_id, nb_gpus):
     LRDecay = ReduceLROnPlateau(monitor='val_loss', factor=0.8, patience=20, verbose=1, mode='min', min_lr=1e-8,
                                 epsilon=0.01)
     lcb = wm.LossCallback()
+    es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=50)
     # del unsupervised_target, unsupervised_weight, supervised_flag, imgs
     # del supervised_flag
-    cb = [model_checkpoint, tcb, tensorboard, lcb, LRDecay, csv_logger]
+    cb = [model_checkpoint, tcb, tensorboard, lcb, LRDecay, csv_logger, es]
 
     print('BATCH Size = ', batch_size)
 
@@ -354,7 +355,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = batch_size
-    gpu_id = '1'
+    gpu_id = '2'
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
     # os.environ["CUDA_VISIBLE_DEVICES"] = '2'

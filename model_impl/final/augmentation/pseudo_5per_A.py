@@ -1,8 +1,6 @@
-import csv
-
 import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
-from keras.callbacks import Callback, ReduceLROnPlateau, CSVLogger
+from keras.callbacks import Callback, ReduceLROnPlateau, CSVLogger, EarlyStopping
 from keras.callbacks import ModelCheckpoint, TensorBoard
 
 from generator.temporal_A import DataGenerator
@@ -13,17 +11,19 @@ from zonal_utils.AugmentationGenerator import *
 
 # 294 Training 58 have gt
 learning_rate = 5e-5
-FOLD_NUM = 33
+FOLD_NUM = 1
 
 TB_LOG_DIR = '/data/suhita/temporal/tb/variance_mcdropout/pseudo_5per_A_F' + str(FOLD_NUM) + '_' + str(
     learning_rate) + '/'
 MODEL_NAME = '/data/suhita/temporal/pseudo_5per_A_F' + str(FOLD_NUM)
 
-TRAIN_IMGS_PATH = '/cache/suhita/data/fold3/train/imgs/'
-TRAIN_GT_PATH = '/cache/suhita/data/fold3/train/gt/'
+TRAIN_IMGS_PATH = '/cache/suhita/data/fold1/train/imgs/'
+TRAIN_GT_PATH = '/cache/suhita/data/fold1/train/gt/'
 
-VAL_IMGS_PATH = '/cache/suhita/data/fold3/val/imgs/'
-VAL_GT_PATH = '/cache/suhita/data/fold3/val/gt/'
+# VAL_IMGS_PATH = '/cache/suhita/data/fold1/val/imgs/'
+# VAL_GT_PATH = '/cache/suhita/data/fold1/val/gt/'
+VAL_IMGS_PATH = '/cache/suhita/data/test_anneke/imgs/'
+VAL_GT_PATH = '/cache/suhita/data/test_anneke/gt/'
 
 TRAINED_MODEL_PATH = '/data/suhita/temporal/supervised_F3.h5'
 
@@ -75,10 +75,6 @@ def train(gpu_id, nb_gpus):
             self.val_pz_dice_coef = 0.
             self.val_us_dice_coef = 0.
             self.count = 58 * 168 * 168 * 32
-
-            with open(CSV, 'w') as csvfile:
-                writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-                writer.writerow([str(0), str(self.count)])
 
             self.imgs_path = imgs_path
             self.gt_path = gt_path
@@ -203,6 +199,7 @@ def train(gpu_id, nb_gpus):
     tensorboard = TensorBoard(log_dir=TB_LOG_DIR, write_graph=False, write_grads=True, histogram_freq=0,
                               batch_size=2, write_images=False)
     csv_logger = CSVLogger(CSV, append=True, separator=';')
+    es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=50)
     # datagen listmake_dataset
     train_id_list = [str(i) for i in np.arange(0, num_train_data)]
 
@@ -212,7 +209,7 @@ def train(gpu_id, nb_gpus):
 
     # del unsupervised_target, unsupervised_weight, supervised_flag, imgs
     # del supervised_flag
-    cb = [model_checkpoint, tcb, tensorboard, csv_logger, LRDecay]
+    cb = [model_checkpoint, tcb, tensorboard, csv_logger, LRDecay, es]
 
     print('BATCH Size = ', batch_size)
 
@@ -285,7 +282,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = batch_size
-    gpu_id = '1'
+    gpu_id = '3'
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
     # os.environ["CUDA_VISIBLE_DEVICES"] = '2'

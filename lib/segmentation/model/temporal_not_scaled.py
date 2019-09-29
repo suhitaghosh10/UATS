@@ -29,12 +29,12 @@ class weighted_model:
 
         return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
 
-    def dice_tb(self, input, class_wt=1.):
+    def dice_tb(self, input, class_wt=1., ):
         def dice_loss(y_true, y_pred, smooth=1., axis=(1, 2, 3)):
             supervised_flag = input[1, :, :, :, :]
             unsupervised_gt = input[0, :, :, :, :]
             alpha = 0.6
-            unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
+            # unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
             y_true_final = tf.where(tf.equal(supervised_flag, 2), unsupervised_gt, y_true)
             supervised_flag = tf.where(tf.equal(supervised_flag, 2), K.ones_like(supervised_flag), supervised_flag)
             y_true = y_true_final * supervised_flag
@@ -50,7 +50,7 @@ class weighted_model:
             else:
                 c = 1
 
-            return - class_wt * K.mean((2. * intersection + smooth) / ((c * y_pred_sum) + y_true_sum + smooth))
+            return - K.mean((2. * intersection + smooth) / ((c * y_pred_sum) + y_true_sum + smooth))
 
         return dice_loss
 
@@ -92,8 +92,12 @@ class weighted_model:
         return - K.mean((2. * intersection + smooth) / ((c * y_pred_sum) + y_true_sum + smooth))
 
     def unsup_dice_tb(self, input, class_wt=1.):
+        unsupervised_gt = input[0, :, :, :, :]
+
+        #unsupervised_gt = unsupervised_gt / (1 -  (0.6** (self.epoch_ctr + 1)))
+
         def unsup_dice_loss(y_true, y_pred, smooth=1., axis=(1, 2, 3)):
-            y_true = y_true
+            y_true = unsupervised_gt
             y_pred = y_pred
 
             intersection = K.sum(y_true * y_pred, axis=axis)
@@ -108,8 +112,7 @@ class weighted_model:
 
             avg_dice_coef = K.mean((2. * intersection + smooth) / ((c * y_pred_sum) + y_true_sum + smooth))
 
-            return (1 / (1 + avg_dice_coef)) * class_wt
-
+            return 1 - avg_dice_coef
         return unsup_dice_loss
 
     def dice_loss(self, y_true, y_pred, weight, smooth=1., axis=(1, 2, 3)):

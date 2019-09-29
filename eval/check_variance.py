@@ -5,7 +5,7 @@ import numpy as np
 from lib.segmentation.old.model_TemporalEns_MC import weighted_model
 from lib.segmentation.utils import get_complete_array
 
-MODEL_NAME = '/home/suhita/zonals/data/model.h5'
+MODEL_NAME = '/home/suhita/zonals/data/model_impl.h5'
 VAL_IMGS_PATH = '/home/suhita/zonals/data/test_anneke/imgs/'
 VAL_GT_PATH = '/home/suhita/zonals/data/test_anneke/gt/'
 

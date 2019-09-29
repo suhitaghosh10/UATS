@@ -2,7 +2,7 @@ import tensorflow as tf
 from keras import backend as K
 from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import Callback, ReduceLROnPlateau
-from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger
+from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
 
 from generator.temporal_A import DataGenerator as train_gen
 from lib.segmentation.model.temporal_scaled import weighted_model
@@ -13,20 +13,14 @@ from zonal_utils.AugmentationGenerator import *
 
 # 294 Training 58 have gt
 learning_rate = 5e-5
-TEMP = 3
+TEMP = 2.908655
 
 FOLD_NUM = 4
-TB_LOG_DIR = '/data/suhita/temporal/tb/variance_mcdropout/scaling_temp_A_' + str(TEMP) + '_F' + str(
+TB_LOG_DIR = '/data/suhita/temporal/tb/variance_mcdropout/SC' + str(TEMP) + '_F' + str(
     FOLD_NUM) + '_' + str(learning_rate) + '/'
-MODEL_NAME = '/data/suhita/temporal/scaling_temp_A_' + str(TEMP) + '_F' + str(FOLD_NUM)
+MODEL_NAME = '/data/suhita/temporal/SC' + str(TEMP) + '_F' + str(FOLD_NUM)
 
-CSV_NAME = '/data/suhita/temporal/CSV/scaling_temp_A_' + str(FOLD_NUM) + '.csv'
-
-# TRAIN_IMGS_PATH = '/cache/suhita/data/training/imgs/'
-# TRAIN_GT_PATH = '/cache/suhita/data/training/gt/'
-
-# VAL_IMGS_PATH = '/cache/suhita/data/test_anneke/imgs/'
-# VAL_GT_PATH = '/cache/suhita/data/test_anneke/gt/'
+CSV_NAME = '/data/suhita/temporal/CSV/SC' + str(FOLD_NUM) + '.csv'
 
 TRAIN_IMGS_PATH = '/cache/suhita/data/fold4/train/imgs/'
 TRAIN_GT_PATH = '/cache/suhita/data/fold4/train/gt/'
@@ -37,8 +31,8 @@ VAL_GT_PATH = '/cache/suhita/data/fold4/val/gt/'
 # TRAINED_MODEL_PATH = '/cache/suhita/data/model.h5'
 TRAINED_MODEL_PATH = '/data/suhita/temporal/supervised_F4.h5'
 
-ENS_GT_PATH = '/data/suhita/temporal/sadv2/ens_gt/'
-FLAG_PATH = '/data/suhita/temporal/sadv2/flag/'
+ENS_GT_PATH = '/data/suhita/temporal/sadv3/ens_gt/'
+FLAG_PATH = '/data/suhita/temporal/sadv3/flag/'
 PERCENTAGE_OF_PIXELS = 5
 
 NUM_CLASS = 5
@@ -133,6 +127,7 @@ def train(gpu_id, nb_gpus):
                 K.set_value(model.optimizer.lr, weight_down * learning_rate)
                 K.set_value(model.optimizer.beta_1, 0.4 * weight_down + 0.5)
                 print('LR: alpha-', K.eval(model.optimizer.lr), K.eval(model.optimizer.beta_1))
+            # print(K.eval(model.layers[43].trainable_weights[0]))
 
         def on_epoch_end(self, epoch, logs={}):
             sup_count = self.count
@@ -246,9 +241,10 @@ def train(gpu_id, nb_gpus):
     LRDecay = ReduceLROnPlateau(monitor='val_loss', factor=0.8, patience=20, verbose=1, mode='min', min_lr=1e-8,
                                 epsilon=0.01)
     lcb = wm.LossCallback()
+    es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=50)
     # del unsupervised_target, unsupervised_weight, supervised_flag, imgs
     # del supervised_flag
-    cb = [model_checkpoint, tcb, tensorboard, lcb, LRDecay, csv_logger]
+    cb = [model_checkpoint, tcb, tensorboard, lcb, LRDecay, csv_logger, es]
 
     print('BATCH Size = ', batch_size)
 
@@ -266,7 +262,7 @@ def train(gpu_id, nb_gpus):
                                    batch_size=batch_size)
 
     steps = num_train_data / batch_size
-    # steps =2
+    #steps =2
 
     val_supervised_flag = np.ones((num_val_data, 32, 168, 168), dtype='int8')
     # val_x_arr = get_complete_array(VAL_IMGS_PATH)

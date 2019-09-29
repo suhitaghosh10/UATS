@@ -15,13 +15,11 @@ class weighted_model:
     alpha = 0.6
     epoch_ctr = K.variable(0, name='epoch_ctr')
 
-
     class LossCallback(Callback):
 
         def on_epoch_end(self, epoch, logs={}):
             weighted_model.epoch_ctr = epoch
             print(weighted_model.epoch_ctr)
-
 
     def dice_coef(self, y_true, y_pred, smooth=1.):
 
@@ -96,7 +94,7 @@ class weighted_model:
     def unsup_dice_tb(self, input, class_wt=1.):
         unsupervised_gt = input[0, :, :, :, :]
 
-        #unsupervised_gt = unsupervised_gt / (1 -  (0.6** (self.epoch_ctr + 1)))
+        # unsupervised_gt = unsupervised_gt / (1 -  (0.6** (self.epoch_ctr + 1)))
 
         def unsup_dice_loss(y_true, y_pred, smooth=1., axis=(1, 2, 3)):
             y_true = unsupervised_gt
@@ -115,6 +113,7 @@ class weighted_model:
             avg_dice_coef = K.mean((2. * intersection + smooth) / ((c * y_pred_sum) + y_true_sum + smooth))
 
             return 1 - avg_dice_coef
+
         return unsup_dice_loss
 
     def dice_loss(self, y_true, y_pred, weight, smooth=1., axis=(1, 2, 3)):
@@ -165,7 +164,7 @@ class weighted_model:
             print(K.eval(self.epoch_ctr))
 
             unsupervised_gt = input[0, :, :, :, :]
-            unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
+            # unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
 
             supervised_flag = input[1, :, :, :, :]
 
@@ -278,18 +277,8 @@ class weighted_model:
         # conv_out_afs_sig = Lambda(lambda x: x[:, :, :, :, 3])(conv_out)
         # conv_out_afs_sig = Activation('sigmoid')(conv_out_afs_sig)
 
-        # conv_out = Lambda(lambda x: x / temp, name='scaling')(conv_out)
-        # conv_out = Temp_Scaling.SadLayer(name='scaling')(conv_out)
-
-        conv_out = Lambda(lambda x: x / temp)(conv_out)
-
-        # conv_out = Lambda(lambda x: Temp_Scaling.SadLayer(x), name='scaling')(conv_out)
-
-        #conv_out = Lambda(lambda x: x / y, name='scaling')(conv_out)
-
-
+        conv_out = Lambda(lambda x: x / temp, name='scaling')(conv_out)
         conv_out_sm = Activation('softmax')(conv_out)
-
 
         pz_sm_out = Lambda(lambda x: x[:, :, :, :, 0], name='pz')(conv_out_sm)
         cz_sm_out = Lambda(lambda x: x[:, :, :, :, 1], name='cz')(conv_out_sm)
@@ -332,7 +321,6 @@ class weighted_model:
             # model_copy = Model([input_img, unsupervised_label, supervised_flag, unsupervised_weight],[pz_out, cz_out, us_out, afs_out, bg_out])
 
             # intermediate_layer_model = Model(inputs=model_impl.input,outputs=model_impl.get_layer(layer_name).output)
-            #p_model.layers.extend(temp)
 
             p_model.compile(optimizer=optimizer,
                             loss={'pz': self.semi_supervised_loss(pz, unsup_loss_class_wt=1),
@@ -362,7 +350,6 @@ class weighted_model:
                 # model_copy = Model([input_img, unsupervised_label, gt, supervised_flag, unsupervised_weight],[pz_out, cz_out, us_out, afs_out, bg_out])
 
                 # intermediate_layer_model = Model(inputs=model_impl.input,outputs=model_impl.get_layer(layer_name).output)
-                #p_model.layers.extend(temp)
 
                 p_model.compile(optimizer=optimizer,
                                 loss={'pz': self.semi_supervised_loss(pz, unsup_loss_class_wt=1),
@@ -372,8 +359,7 @@ class weighted_model:
                                       'bg': self.semi_supervised_loss(bg, 1)
                                       }
                                 ,
-                                metrics={'pz': [self.dice_coef, self.unsup_dice_tb(pz, 1), self.dice_tb(pz, 1),
-                                                self.get_Temp_val(p_model)],
+                                metrics={'pz': [self.dice_coef, self.unsup_dice_tb(pz, 1), self.dice_tb(pz, 1)],
                                          'cz': [self.dice_coef, self.unsup_dice_tb(cz, 1), self.dice_tb(cz, 1)],
                                          'us': [self.dice_coef, self.unsup_dice_tb(us, 2), self.dice_tb(us, 2 * 2)],
                                          'afs': [self.dice_coef, self.unsup_dice_tb(afs, 2), self.dice_tb(afs, 2 * 2)],

@@ -10,19 +10,20 @@ from zonal_utils.AugmentationGenerator import *
 
 # 294 Training 58 have gt
 learning_rate = 5e-5
-FOLD_NUM = 3
+FOLD_NUM = 1
 TB_LOG_DIR = '/data/suhita/temporal/tb/variance_mcdropout/pseudo_A_F' + str(FOLD_NUM) + '/'
 MODEL_NAME = '/data/suhita/temporal/pseudo_A_F' + str(FOLD_NUM) + '.h5'
 
 CSV_NAME = '/data/suhita/temporal/CSV/pseudo_A_F' + str(FOLD_NUM) + '.csv'
 
-TRAIN_IMGS_PATH = '/cache/suhita/data/fold3/train/imgs/'
-TRAIN_GT_PATH = '/cache/suhita/data/fold3/train/gt/'
+TRAIN_IMGS_PATH = '/cache/suhita/data/training/imgs/'
+TRAIN_GT_PATH = '/cache/suhita/data/training/gt/'
+# TRAIN_UNLABELED_DATA_PRED_PATH = '/cache/suhita/data/training/ul_gt/'
 
-VAL_IMGS_PATH = '/cache/suhita/data/fold3/val/imgs/'
-VAL_GT_PATH = '/cache/suhita/data/fold3/val/gt/'
+VAL_IMGS_PATH = '/cache/suhita/data/test_anneke/imgs/'
+VAL_GT_PATH = '/cache/suhita/data/test_anneke/gt/'
 
-TRAINED_MODEL_PATH = '/data/suhita/temporal/supervised_F3.h5'
+TRAINED_MODEL_PATH = '/data/suhita/data/model_impl.h5'
 # TRAINED_MODEL_PATH = '/data/suhita/data/model_impl.h5'
 
 
@@ -113,25 +114,22 @@ def train(gpu_id, nb_gpus, trained_model=None):
     # model_impl.save('temporal_max_ramp_final.h5')
 
 
-def predict(val_imgs, val_gt, model_name, evaluate=True):
-    nrChanels = 1
+def predict(model_name, eval=True):
     out_dir = './'
     val_imgs = np.load('/cache/suhita/data/test_anneke/final_test_array_imgs.npy')
     val_gt = np.load('/cache/suhita/data/test_anneke/final_test_array_GT.npy')
 
     wm = weighted_model()
     model = wm.build_model(learning_rate=learning_rate, gpu_id=None,
-                           nb_gpus=None,
-                           trained_model=model_name)
+                           nb_gpus=None, trained_model=model_name)
     print('load_weights')
     # model_impl.load_weights(TRAINED_MODEL_PATH)
     out = model.predict([val_imgs], batch_size=1, verbose=1)
-    np.save(os.path.join(out_dir, 'original_predicted.npy'), out)
-
-    if evaluate:
+    np.save(os.path.join(out_dir, 'gn_predicted.npy'), out)
+    if eval:
         val_gt = val_gt.astype(np.uint8)
         val_gt_list = [val_gt[:, :, :, :, 0], val_gt[:, :, :, :, 1], val_gt[:, :, :, :, 2], val_gt[:, :, :, :, 3],
-                   val_gt[:, :, :, :, 4]]
+                       val_gt[:, :, :, :, 4]]
         scores = model.evaluate([val_imgs], val_gt_list, batch_size=2, verbose=1)
         length = len(model.metrics_names)
         for i in range(6, 11):
@@ -144,10 +142,10 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = 2
-    gpu_id = '3'
+    gpu_id = '2'
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
-    os.environ["CUDA_VISIBLE_DEVICES"] = '3'
+    os.environ["CUDA_VISIBLE_DEVICES"] = '2'
     # os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
     # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     config = tf.ConfigProto()
@@ -164,3 +162,4 @@ if __name__ == '__main__':
     #train(gpu, nb_gpus, trained_model=TRAINED_MODEL_PATH)
     # val_x = np.load('/cache/suhita/data/validation/valArray_imgs_fold1.npy')
     # val_y = np.load('/cache/suhita/data/validation/valArray_GT_fold1.npy').astype('int8')
+    predict(TRAINED_MODEL_PATH)

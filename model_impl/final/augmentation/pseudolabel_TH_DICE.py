@@ -1,51 +1,53 @@
-import os
-
-import numpy as np
 import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
-from keras.callbacks import ModelCheckpoint, TensorBoard, ReduceLROnPlateau, CSVLogger
+from keras.callbacks import ModelCheckpoint, TensorBoard, ReduceLROnPlateau, CSVLogger, EarlyStopping
 
-# from generator.baseline_A import DataGenerator as train_gen
-from generator.baseline import DataGenerator as train_gen
-from lib.segmentation.model.model_baseline import weighted_model
+from generator.baseline_A import DataGenerator as gen
+from lib.segmentation.model.model_Pseudolabel_Th import weighted_model
+from lib.segmentation.ops import ramp_down_weight
 from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
-from lib.segmentation.utils import get_complete_array
-from zonal_utils.utils import get_train_id_list, get_val_id_list
+from zonal_utils.AugmentationGenerator import *
 
+# 294 Training 58 have gt
 learning_rate = 5e-5
-AUGMENTATION_NO = 2
-TRAIN_NUM = 58
 FOLD_NUM = 1
-CSV_NAME = '/data/suhita/temporal/CSV/Supervised_F_NA' + str(FOLD_NUM) + '.csv'
-NAME = 'Supervised_F_NA' + str(FOLD_NUM)
-TB_LOG_DIR = '/data/suhita/temporal/tb/variance_mcdropout/' + NAME + '_' + str(learning_rate) + '/'
-MODEL_NAME = '/data/suhita/temporal/' + NAME + '.h5'
+TB_LOG_DIR = '/data/suhita/temporal/tb/variance_mcdropout/pseudo_DICE_A_F' + str(FOLD_NUM) + '/'
+MODEL_NAME = '/data/suhita/temporal/pseudo_DICE_A_F' + str(FOLD_NUM) + '.h5'
+
+CSV_NAME = '/data/suhita/temporal/CSV/pseudo_DICE_A_F' + str(FOLD_NUM) + '.csv'
 
 TRAIN_IMGS_PATH = '/cache/suhita/data/fold1/train/imgs/'
 TRAIN_GT_PATH = '/cache/suhita/data/fold1/train/gt/'
+# TRAIN_UNLABELED_DATA_PRED_PATH = '/cache/suhita/data/training/ul_gt/'
 
 VAL_IMGS_PATH = '/cache/suhita/data/test_anneke/imgs/'
 VAL_GT_PATH = '/cache/suhita/data/test_anneke/gt/'
 
+TRAINED_MODEL_PATH = '/data/suhita/model.h5'
+# TRAINED_MODEL_PATH = '/data/suhita/data/model_impl.h5'
 
-TRAINED_MODEL_PATH = MODEL_NAME
 
 NUM_CLASS = 5
 num_epoch = 351
 batch_size = 2
 
-def train(gpu_id, nb_gpus, trained_model=None):
+# hyper-params
+ramp_up_period = 50
+ramp_down_period = 50
 
+
+def train(gpu_id, nb_gpus, trained_model=None):
     wm = weighted_model()
     model = wm.build_model(learning_rate=learning_rate, gpu_id=gpu_id,
                            nb_gpus=nb_gpus, trained_model=trained_model)
+    gen_lr_weight = ramp_down_weight(ramp_down_period)
 
     print('-' * 30)
     print('Creating and compiling model_impl...')
     print('-' * 30)
 
+    # model_impl.metrics_tensors += model_impl.outputs
     model.summary()
-
     # callbacks
     print('-' * 30)
     print('Creating callbacks...')
@@ -66,16 +68,13 @@ def train(gpu_id, nb_gpus, trained_model=None):
 
     tensorboard = TensorBoard(log_dir=TB_LOG_DIR, write_graph=False, write_grads=True, histogram_freq=0,
                               batch_size=2, write_images=False)
+    es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=50)
     LRDecay = ReduceLROnPlateau(monitor='val_loss', factor=0.8, patience=20, verbose=1, mode='min', min_lr=1e-8,
                                 epsilon=0.01)
 
     # datagen listmake_dataset
-    train_id_list = [str(i) for i in get_train_id_list(FOLD_NUM)]
-
-    # del unsupervised_target, unsupervised_weight, supervised_flag, imgs
-    # del supervised_flag
-
-    cb = [model_checkpoint, tensorboard, LRDecay, csv_logger]
+    train_id_list = [str(i) for i in np.arange(294)]
+    cb = [model_checkpoint, tensorboard, LRDecay, csv_logger, es]
 
     print('BATCH Size = ', batch_size)
 
@@ -86,31 +85,28 @@ def train(gpu_id, nb_gpus, trained_model=None):
     print('-' * 30)
     print('Fitting model_impl...')
     print('-' * 30)
-    training_generator = train_gen(TRAIN_IMGS_PATH,
-                                   TRAIN_GT_PATH,
-                                   train_id_list,
-                                   **params)
+    training_generator = gen(TRAIN_IMGS_PATH,
+                             TRAIN_GT_PATH,
+                             train_id_list,
+                             **params)
 
-    steps = (TRAIN_NUM * AUGMENTATION_NO) / batch_size
+    steps = 294 / batch_size
     # steps=2
 
-    val_x_arr = get_complete_array(VAL_IMGS_PATH)
-    val_y_arr = get_complete_array(VAL_GT_PATH, dtype='int8')
-
-    pz = val_y_arr[:, :, :, :, 0]
-    cz = val_y_arr[:, :, :, :, 1]
-    us = val_y_arr[:, :, :, :, 2]
-    afs = val_y_arr[:, :, :, :, 3]
-    bg = val_y_arr[:, :, :, :, 4]
-
-    y_val = [pz, cz, us, afs, bg]
-    x_val = [val_x_arr]
-    del pz, cz, us, afs, bg, val_y_arr, val_x_arr
-    val_id_list = [str(i) for i in get_val_id_list(FOLD_NUM)]
+    # val_imgs = get_complete_array(TEST_IMGS_PATH)
+    # val_gt = get_complete_array(TEST_GT_PATH, dtype='int8')
+    # val_mask = np.zeros_like(val_gt)
+    # val_gt = val_gt.astype(np.uint8)
+    # val_gt_list = [val_gt[:, :, :, :, 0], val_gt[:, :, :, :, 1], val_gt[:, :, :, :, 2], val_gt[:, :, :, :, 3],val_gt[:, :, :, :, 4]]
+    val_id_list = [str(i) for i in np.arange(20)]
+    val_generator = gen(VAL_IMGS_PATH,
+                        VAL_GT_PATH,
+                        val_id_list,
+                        **params)
 
     history = model.fit_generator(generator=training_generator,
                                   steps_per_epoch=steps,
-                                  validation_data=[x_val, y_val],
+                                  validation_data=val_generator,
                                   epochs=num_epoch,
                                   callbacks=cb
                                   )
@@ -148,9 +144,9 @@ if __name__ == '__main__':
     gpu_id = '2'
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
-    # os.environ["CUDA_VISIBLE_DEVICES"] = '2'
-    os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
-    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    os.environ["CUDA_VISIBLE_DEVICES"] = '2'
+    # os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
+    # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
     config.allow_soft_placement = True
@@ -161,11 +157,8 @@ if __name__ == '__main__':
         'batch_size should be a multiple of the nr. of gpus. ' + \
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
-    train(None, None, trained_model=None)
-    # train(gpu, nb_gpus, trained_model=None)
+    train(None, None, trained_model=TRAINED_MODEL_PATH)
+    # train(gpu, nb_gpus, trained_model=TRAINED_MODEL_PATH)
     # val_x = np.load('/cache/suhita/data/validation/valArray_imgs_fold1.npy')
     # val_y = np.load('/cache/suhita/data/validation/valArray_GT_fold1.npy').astype('int8')
-
-    # val_x = TEST_IMGS_PATH
-    #val_y = TEST_GT_PATH
-    #predict(val_x, val_y, TRAINED_MODEL_PATH)
+    predict(TRAINED_MODEL_PATH)

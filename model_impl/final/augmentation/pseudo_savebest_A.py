@@ -11,20 +11,22 @@ from zonal_utils.AugmentationGenerator import *
 
 # 294 Training 58 have gt
 learning_rate = 5e-5
-FOLD_NUM = 4
+FOLD_NUM = 1
 TB_LOG_DIR = '/data/suhita/temporal/tb/variance_mcdropout/pseudo_SB_A_F' + str(FOLD_NUM) + '_' + str(
     learning_rate) + '/'
 MODEL_NAME = '/data/suhita/temporal/pseudo_SB_A_F' + str(FOLD_NUM)
 
 CSV_NAME = '/data/suhita/temporal/CSV/pseudo_SB_A_F' + str(FOLD_NUM) + '.csv'
 
-TRAIN_IMGS_PATH = '/cache/suhita/data/fold4/train/imgs/'
-TRAIN_GT_PATH = '/cache/suhita/data/fold4/train/gt/'
+TRAIN_IMGS_PATH = '/cache/suhita/data/fold1/train/imgs/'
+TRAIN_GT_PATH = '/cache/suhita/data/fold1/train/gt/'
 
-VAL_IMGS_PATH = '/cache/suhita/data/fold4/val/imgs/'
-VAL_GT_PATH = '/cache/suhita/data/fold4/val/gt/'
+# VAL_IMGS_PATH = '/cache/suhita/data/fold1/val/imgs/'
+# VAL_GT_PATH = '/cache/suhita/data/fold1/val/gt/'
+VAL_IMGS_PATH = '/cache/suhita/data/test_anneke/imgs/'
+VAL_GT_PATH = '/cache/suhita/data/test_anneke/gt/'
 
-TRAINED_MODEL_PATH = '/data/suhita/temporal/supervised_F4.h5'
+TRAINED_MODEL_PATH = '/data/suhita/temporal/model.h5'
 # TRAINED_MODEL_PATH = '/cache/suhita/temporal/temporal_sl2.h5'
 
 ENS_GT_PATH = '/data/suhita/temporal/sadv2/ens_gt/'

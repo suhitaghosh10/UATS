@@ -18,7 +18,7 @@ FOLD_NUM = 3
 CSV_NAME = '/data/suhita/temporal/CSV/Supervised_F' + str(FOLD_NUM) + '.csv'
 NAME = '/data/suhita/supervised_F' + str(FOLD_NUM)
 TB_LOG_DIR = '/data/suhita/temporal/tb/variance_mcdropout/' + NAME + '_' + str(learning_rate) + '/'
-MODEL_NAME = '/data/suhita/temporal/supervised_F4.h5'
+MODEL_NAME = '/data/suhita/temporal/results/csv/f2/pseudo_A_F2'
 
 TRAIN_IMGS_PATH = '/cache/suhita/data/training/supervised/imgs/'
 TRAIN_GT_PATH = '/cache/suhita/data/training/supervised/gt/'

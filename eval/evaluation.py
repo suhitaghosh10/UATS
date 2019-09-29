@@ -2,7 +2,6 @@ import csv
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
-from sklearn.metrics import roc_auc_score
 
 from eval.preprocess import *
 
@@ -82,16 +81,15 @@ def evaluateFiles_zones(GT_array, pred_directory, csvName):
         csvwriter = csv.writer(csvfile, delimiter=';', lineterminator='\n',
                                quotechar='|', quoting=csv.QUOTE_MINIMAL)
         csvwriter.writerow(
-            ['Case', 'PZ Dice', 'CZ Dice', 'US Dice', 'AFS Dice', 'PZ MeanDis', 'CZ MeanDis', 'US MeanDis',
-             'AFS MeanDis', 'PZ H', 'CZ H', 'US H',
-             'AFS H', 'PZ auc', 'CZ auc', 'US auc', 'AFS auc'])
+            ['Case', 'PZ Dice', 'CZ Dice', 'US Dice', 'AFS Dice', 'BG Dice', 'PZ MeanDis', 'CZ MeanDis', 'US MeanDis',
+             'AFS MeanDis', 'BG MeanDis', 'PZ H', 'CZ H', 'US H', 'AFS H', 'BG H'])
 
         nrImgs = GT_array.shape[0]
-        dices = np.zeros((nrImgs, 4), dtype=np.float32)
+        dices = np.zeros((nrImgs, 5), dtype=np.float32)
         print(dices.shape)
-        mad = np.zeros((nrImgs, 4), dtype=np.float32)
-        hdf = np.zeros((nrImgs, 4), dtype=np.float32)
-        auc = np.zeros((nrImgs, 4), dtype=np.float32)
+        mad = np.zeros((nrImgs, 5), dtype=np.float32)
+        hdf = np.zeros((nrImgs, 5), dtype=np.float32)
+        # auc = np.zeros((nrImgs, 4), dtype=np.float32)
 
         for imgNumber in range(0, nrImgs):
             print('Case' + str(imgNumber))
@@ -99,9 +97,9 @@ def evaluateFiles_zones(GT_array, pred_directory, csvName):
             temp_dice = []
             temp_mad = []
             temp_hdf = []
-            temp_auc = []
+            # temp_auc = []
 
-            for zoneIndex in range(0, 4):
+            for zoneIndex in range(0, 5):
                 pred_arr = np.load(pred_directory + 'predicted_' + str(imgNumber) + '.npy')[zoneIndex]
                 pred_arr = thresholdArray(pred_arr, 0.3)
                 # pred_arr = pred_arr.astype(int)
@@ -114,59 +112,66 @@ def evaluateFiles_zones(GT_array, pred_directory, csvName):
                 ####GT_label = utils.resampleToReference(GT_label, pred_img, sitk.sitkNearestNeighbor, 0)
                 GT_label = castImage(GT_label, sitk.sitkUInt8)
 
-                sitk.WriteImage(pred_img, 'predImg.nrrd')
-                sitk.WriteImage(GT_label, 'GT_label.nrrd')
+                # sitk.WriteImage(pred_img, 'predImg.nrrd')
+                #sitk.WriteImage(GT_label, 'GT_label.nrrd')
 
                 dice = getDice(pred_img, GT_label)
                 temp_dice.append(dice)
                 print(dice)
                 # avd = relativeAbsoluteVolumeDifference(pred_img, GT_label)
                 [hausdorff, avgDist] = getBoundaryDistances(pred_img, GT_label)
+                # hausdorff = hausdorff_distance(sitk.GetArrayFromImage(pred_img).reshape(168*168,32),sitk.GetArrayFromImage(GT_label).reshape(168*168,32), distance="haversine")
+                #print(hausdorff, avgDist )
                 temp_mad.append(avgDist)
                 temp_hdf.append(hausdorff)
                 # values.append(dice)
                 # values.append(avgDist)
 
-                roc_auc = roc_auc_score(np.ravel(GT_array[imgNumber, :, :, :, zoneIndex]), np.ravel(pred_arr))
-                temp_auc.append(roc_auc)
+                # roc_auc = roc_auc_score(np.ravel(GT_array[imgNumber, :, :, :, zoneIndex]), np.ravel(pred_arr))
+                #temp_auc.append(roc_auc)
 
                 dices[imgNumber, zoneIndex] = dice
                 mad[imgNumber, zoneIndex] = avgDist
                 hdf[imgNumber, zoneIndex] = hausdorff
-                auc[imgNumber, zoneIndex] = roc_auc
+                #auc[imgNumber, zoneIndex] = roc_auc
 
             values.append(temp_dice[0])
             values.append(temp_dice[1])
             values.append(temp_dice[2])
             values.append(temp_dice[3])
+            values.append(temp_dice[4])
 
             values.append(temp_mad[0])
             values.append(temp_mad[1])
             values.append(temp_mad[2])
             values.append(temp_mad[3])
+            values.append(temp_mad[4])
 
             values.append(temp_hdf[0])
             values.append(temp_hdf[1])
             values.append(temp_hdf[2])
             values.append(temp_hdf[3])
+            values.append(temp_hdf[4])
 
-            values.append(temp_auc[0])
-            values.append(temp_auc[1])
-            values.append(temp_auc[2])
-            values.append(temp_auc[3])
+            # values.append(temp_auc[0])
+            # values.append(temp_auc[1])
+            # values.append(temp_auc[2])
+            #values.append(temp_auc[3])
             # values.append(temp_mad)
             csvwriter.writerow(values)
 
         csvwriter.writerow('')
         average = ['Average', np.average(dices[:, 0]), np.average(dices[:, 1]), np.average(dices[:, 2]),
-                   np.average(dices[:, 3]), np.average(mad[:, 0]), np.average(mad[:, 1]), np.average(mad[:, 2]),
-                   np.average(mad[:, 3])]
+                   np.average(dices[:, 3]), np.average(dices[:, 4]), np.average(mad[:, 0]), np.average(mad[:, 1]),
+                   np.average(mad[:, 2]),
+                   np.average(mad[:, 3]), np.average(mad[:, 4])]
         median = ['Median', np.median(dices[:, 0]), np.median(dices[:, 1]), np.median(dices[:, 2]),
-                  np.median(dices[:, 3]), np.median(mad[:, 0]), np.median(mad[:, 1]), np.median(mad[:, 2]),
-                  np.median(mad[:, 3])]
-        std = ['STD', np.std(dices[:, 0]), np.std(dices[:, 1]), np.std(dices[:, 2]),
-               np.std(dices[:, 3]), np.std(mad[:, 0]), np.std(mad[:, 1]), np.std(mad[:, 2]),
-               np.std(mad[:, 3])]
+                  np.median(dices[:, 3]), np.median(dices[:, 4]), np.median(mad[:, 0]), np.median(mad[:, 1]),
+                  np.median(mad[:, 2]),
+                  np.median(mad[:, 3]), np.median(mad[:, 4])]
+        std = ['STD', np.std(dices[:, 0]), np.std(dices[:, 1]), np.std(dices[:, 2]), np.std(dices[:, 3]),
+               np.std(dices[:, 4]),
+               np.std(mad[:, 0]), np.std(mad[:, 1]), np.std(mad[:, 2]), np.std(mad[:, 3]), np.std(mad[:, 4])]
 
         csvwriter.writerow(average)
         csvwriter.writerow(median)
@@ -177,18 +182,21 @@ def evaluateFiles_zones(GT_array, pred_directory, csvName):
         print(np.average(dices[:, 1]))
         print(np.average(dices[:, 2]))
         print(np.average(dices[:, 3]))
+        print(np.average(dices[:, 4]))
 
         print('Mean Dist')
         print(np.average(mad[:, 0]))
         print(np.average(mad[:, 1]))
         print(np.average(mad[:, 2]))
         print(np.average(mad[:, 3]))
+        print(np.average(mad[:, 4]))
 
         print('Hausdorff 95%')
         print(np.average(mad[:, 0]))
         print(np.average(mad[:, 1]))
         print(np.average(mad[:, 2]))
         print(np.average(mad[:, 3]))
+        print(np.average(mad[:, 4]))
 
 
 def evaluateFiles(GT_directory, pred_directory, csvName):
@@ -549,9 +557,9 @@ def postprocesAndEvaluateFiles(name, GT_array, csvName, eval=True):
 
 
 if __name__ == '__main__':
-    name = '/home/suhita/zonals/temporal/model/final/predicted1'
+    name = '/data/suhita/temporal/bai1'
     GT_array_name = '/home/suhita/zonals/data/test_anneke/final_test_array_GT.npy'
-    csvName = name + '.csv'
+    csvName = name
 
     GT_array = np.load(GT_array_name)
     # GT_array = get_complete_array('/home/suhita/zonals/data/test_anneke/gt/')

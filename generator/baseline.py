@@ -39,17 +39,17 @@ class DataGenerator(keras.utils.Sequence):
             X[i, :, :, :, :] = np.load(self.img_path + ID + '.npy')
             aug_gt = np.load(self.gt_path + ID + '.npy')
 
-            y1[i, :, :, :] = aug_gt[0, :, :, :, 0]
-            y2[i, :, :, :] = aug_gt[0, :, :, :, 1]
-            y3[i, :, :, :] = aug_gt[0, :, :, :, 2]
-            y4[i, :, :, :] = aug_gt[0, :, :, :, 3]
-            y5[i, :, :, :] = aug_gt[0, :, :, :, 4]
+            y1[i, :, :, :] = aug_gt[:, :, :, 0]
+            y2[i, :, :, :] = aug_gt[:, :, :, 1]
+            y3[i, :, :, :] = aug_gt[:, :, :, 2]
+            y4[i, :, :, :] = aug_gt[:, :, :, 3]
+            y5[i, :, :, :] = aug_gt[:, :, :, 4]
 
         return X, [y1, y2, y3, y4, y5]
 
     def __len__(self):
         'Denotes the number of batches per epoch'
-        return int(np.floor(len(self.list_IDs) / self.batch_size))
+        return int(np.floor(len(self.id_list) / self.batch_size))
 
     def __getitem__(self, index):
         'Generate one batch of data'
@@ -59,7 +59,7 @@ class DataGenerator(keras.utils.Sequence):
         # print(indexes)
 
         # Find list of IDs
-        list_IDs_temp = [self.list_IDs[k] for k in indexes]
+        list_IDs_temp = [self.id_list[k] for k in indexes]
 
         # Generate data
         X, [y1, y2, y3, y4, y5] = self.__data_generation(list_IDs_temp)

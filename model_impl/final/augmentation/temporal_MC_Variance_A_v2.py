@@ -2,7 +2,7 @@ import tensorflow as tf
 from keras import backend as K
 from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import Callback, ReduceLROnPlateau
-from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger
+from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
 
 from generator.temporal_A import DataGenerator
 from lib.segmentation.model.temporalEns_MC_2model import weighted_model
@@ -15,11 +15,11 @@ from zonal_utils.AugmentationGenerator import *
 learning_rate = 5e-5
 
 FOLD_NUM = 4
-TB_LOG_DIR = '/data/suhita/temporal/tb/variance_mcdropout/MC_Var_A_F_v2' + str(
+TB_LOG_DIR = '/data/suhita/temporal/tb/variance_mcdropout/MC_Var_A_F____v2' + str(
     FOLD_NUM) + '_' + str(learning_rate) + '/'
-MODEL_NAME = '/data/suhita/temporal/MC_Var_A_F' + str(FOLD_NUM)
+MODEL_NAME = '/data/suhita/temporal/MC_Var_A_F____v2' + str(FOLD_NUM)
 
-CSV_NAME = '/data/suhita/temporal/CSV/MC_Var_A_F' + str(FOLD_NUM) + '.csv'
+CSV_NAME = '/data/suhita/temporal/CSV/MC_Var_A_F____v2' + str(FOLD_NUM) + '.csv'
 
 # TRAIN_IMGS_PATH = '/cache/suhita/data/training/imgs/'
 # TRAIN_GT_PATH = '/cache/suhita/data/training/gt/'
@@ -36,8 +36,8 @@ VAL_GT_PATH = '/cache/suhita/data/fold4/val/gt/'
 # TRAINED_MODEL_PATH = '/cache/suhita/data/model.h5'
 TRAINED_MODEL_PATH = '/data/suhita/temporal/supervised_F4.h5'
 
-ENS_GT_PATH = '/data/suhita/temporal/sadv2/ens_gt/'
-FLAG_PATH = '/data/suhita/temporal/sadv2/flag/'
+ENS_GT_PATH = '/data/suhita/temporal/sadv3/ens_gt/'
+FLAG_PATH = '/data/suhita/temporal/sadv3/flag/'
 
 PERCENTAGE_OF_PIXELS = 5
 
@@ -284,7 +284,8 @@ def train(gpu_id, nb_gpus):
     lcb = wm.LossCallback()
     # del unsupervised_target, unsupervised_weight, supervised_flag, imgs
     # del supervised_flag
-    cb = [model_checkpoint, tcb, tensorboard, lcb, LRDecay, csv_logger]
+    es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=50)
+    cb = [model_checkpoint, tcb, tensorboard, lcb, LRDecay, csv_logger, es]
 
     print('BATCH Size = ', batch_size)
 

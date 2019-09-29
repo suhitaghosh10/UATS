@@ -34,7 +34,7 @@ class weighted_model:
             supervised_flag = input[1, :, :, :, :]
             unsupervised_gt = input[0, :, :, :, :]
             alpha = 0.6
-            unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
+            # unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
             y_true_final = tf.where(tf.equal(supervised_flag, 2), unsupervised_gt, y_true)
             supervised_flag = tf.where(tf.equal(supervised_flag, 2), K.ones_like(supervised_flag), supervised_flag)
             y_true = y_true_final * supervised_flag
@@ -50,7 +50,7 @@ class weighted_model:
             else:
                 c = 1
 
-            return - class_wt * K.mean((2. * intersection + smooth) / ((c * y_pred_sum) + y_true_sum + smooth))
+            return - K.mean((2. * intersection + smooth) / ((c * y_pred_sum) + y_true_sum + smooth))
 
         return dice_loss
 
@@ -92,8 +92,12 @@ class weighted_model:
         return - K.mean((2. * intersection + smooth) / ((c * y_pred_sum) + y_true_sum + smooth))
 
     def unsup_dice_tb(self, input, class_wt=1.):
+        unsupervised_gt = input[0, :, :, :, :]
+
+        #unsupervised_gt = unsupervised_gt / (1 -  (0.6** (self.epoch_ctr + 1)))
+
         def unsup_dice_loss(y_true, y_pred, smooth=1., axis=(1, 2, 3)):
-            y_true = y_true
+            y_true = unsupervised_gt
             y_pred = y_pred
 
             intersection = K.sum(y_true * y_pred, axis=axis)
@@ -108,8 +112,7 @@ class weighted_model:
 
             avg_dice_coef = K.mean((2. * intersection + smooth) / ((c * y_pred_sum) + y_true_sum + smooth))
 
-            return (1 - avg_dice_coef) * class_wt
-
+            return 1 - avg_dice_coef
         return unsup_dice_loss
 
     def dice_loss(self, y_true, y_pred, weight, smooth=1., axis=(1, 2, 3)):
@@ -296,9 +299,6 @@ class weighted_model:
         conv7 = self.upLayer(conv6, conv1_b_m, sfs * 4, 7, bn, do)
 
         conv_out_sm = Conv3D(5, (1, 1, 1), activation='softmax', name='conv_final_softmax')(conv7)
-
-        # conv_out = Lambda(lambda x: x/1.5, name='scaling')(conv_out)
-        # conv_out_sm = Activation('softmax')(conv_out)
 
         pz_sm_out = Lambda(lambda x: x[:, :, :, :, 0], name='pz')(conv_out_sm)
         cz_sm_out = Lambda(lambda x: x[:, :, :, :, 1], name='cz')(conv_out_sm)
