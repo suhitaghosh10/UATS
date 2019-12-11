@@ -557,7 +557,7 @@ def postprocesAndEvaluateFiles(name, GT_array, csvName, eval=True):
 
 
 if __name__ == '__main__':
-    name = '/data/suhita/temporal/bai1'
+    name = '/data/suhita/temporal/Temporal_ORIG_A_F4'
     GT_array_name = '/home/suhita/zonals/data/test_anneke/final_test_array_GT.npy'
     csvName = name
 
@@ -566,4 +566,4 @@ if __name__ == '__main__':
 
 
     # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
-    postprocesAndEvaluateFiles(name, GT_array, eval=True, csvName=csvName)
+    postprocesAndEvaluateFiles(name, GT_array, eval=False, csvName=csvName)

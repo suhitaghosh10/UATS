@@ -1,3 +1,5 @@
+from time import time
+
 import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import Callback, ReduceLROnPlateau
@@ -11,23 +13,22 @@ from zonal_utils.AugmentationGenerator import *
 
 # 294 Training 58 have gt
 learning_rate = 5e-5
-FOLD_NUM = 2
+FOLD_NUM = 4
 TB_LOG_DIR = '/data/suhita/temporal/tb/variance_mcdropout/bai' + str(FOLD_NUM) + '/'
 MODEL_NAME = '/data/suhita/temporal/bai' + str(FOLD_NUM)
 
 CSV_NAME = '/data/suhita/temporal/CSV/bai' + str(FOLD_NUM) + '.csv'
 
-TRAIN_IMGS_PATH = '/cache/suhita/data/fold2/train/imgs/'
-TRAIN_GT_PATH = '/cache/suhita/data/fold2/train/gt/'
-# TRAIN_UNLABELED_DATA_PRED_PATH = '/cache/suhita/data/training/ul_gt/'
+TRAIN_IMGS_PATH = '/cache/suhita/data/fold4/train/imgs/'
+TRAIN_GT_PATH = '/cache/suhita/data/fold4/train/gt/'
 
-VAL_IMGS_PATH = '/cache/suhita/data/fold2/val/imgs/'
-VAL_GT_PATH = '/cache/suhita/data/fold2/val/gt/'
+VAL_IMGS_PATH = '/cache/suhita/data/fold4/val/imgs/'
+VAL_GT_PATH = '/cache/suhita/data/fold4/val/gt/'
 
-TRAINED_MODEL_PATH = '/data/suhita/temporal/supervised_F2.h5'
-# TRAINED_MODEL_PATH = '/cache/suhita/temporal/temporal_sl2.h5'
+TRAINED_MODEL_PATH = '/data/suhita/temporal/supervised_F4.h5'
 
 ENS_GT_PATH = '/data/suhita/temporal/sadv2/ens_gt/'
+
 
 PERCENTAGE_OF_PIXELS = 5
 UPDATE_EPOCH_NO = 50
@@ -100,10 +101,10 @@ def train(gpu_id, nb_gpus):
             return flag_save, val_save
 
         def on_epoch_begin(self, epoch, logs=None):
-            pass
+            self.starttime=time()
 
         def on_epoch_end(self, epoch, logs={}):
-
+            print(time() - self.starttime)
             if epoch > 0 and epoch % UPDATE_EPOCH_NO == 0:
                 # if epoch == 0:
                 print('updating pseudolabels')
@@ -230,7 +231,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = batch_size
-    gpu_id = '2'
+    gpu_id = '3'
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
     # os.environ["CUDA_VISIBLE_DEVICES"] = '2'

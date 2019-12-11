@@ -18,7 +18,7 @@ TEMP = 1
 FOLD_NUM = 1
 TB_LOG_DIR = '/cache/suhita/temporal/tb/variance_mcdropout/scaling_temp_A_' + str(TEMP) + '_F' + str(
     FOLD_NUM) + '_' + str(learning_rate) + '/'
-MODEL_NAME = '/data/suhita/temporal/bai1'
+MODEL_NAME = '/data/suhita/temporal/Temporal_SSL_A_F4'
 
 CSV_NAME = '/cache/suhita/temporal/CSV/scaling_temp_A_' + str(FOLD_NUM) + '.csv'
 
@@ -318,7 +318,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = batch_size
-    gpu_id = '1'
+    gpu_id = '3'
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
     # os.environ["CUDA_VISIBLE_DEVICES"] = '2'

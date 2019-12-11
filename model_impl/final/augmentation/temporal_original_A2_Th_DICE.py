@@ -14,23 +14,24 @@ from zonal_utils.AugmentationGenerator import *
 # 294 Training 58 have gt
 learning_rate = 5e-5
 
-FOLD_NUM = 1
-TB_LOG_DIR = '/data/suhita/temporal/tb/variance_mcdropout/Temporal_SSL_MSE_A_F' + str(FOLD_NUM) + '_' + str(
+FOLD_NUM = 4
+TB_LOG_DIR = '/data/suhita/temporal/tb/variance_mcdropout/Temporal_SSL_Dice_A_F' + str(FOLD_NUM) + '_' + str(
     learning_rate) + '/'
-MODEL_NAME = '/data/suhita/temporal/Temporal_SSL_MSE_A_F' + str(FOLD_NUM)
+MODEL_NAME = '/data/suhita/temporal/Temporal_SSL_Dice_A_F' + str(FOLD_NUM)
 
-CSV_NAME = '/data/suhita/temporal/CSV/Temporal_SSL_MSE_A_F' + str(FOLD_NUM) + '.csv'
+CSV_NAME = '/data/suhita/temporal/CSV/Temporal_SSL_Dice_A_F' + str(FOLD_NUM) + '.csv'
 
-TRAIN_IMGS_PATH = '/cache/suhita/data/fold1/train/imgs/'
-TRAIN_GT_PATH = '/cache/suhita/data/fold1/train/gt/'
+TRAIN_IMGS_PATH = '/cache/suhita/data/fold4/train/imgs/'
+TRAIN_GT_PATH = '/cache/suhita/data/fold4/train/gt/'
 
-VAL_IMGS_PATH = '/cache/suhita/data/test_anneke/imgs/'
-VAL_GT_PATH = '/cache/suhita/data/test_anneke/gt/'
+VAL_IMGS_PATH = '/cache/suhita/data/fold4/val/imgs/'
+VAL_GT_PATH = '/cache/suhita/data/fold4/val/gt/'
 
-# TRAINED_MODEL_PATH = '/cache/suhita/temporal/temporal_sl2.h5'
+TRAINED_MODEL_PATH = '/data/suhita/temporal/supervised_F4.h5'
 
-ENS_GT_PATH = '/data/suhita/temporal/sadv4/ens_gt/'
-FLAG_PATH = '/data/suhita/temporal/sadv4/flag/'
+ENS_GT_PATH = '/data/suhita/temporal/sadv2/ens_gt/'
+FLAG_PATH = '/data/suhita/temporal/sadv2/flag/'
+
 PERCENTAGE_OF_PIXELS = 5
 
 NUM_CLASS = 5

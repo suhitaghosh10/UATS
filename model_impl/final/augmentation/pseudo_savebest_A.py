@@ -1,3 +1,5 @@
+from time import time
+
 import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import Callback, ReduceLROnPlateau
@@ -11,26 +13,24 @@ from zonal_utils.AugmentationGenerator import *
 
 # 294 Training 58 have gt
 learning_rate = 5e-5
-FOLD_NUM = 1
+FOLD_NUM = 4
 TB_LOG_DIR = '/data/suhita/temporal/tb/variance_mcdropout/pseudo_SB_A_F' + str(FOLD_NUM) + '_' + str(
     learning_rate) + '/'
 MODEL_NAME = '/data/suhita/temporal/pseudo_SB_A_F' + str(FOLD_NUM)
 
 CSV_NAME = '/data/suhita/temporal/CSV/pseudo_SB_A_F' + str(FOLD_NUM) + '.csv'
 
-TRAIN_IMGS_PATH = '/cache/suhita/data/fold1/train/imgs/'
-TRAIN_GT_PATH = '/cache/suhita/data/fold1/train/gt/'
+TRAIN_IMGS_PATH = '/cache/suhita/data/fold4/train/imgs/'
+TRAIN_GT_PATH = '/cache/suhita/data/fold4/train/gt/'
 
-# VAL_IMGS_PATH = '/cache/suhita/data/fold1/val/imgs/'
-# VAL_GT_PATH = '/cache/suhita/data/fold1/val/gt/'
-VAL_IMGS_PATH = '/cache/suhita/data/test_anneke/imgs/'
-VAL_GT_PATH = '/cache/suhita/data/test_anneke/gt/'
+VAL_IMGS_PATH = '/cache/suhita/data/fold4/val/imgs/'
+VAL_GT_PATH = '/cache/suhita/data/fold4/val/gt/'
 
-TRAINED_MODEL_PATH = '/data/suhita/temporal/model.h5'
-# TRAINED_MODEL_PATH = '/cache/suhita/temporal/temporal_sl2.h5'
+TRAINED_MODEL_PATH = '/data/suhita/temporal/supervised_F4.h5'
 
 ENS_GT_PATH = '/data/suhita/temporal/sadv2/ens_gt/'
 FLAG_PATH = '/data/suhita/temporal/sadv2/flag/'
+
 
 PERCENTAGE_OF_PIXELS = 5
 
@@ -119,9 +119,10 @@ def train(gpu_id, nb_gpus):
             return flag_save, val_save
 
         def on_epoch_begin(self, epoch, logs=None):
-            pass
+            self.starttime=time()
 
         def on_epoch_end(self, epoch, logs={}):
+
             sup_count = self.count
             pz_save, self.val_pz_dice_coef = self.shall_save(logs['val_pz_dice_coef'], self.val_pz_dice_coef)
             cz_save, self.val_cz_dice_coef = self.shall_save(logs['val_cz_dice_coef'], self.val_cz_dice_coef)
@@ -198,6 +199,7 @@ def train(gpu_id, nb_gpus):
 
                     sup_count = sup_count + np.count_nonzero(flag)
                     del flag
+                    print(time() - self.starttime)
 
                 # shuffle and init datagen again
 

@@ -1,3 +1,5 @@
+from time import time
+
 import tensorflow as tf
 from keras import backend as K
 from keras.backend.tensorflow_backend import set_session
@@ -21,23 +23,16 @@ MODEL_NAME = '/data/suhita/temporal/NO_scaling_A_____F' + str(FOLD_NUM)
 
 CSV_NAME = '/data/suhita/temporal/CSV/NO_scaling_A_____F' + str(FOLD_NUM) + '.csv'
 
-TRAIN_IMGS_PATH = '/cache/suhita/data/training/imgs/'
-# TRAIN_GT_PATH = '/cache/suhita/data/training/gt/'
-
-# VAL_IMGS_PATH = '/cache/suhita/data/test_anneke/imgs/'
-# VAL_GT_PATH = '/cache/suhita/data/test_anneke/gt/'
-
 TRAIN_IMGS_PATH = '/cache/suhita/data/fold4/train/imgs/'
 TRAIN_GT_PATH = '/cache/suhita/data/fold4/train/gt/'
 
 VAL_IMGS_PATH = '/cache/suhita/data/fold4/val/imgs/'
 VAL_GT_PATH = '/cache/suhita/data/fold4/val/gt/'
 
-# TRAINED_MODEL_PATH = '/cache/suhita/data/model.h5'
 TRAINED_MODEL_PATH = '/data/suhita/temporal/supervised_F4.h5'
 
-ENS_GT_PATH = '/data/suhita/temporal/sadv3/ens_gt/'
-FLAG_PATH = '/data/suhita/temporal/sadv3/flag/'
+ENS_GT_PATH = '/data/suhita/temporal/sadv2/ens_gt/'
+FLAG_PATH = '/data/suhita/temporal/sadv2/flag/'
 PERCENTAGE_OF_PIXELS = 5
 
 NUM_CLASS = 5
@@ -126,7 +121,7 @@ def train(gpu_id, nb_gpus):
             return flag_save, val_save
 
         def on_epoch_begin(self, epoch, logs=None):
-            # tf.summary.scalar("labeled_pixels", np.count_nonzero(self.supervised_flag))
+            self.starttime = time()
             if epoch > num_epoch - ramp_down_period:
                 weight_down = next(gen_lr_weight)
                 K.set_value(model.optimizer.lr, weight_down * learning_rate)
@@ -134,6 +129,7 @@ def train(gpu_id, nb_gpus):
                 print('LR: alpha-', K.eval(model.optimizer.lr), K.eval(model.optimizer.beta_1))
 
         def on_epoch_end(self, epoch, logs={}):
+            print(time() - self.starttime)
             sup_count = self.count
             pz_save, self.val_pz_dice_coef = self.shall_save(logs['val_pz_dice_coef'], self.val_pz_dice_coef)
             cz_save, self.val_cz_dice_coef = self.shall_save(logs['val_cz_dice_coef'], self.val_cz_dice_coef)
@@ -317,7 +313,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = batch_size
-    gpu_id = '3'
+    gpu_id = '4'
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
     # os.environ["CUDA_VISIBLE_DEVICES"] = '2'

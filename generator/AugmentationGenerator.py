@@ -7,7 +7,7 @@ import numpy as np
 
 rn.seed(1235)
 write_flag = False
-OUTPUT_DIR = '/home/suhita/zonals/temporal/model_impl/'
+OUTPUT_DIR = '/cache/suhita/'
 
 reference_size = [168, 168, 32]
 reference_spacing = [0.5, 0.5, 3.0]
@@ -73,6 +73,7 @@ def resampleToReference(inputImg, referenceImg, interpolator, defaultValue):
 
 def augment_images_spatial(original_image, reference_image, augmentation_type, T0, T_aug, transformation_parameters,
                            interpolator=sitk.sitkLinear, default_intensity_value=0.0):
+    #interpolator = sitk.sitkNearestNeighbor
     if augmentation_type == AugmentTypes.FLIP_HORIZ.value:
         arr = sitk.GetArrayFromImage(original_image)
         arr = np.flip(arr, axis=2)
@@ -935,15 +936,15 @@ def get_mask(gt_arr_inp, write=False):
 
 
 if __name__ == '__main__':
-    img_path = '/home/suhita/zonals/data/training/imgs/'
+    img_path = '/cache/suhita/data/fold4/train/imgs/'
     #gt_path = '/home/suhita/zonals/temporal/sadv2/gt/'
-    gt_path = '/home/suhita/zonals/data/training/gt/'
-    ens_gt = '/home/suhita/zonals/temporal/SADV1/ens_gt/'
-    img_no = 200
+    gt_path = '/data/suhita/temporal/sadv1/ens_gt/'
+    ens_gt = '/data/suhita/temporal/sadv1/ens_gt/'
+    img_no = 1
     img = np.load(img_path + str(img_no) + '.npy')
     gt = np.load(gt_path + str(img_no) + '.npy')
     ens_gt = np.load(ens_gt + str(img_no) + '.npy')
-    augmentation_type = AugmentTypes.ROTATE
+    augmentation_type = AugmentTypes.ROTATE.value
 
     out_img, out_gt, out_ens_gt = get_single_image_augmentation_with_ensemble2(augmentation_type, img, gt, ens_gt,
                                                                                img_no)

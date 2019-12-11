@@ -1,5 +1,8 @@
+from time import time
+
 import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
+from keras.callbacks import Callback
 from keras.callbacks import ModelCheckpoint, TensorBoard, ReduceLROnPlateau, CSVLogger
 
 from generator.baseline_A import DataGenerator as gen
@@ -10,21 +13,23 @@ from zonal_utils.AugmentationGenerator import *
 
 # 294 Training 58 have gt
 learning_rate = 5e-5
-FOLD_NUM = 1
+FOLD_NUM = 4
 TB_LOG_DIR = '/data/suhita/temporal/tb/variance_mcdropout/pseudo_A_F' + str(FOLD_NUM) + '/'
 MODEL_NAME = '/data/suhita/temporal/pseudo_A_F' + str(FOLD_NUM) + '.h5'
 
 CSV_NAME = '/data/suhita/temporal/CSV/pseudo_A_F' + str(FOLD_NUM) + '.csv'
 
-TRAIN_IMGS_PATH = '/cache/suhita/data/training/imgs/'
-TRAIN_GT_PATH = '/cache/suhita/data/training/gt/'
-# TRAIN_UNLABELED_DATA_PRED_PATH = '/cache/suhita/data/training/ul_gt/'
+TRAIN_IMGS_PATH = '/cache/suhita/data/fold4/train/imgs/'
+TRAIN_GT_PATH = '/cache/suhita/data/fold4/train/gt/'
 
-VAL_IMGS_PATH = '/cache/suhita/data/test_anneke/imgs/'
-VAL_GT_PATH = '/cache/suhita/data/test_anneke/gt/'
+VAL_IMGS_PATH = '/cache/suhita/data/fold4/val/imgs/'
+VAL_GT_PATH = '/cache/suhita/data/fold4/val/gt/'
 
-TRAINED_MODEL_PATH = '/data/suhita/data/model_impl.h5'
-# TRAINED_MODEL_PATH = '/data/suhita/data/model_impl.h5'
+TRAINED_MODEL_PATH = '/data/suhita/temporal/supervised_F4.h5'
+
+ENS_GT_PATH = '/data/suhita/temporal/sadv2/ens_gt/'
+FLAG_PATH = '/data/suhita/temporal/sadv2/flag/'
+
 
 
 NUM_CLASS = 5
@@ -41,6 +46,18 @@ def train(gpu_id, nb_gpus, trained_model=None):
     model = wm.build_model(learning_rate=learning_rate, gpu_id=gpu_id,
                            nb_gpus=nb_gpus, trained_model=trained_model)
     gen_lr_weight = ramp_down_weight(ramp_down_period)
+
+    class TemporalCallback(Callback):
+
+        def __init__(self, imgs_path, gt_path, ensemble_path, supervised_flag_path, train_idx_list):
+            pass
+
+
+        def on_epoch_begin(self, epoch, logs=None):
+            self.starttime=time()
+
+        def on_epoch_end(self, epoch, logs={}):
+            print(time() - self.starttime)
 
     print('-' * 30)
     print('Creating and compiling model_impl...')
