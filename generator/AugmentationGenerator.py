@@ -741,7 +741,7 @@ def get_single_image_augmentation_with_ensemble(augmentation_type, orig_image, o
     return out_img, out_gt, out_ens_gt
 
 
-def get_single_image_augmentation_with_ensemble2(augmentation_type, orig_image, orig_gt, ens_gt, img_no):
+def get_single_image_augmentation_with_ensemble2(augmentation_type, orig_image, orig_gt, ens_gt, img_no, labelled_num):
     # print(img_no, augmentation_type)
     out_img = np.zeros([32, 168, 168, 1], dtype=np.float32)
 
@@ -769,7 +769,7 @@ def get_single_image_augmentation_with_ensemble2(augmentation_type, orig_image, 
         augmentation_type).name + '.nrrd'), reference_image, is_image=True)
 
     # out_gt = get_transformed_ens_gt2(orig_gt, augmentation_type, centered_transform, aug_transform, transformation_parameters_list)
-    if int(img_no) < 58:
+    if int(img_no) < labelled_num:
         out_gt = get_transformed_gt(orig_gt, augmentation_type, centered_transform, aug_transform,
                                     transformation_parameters_list)
 
@@ -883,8 +883,8 @@ def get_single_image_augmentation_with_ensemble3(augmentation_type, orig_image, 
     out_ens_gt = resampleImage(out_ens_gt, [0.5, 0.5, 0.5], sitk.sitkLinear, 0.)
     out_ens_gt = augment_images_spatial(out_ens_gt, gt_ref, augmentation_type, centered_transform,
                                         aug_transform, transformation_parameters_list)
-    if (out_ens_gt.GetSize() != gt_ref.GetSize()):
-        print(img_no)
+    # if (out_ens_gt.GetSize() != gt_ref.GetSize()):
+    # print(img_no)
     out_ens_gt = sitk.GetArrayFromImage(out_ens_gt)
 
     write_image(out_ens_gt[:, :, :, 0],
@@ -936,16 +936,16 @@ def get_mask(gt_arr_inp, write=False):
 
 
 if __name__ == '__main__':
-    img_path = '/cache/suhita/data/fold4/train/imgs/'
+    img_path = '/cache/suhita/data/fold1/train/imgs/'
     #gt_path = '/home/suhita/zonals/temporal/sadv2/gt/'
-    gt_path = '/data/suhita/temporal/sadv1/ens_gt/'
+    gt_path = '/cache/suhita/data/fold1/train/gt/'
     ens_gt = '/data/suhita/temporal/sadv1/ens_gt/'
     img_no = 1
     img = np.load(img_path + str(img_no) + '.npy')
     gt = np.load(gt_path + str(img_no) + '.npy')
     ens_gt = np.load(ens_gt + str(img_no) + '.npy')
-    augmentation_type = AugmentTypes.ROTATE.value
+    augmentation_type = AugmentTypes.TRANSLATION_3D
 
     out_img, out_gt, out_ens_gt = get_single_image_augmentation_with_ensemble2(augmentation_type, img, gt, ens_gt,
                                                                                img_no)
-    #out_img, out_gt = get_single_image_augmentation(augmentation_type, img, gt, img_no)
+    out_img, out_gt = get_single_image_augmentation(augmentation_type, img, gt, img_no)

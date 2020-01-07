@@ -7,7 +7,7 @@ NPY = '.npy'
 
 class DataGenerator(keras.utils.Sequence):
     def __init__(self, imgs_path, gt_path, supervised_flag_path, id_list, batch_size=2,
-                 dim=(32, 168, 168)):
+                 dim=(32, 168, 168), labelled_num=58):
         'Initialization'
         self.dim = dim
         self.imgs_path = imgs_path
@@ -16,6 +16,7 @@ class DataGenerator(keras.utils.Sequence):
         self.batch_size = batch_size
         self.id_list = id_list
         self.indexes = np.arange(len(self.id_list))
+        self.labelled_num = labelled_num
 
     def on_epoch_end(self):
         np.random.shuffle(self.indexes)

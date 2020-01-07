@@ -39,8 +39,10 @@ class DataGenerator(keras.utils.Sequence):
             aug_type = np.random.randint(0, 4)
 
             X[i, :, :, :, :], aug_gt = aug.get_single_image_augmentation(aug_type,
-                                                                         np.load(self.img_path + ID + '.npy'),
-                                                                         np.load(self.gt_path + ID + '.npy'), img_no=ID)
+                                                                         np.load(self.img_path + ID + '.npy',
+                                                                                 allow_pickle=True),
+                                                                         np.load(self.gt_path + ID + '.npy',
+                                                                                 allow_pickle=True), img_no=ID)
 
             y1[i, :, :, :] = aug_gt[0, :, :, :, 0]
             y2[i, :, :, :] = aug_gt[0, :, :, :, 1]
@@ -58,13 +60,12 @@ class DataGenerator(keras.utils.Sequence):
         'Generate one batch of data'
         # Generate indexes of the batch
         indexes = self.indexes[index * self.batch_size:(index + 1) * self.batch_size]
-        # print('\n')
-        # print(indexes)
 
         # Find list of IDs
         list_IDs_temp = [self.id_list[k] for k in indexes]
 
         # Generate data
+
         X, [y1, y2, y3, y4, y5] = self.__data_generation(list_IDs_temp)
 
         return X, [y1, y2, y3, y4, y5]

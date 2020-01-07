@@ -1,7 +1,7 @@
 import numpy as np
 
-unlabeled_imgs = np.load('/home/suhita/zonals/data/training/npy_img_unlabeled.npy')
-unlabeled_imgs_gt = np.load('/home/suhita/zonals/data/training/npy_img_unlabeled_gt.npy')
+unlabeled_imgs = np.load('/cache/suhita/data/npy_img_unlabeled.npy')
+unlabeled_imgs_gt = np.load('/cache/suhita/code/uats/model_impl/baseline/gn_predic/predicted_final_.npy')
 
 good_count = unlabeled_imgs.shape[0] - 8
 
@@ -19,19 +19,20 @@ good_imgs_list = set(all) - set(conc)
 counter = 0
 for i in conc:
     bad_prediction_arr[counter] = unlabeled_imgs[i]
-    bad_prediction_arr_gt[counter] = np.transpose(unlabeled_imgs_gt[i], axes=(1, 2, 3, 0))
+    # bad_prediction_arr_gt[counter] = np.transpose(unlabeled_imgs_gt[i], axes=(1, 2, 3, 0))
+    bad_prediction_arr_gt[counter] = unlabeled_imgs_gt[i]
     print('bad images', i)
     counter += 1
 
-np.save('/home/suhita/zonals/data/training/bad/bad_prediction_arr', bad_prediction_arr)
-np.save('/home/suhita/zonals/data/training/bad/bad_prediction_arr_gt', bad_prediction_arr_gt.astype('int8'))
+# np.save('/home/suhita/zonals/data/training/bad/bad_prediction_arr', bad_prediction_arr)
+#np.save('/home/suhita/zonals/data/training/bad/bad_prediction_arr_gt', bad_prediction_arr_gt.astype('int8'))
 
 counter = 0
 for i in good_imgs_list:
     good_prediction_arr[counter] = unlabeled_imgs[i]
-    good_prediction_arr_gt[counter] = np.transpose(unlabeled_imgs_gt[i], axes=(1, 2, 3, 0))
+    good_prediction_arr_gt[counter] = unlabeled_imgs_gt[i]
     counter += 1
     print(i)
 
-np.save('/home/suhita/zonals/data/training/good_prediction_arr', good_prediction_arr)
-np.save('/home/suhita/zonals/data/training/good_prediction_arr_gt', good_prediction_arr_gt.astype('int8'))
+np.save('/cache/suhita/data/good_prediction_arr', good_prediction_arr)
+np.save('/cache/suhita/data/good_prediction_arr_gt', good_prediction_arr_gt.astype('int8'))

@@ -1,40 +1,39 @@
 import numpy as np
 
 # training
-
-'''
-timgs = np.load('/home/suhita/zonals/data/training/trainArray_imgs_fold1.npy')
+train_num = 30
+root_path = '/cache/suhita/data/'
+timgs = np.load(root_path + 'trainArray_imgs_fold1.npy')
 print(timgs.shape)
-tgt = np.load('/home/suhita/zonals/data/training/trainArray_GT_fold1.npy')
+tgt = np.load(root_path + 'trainArray_GT_fold1.npy')
 tgt = tgt.astype('int8')
 
-imgs = np.load('/home/suhita/zonals/data/training/good_prediction_arr.npy')
-gt = np.load('/home/suhita/zonals/data/training/good_prediction_arr_gt.npy')
+imgs = np.load(root_path + 'good_prediction_arr.npy')
+gt = np.load(root_path + 'good_prediction_arr_gt.npy')
 gt = gt.astype('int8')
 
-stop = imgs.shape[0] + 58
+stop = imgs.shape[0] + train_num
 print(stop)
 
-for i in np.arange(timgs.shape[0]):
-    np.save('/home/suhita/zonals/data/training/imgs/' + str(i), timgs[i])
-    np.save('/home/suhita/zonals/data/training/gt/' + str(i), tgt[i])
+for i in np.arange(train_num):
+    np.save(root_path + 'fold1_30/train/imgs/' + str(i), timgs[i])
+    np.save(root_path + 'fold1_30/train/gt/' + str(i), tgt[i])
     print(i)
 
-for i in np.arange(start=58, stop=stop):
-    np.save('/home/suhita/zonals/data/training/imgs/' + str(i), imgs[i - 58])
-    np.save('/home/suhita/zonals/data/training/gt/' + str(i), gt[i - 58])
+for i in np.arange(start=train_num, stop=stop):
+    np.save(root_path + 'fold1_30/train/imgs/' + str(i), imgs[i - train_num])
+    np.save(root_path + 'fold1_30/train/gt/' + str(i), gt[i - train_num])
     print(i)
-'''
+
 # validation
 
 
-# vimgs = np.load('/home/suhita/zonals/data/validation/valArray_imgs_fold1.npy')
-vimgs = np.load('/home/suhita/zonals/data/test_anneke/final_test_array_imgs.npy')
+vimgs = np.load(root_path + 'valArray_imgs_fold1.npy')
 print(vimgs.shape)
-# vgt = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy')
-vgt = np.load('/home/suhita/zonals/data/test_anneke/final_test_array_GT.npy').astype('int8')
+vgt = np.load(root_path + 'valArray_GT_fold1.npy').astype('int8')
+# vgt = np.load('/home/suhita/zonals/data/test_anneke/final_test_array_GT.npy').astype('int8')
 
 for i in np.arange(vimgs.shape[0]):
-    np.save('/home/suhita/zonals/data/test_anneke/imgs/' + str(i), vimgs[i, :, :, :, :])
-    np.save('/home/suhita/zonals/data/test_anneke/gt/' + str(i), vgt[i, :, :, :, :])
+    np.save(root_path + 'fold1_30/val/imgs/' + str(i), vimgs[i, :, :, :, :])
+    np.save(root_path + 'fold1_30/val/gt/' + str(i), vgt[i, :, :, :, :])
     print(i)

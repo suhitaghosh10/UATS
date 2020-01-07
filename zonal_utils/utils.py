@@ -140,6 +140,7 @@ def augment_images_spatial(original_image, reference_image, T0, T_aug, transform
         return aug_image
 
 
+"""
 def get_train_id_list(fold_num):
     if fold_num == 1:
         return np.arange(0, 58)
@@ -152,7 +153,7 @@ def get_train_id_list(fold_num):
     else:
         print('wrong fold number')
         return None
-
+"""
 
 def get_val_id_list(fold_num):
     if fold_num == 1:

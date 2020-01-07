@@ -545,7 +545,7 @@ def postprocesAndEvaluateFiles(name, GT_array, csvName, eval=True):
     for i in range(0, prediction.shape[1]):
         print(i)
         array = removeIslands(prediction[:, i, :, :, :])
-        np.save(outDir + 'predicted_' + str(i) + '.npy', array)
+        #np.save(outDir + 'predicted_' + str(i) + '.npy', array)
         print(array.shape)
         out_arr[i] = np.transpose(array, (1, 2, 3, 0))
         # print('preditction', prediction.shape)
@@ -557,11 +557,13 @@ def postprocesAndEvaluateFiles(name, GT_array, csvName, eval=True):
 
 
 if __name__ == '__main__':
-    name = '/data/suhita/temporal/Temporal_ORIG_A_F4'
-    GT_array_name = '/home/suhita/zonals/data/test_anneke/final_test_array_GT.npy'
+    name = '/cache/suhita/code/uats/model_impl/baseline/gn_predicted'
+    GT_array_name = None
     csvName = name
+    GT_array = None
 
-    GT_array = np.load(GT_array_name)
+    if GT_array_name is not None:
+        GT_array = np.load(GT_array_name)
     # GT_array = get_complete_array('/home/suhita/zonals/data/test_anneke/gt/')
 
 

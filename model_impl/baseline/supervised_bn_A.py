@@ -3,33 +3,33 @@ import os
 import numpy as np
 import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
-from keras.callbacks import ModelCheckpoint, TensorBoard, ReduceLROnPlateau, CSVLogger
+from keras.callbacks import ModelCheckpoint, TensorBoard, EarlyStopping, CSVLogger
 
 from generator.baseline_A import DataGenerator as train_gen
 from lib.segmentation.model.model_baseline import weighted_model
 from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
 from lib.segmentation.utils import get_complete_array
-from zonal_utils.utils import get_train_id_list, get_val_id_list
 
 learning_rate = 5e-5
-AUGMENTATION_NO = 20
+AUGMENTATION_NO = 1
 TRAIN_NUM = 58
-FOLD_NUM = 4
-CSV_NAME = '/data/suhita/temporal/CSV/Supervised_F' + str(FOLD_NUM) + '.csv'
-NAME = 'supervised_F' + str(FOLD_NUM)
-TB_LOG_DIR = '/data/suhita/temporal/tb/variance_mcdropout/' + NAME + '_' + str(learning_rate) + '/'
+FOLD_NUM = 1
+NAME = 'supervised_F' + str(FOLD_NUM) + '_' + str(TRAIN_NUM)
+CSV_NAME = '/data/suhita/temporal/CSV/' + NAME + '.csv'
+
+TB_LOG_DIR = '/data/suhita/temporal/tb/' + NAME + str(learning_rate) + '/'
 MODEL_NAME = '/data/suhita/temporal/' + NAME + '.h5'
 
-TRAIN_IMGS_PATH = '/cache/suhita/data/fold4/train/imgs/'
-TRAIN_GT_PATH = '/cache/suhita/data/fold4/train/gt/'
+TRAIN_IMGS_PATH = '/cache/suhita/data/fold1/SUPERVISED/train/imgs/'
+TRAIN_GT_PATH = '/cache/suhita/data/fold1/SUPERVISED/train/gt/'
 
-VAL_IMGS_PATH = '/cache/suhita/data/fold4/val/imgs/'
-VAL_GT_PATH = '/cache/suhita/data/fold4/val/gt/'
+VAL_IMGS_PATH = '/cache/suhita/data/fold1/SUPERVISED/val/imgs/'
+VAL_GT_PATH = '/cache/suhita/data/fold1/SUPERVISED/val/gt/'
 
 TRAINED_MODEL_PATH = MODEL_NAME
 
 NUM_CLASS = 5
-num_epoch = 351
+num_epoch = 1000
 batch_size = 2
 
 
@@ -64,16 +64,15 @@ def train(gpu_id, nb_gpus, trained_model=None):
 
     tensorboard = TensorBoard(log_dir=TB_LOG_DIR, write_graph=False, write_grads=True, histogram_freq=0,
                               batch_size=2, write_images=False)
-    LRDecay = ReduceLROnPlateau(monitor='val_loss', factor=0.8, patience=20, verbose=1, mode='min', min_lr=1e-8,
-                                epsilon=0.01)
+    es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=50)
 
     # datagen listmake_dataset
-    train_id_list = [str(i) for i in get_train_id_list(FOLD_NUM)]
+    train_id_list = [str(i) for i in np.arange(0, TRAIN_NUM)]
 
     # del unsupervised_target, unsupervised_weight, supervised_flag, imgs
     # del supervised_flag
 
-    cb = [model_checkpoint, tensorboard, LRDecay, csv_logger]
+    cb = [model_checkpoint, tensorboard, es, csv_logger]
 
     print('BATCH Size = ', batch_size)
 
@@ -104,7 +103,6 @@ def train(gpu_id, nb_gpus, trained_model=None):
     y_val = [pz, cz, us, afs, bg]
     x_val = [val_x_arr]
     del pz, cz, us, afs, bg, val_y_arr, val_x_arr
-    val_id_list = [str(i) for i in get_val_id_list(FOLD_NUM)]
 
     history = model.fit_generator(generator=training_generator,
                                   steps_per_epoch=steps,
@@ -143,7 +141,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = 2
-    gpu_id = '2'
+    gpu_id = '0'
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
     # os.environ["CUDA_VISIBLE_DEVICES"] = '2'

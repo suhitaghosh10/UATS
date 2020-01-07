@@ -17,20 +17,21 @@ from zonal_utils.AugmentationGenerator import *
 learning_rate = 5e-5
 TEMP = 2.908655
 
-FOLD_NUM = 4
-TB_LOG_DIR = '/data/suhita/temporal/tb/variance_mcdropout/SC' + str(TEMP) + '_F' + str(
-    FOLD_NUM) + '_' + str(learning_rate) + '/'
-MODEL_NAME = '/data/suhita/temporal/SC' + str(TEMP) + '_F' + str(FOLD_NUM)
+FOLD_NUM = 1
+TRAIN_NUM = 40
+NAME = 'Scaled_F' + str(FOLD_NUM) + '_' + str(TRAIN_NUM)
+TB_LOG_DIR = '/data/suhita/temporal/tb/' + NAME + '_' + str(learning_rate) + '/'
+MODEL_NAME = '/data/suhita/temporal/' + NAME + '.h5'
 
-CSV_NAME = '/data/suhita/temporal/CSV/SC' + str(FOLD_NUM) + '.csv'
+CSV_NAME = '/data/suhita/temporal/CSV/' + NAME + '.csv'
 
-TRAIN_IMGS_PATH = '/cache/suhita/data/fold4/train/imgs/'
-TRAIN_GT_PATH = '/cache/suhita/data/fold4/train/gt/'
+TRAIN_IMGS_PATH = '/cache/suhita/data/fold1/train/imgs/'
+TRAIN_GT_PATH = '/cache/suhita/data/fold1/train/gt/'
 
-VAL_IMGS_PATH = '/cache/suhita/data/fold4/val/imgs/'
-VAL_GT_PATH = '/cache/suhita/data/fold4/val/gt/'
+VAL_IMGS_PATH = '/cache/suhita/data/fold1/val/imgs/'
+VAL_GT_PATH = '/cache/suhita/data/fold1/val/gt/'
 
-TRAINED_MODEL_PATH = '/data/suhita/temporal/supervised_F4.h5'
+TRAINED_MODEL_PATH = '/data/suhita/temporal/' + 'supervised_F' + str(FOLD_NUM) + '_' + str(TRAIN_NUM) + '.h5'
 
 ENS_GT_PATH = '/data/suhita/temporal/sadv2/ens_gt/'
 FLAG_PATH = '/data/suhita/temporal/sadv2/flag/'
@@ -53,12 +54,12 @@ alpha = 0.6
 
 
 def train(gpu_id, nb_gpus):
-    num_labeled_train = 58
+    num_labeled_train = TRAIN_NUM
     num_train_data = len(os.listdir(TRAIN_IMGS_PATH))
     num_un_labeled_train = num_train_data - num_labeled_train
     num_val_data = len(os.listdir(VAL_IMGS_PATH))
 
-    gen_lr_weight = ramp_down_weight(ramp_down_period)
+    # gen_lr_weight = ramp_down_weight(ramp_down_period)
 
     # prepare dataset
     print('-' * 30)
@@ -88,7 +89,7 @@ def train(gpu_id, nb_gpus):
             self.val_cz_dice_coef = 0.
             self.val_pz_dice_coef = 0.
             self.val_us_dice_coef = 0.
-            self.count = 58 * 168 * 168 * 32
+            self.count = TRAIN_NUM * 168 * 168 * 32
 
             self.imgs_path = imgs_path
             self.gt_path = gt_path
@@ -124,14 +125,14 @@ def train(gpu_id, nb_gpus):
 
         def on_epoch_begin(self, epoch, logs=None):
             self.starttime = time()
-
+            '''
             if epoch > num_epoch - ramp_down_period:
                 weight_down = next(gen_lr_weight)
                 K.set_value(model.optimizer.lr, weight_down * learning_rate)
                 K.set_value(model.optimizer.beta_1, 0.4 * weight_down + 0.5)
                 print('LR: alpha-', K.eval(model.optimizer.lr), K.eval(model.optimizer.beta_1))
             # print(K.eval(model.layers[43].trainable_weights[0]))
-
+'''
         def on_epoch_end(self, epoch, logs={}):
             print(time() - self.starttime)
             sup_count = self.count
@@ -242,13 +243,11 @@ def train(gpu_id, nb_gpus):
     train_id_list = [str(i) for i in np.arange(0, num_train_data)]
 
     tcb = TemporalCallback(TRAIN_IMGS_PATH, TRAIN_GT_PATH, ENS_GT_PATH, FLAG_PATH, train_id_list)
-    LRDecay = ReduceLROnPlateau(monitor='val_loss', factor=0.8, patience=20, verbose=1, mode='min', min_lr=1e-8,
-                                epsilon=0.01)
     lcb = wm.LossCallback()
     es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=50)
     # del unsupervised_target, unsupervised_weight, supervised_flag, imgs
     # del supervised_flag
-    cb = [model_checkpoint, tcb, tensorboard, lcb, LRDecay, csv_logger, es]
+    cb = [model_checkpoint, tcb, tensorboard, lcb, csv_logger, es]
 
     print('BATCH Size = ', batch_size)
 
@@ -324,7 +323,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = batch_size
-    gpu_id = '0'
+    gpu_id = '1,2'
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
     # os.environ["CUDA_VISIBLE_DEVICES"] = '2'
