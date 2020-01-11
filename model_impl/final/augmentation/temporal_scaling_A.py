@@ -262,7 +262,8 @@ def train(gpu_id, nb_gpus):
                                    ENS_GT_PATH,
                                    FLAG_PATH,
                                    train_id_list,
-                                   batch_size=batch_size)
+                                   batch_size=batch_size,
+                                   labelled_num=TRAIN_NUM)
 
     steps = num_train_data / batch_size
     #steps =2
@@ -323,7 +324,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = batch_size
-    gpu_id = '1,2'
+    gpu_id = '0'
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
     # os.environ["CUDA_VISIBLE_DEVICES"] = '2'
