@@ -6,9 +6,12 @@ from keras.backend.tensorflow_backend import set_session
 from lib.segmentation.model.model_baseline import weighted_model
 
 learning_rate = 5e-5
-MODEL_NAME = '/data/suhita/temporal/supervised_F1_30.h5'
-IMG = '/cache/suhita/data/npy_img_unlabeled.npy'
-GT = ''
+MODEL_NAME = '/data/suhita/temporal/scaled40.h5'
+
+IMG = '/cache/suhita/data/final_test_array_imgs.npy'
+GT = '/cache/suhita/data/final_test_array_GT.npy'
+# IMG = '/cache/suhita/data/npy_img_unlabeled.npy'
+# GT = ''
 NUM_CLASS = 5
 num_epoch = 351
 batch_size = 2
@@ -40,7 +43,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = 2
-    gpu_id = '2'
+    gpu_id = '0'
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
     # os.environ["CUDA_VISIBLE_DEVICES"] = '2'
@@ -56,4 +59,4 @@ if __name__ == '__main__':
         'batch_size should be a multiple of the nr. of gpus. ' + \
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
-    predict(MODEL_NAME, eval=False, out_npy='/data/suhita/temporal/supervised_F1_30.npy')
+    predict(MODEL_NAME, eval=True, out_npy='/data/suhita/temporal/p.npy')

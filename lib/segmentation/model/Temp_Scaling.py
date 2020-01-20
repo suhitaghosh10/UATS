@@ -12,7 +12,7 @@ class SadLayer(Layer):
         # Create a trainable weight variable for this layer.
         self.temp = self.add_weight(name='temperature',
                                     shape=(self.output_dim),
-                                    initializer=k.initializers.RandomUniform(minval=1.5, maxval=1.7, seed=None),
+                                    initializer=k.initializers.RandomUniform(minval=1.0, maxval=1.7, seed=None),
                                     trainable=True)
         super(SadLayer, self).build(input_shape)  # Be sure to call this at the end
 

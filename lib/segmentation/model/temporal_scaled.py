@@ -99,22 +99,27 @@ class weighted_model:
         #unsupervised_gt = unsupervised_gt / (1 -  (0.6** (self.epoch_ctr + 1)))
 
         def unsup_dice_loss(y_true, y_pred, smooth=1., axis=(1, 2, 3)):
-            y_true = unsupervised_gt
-            y_pred = y_pred
 
-            intersection = K.sum(y_true * y_pred, axis=axis)
-            y_true_sum = K.sum(y_true, axis=axis)
-            y_pred_sum = K.sum(y_pred, axis=axis)
-
-            sign_pred = tf.where(tf.greater(y_pred, 0), K.ones_like(y_pred), K.zeros_like(y_pred))
-            if tf.greater(intersection, 0) is not None:
-                c = K.sum(y_true * y_pred) / (K.sum(y_true * sign_pred) + K.epsilon())
+            supervised_flag = input[1, :, :, :, :]
+            if supervised_flag[0, 0, 0, 0] is 3:
+                return 0
             else:
-                c = 1
+                y_true = unsupervised_gt
+                y_pred = y_pred
 
-            avg_dice_coef = K.mean((2. * intersection + smooth) / ((c * y_pred_sum) + y_true_sum + smooth))
+                intersection = K.sum(y_true * y_pred, axis=axis)
+                y_true_sum = K.sum(y_true, axis=axis)
+                y_pred_sum = K.sum(y_pred, axis=axis)
 
-            return 1 - avg_dice_coef
+                sign_pred = tf.where(tf.greater(y_pred, 0), K.ones_like(y_pred), K.zeros_like(y_pred))
+                if tf.greater(intersection, 0) is not None:
+                    c = K.sum(y_true * y_pred) / (K.sum(y_true * sign_pred) + K.epsilon())
+                else:
+                    c = 1
+
+                avg_dice_coef = K.mean((2. * intersection + smooth) / ((c * y_pred_sum) + y_true_sum + smooth))
+
+                return 1 - avg_dice_coef
         return unsup_dice_loss
 
     def dice_loss(self, y_true, y_pred, weight, smooth=1., axis=(1, 2, 3)):
@@ -161,19 +166,29 @@ class weighted_model:
 
     def semi_supervised_loss(self, input, unsup_loss_class_wt=1., alpha=0.6):
 
-        def loss_func(y_true, y_pred):
-            print(K.eval(self.epoch_ctr))
+        # unsup_loss_class_wt = unsup_loss_class_wt
+
+        def loss_func(y_true, y_pred, unsup_loss_class_wt=unsup_loss_class_wt):
+            # print(K.eval(self.epoch_ctr))
 
             unsupervised_gt = input[0, :, :, :, :]
             unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
-
             supervised_flag = input[1, :, :, :, :]
+
 
             y_true_final = tf.where(tf.equal(supervised_flag, 2), unsupervised_gt, y_true)
             supervised_flag = tf.where(tf.equal(supervised_flag, 2), K.ones_like(supervised_flag), supervised_flag)
+
+            supervised_flag = tf.where(tf.equal(supervised_flag, 2), K.ones_like(supervised_flag), supervised_flag)
             supervised_loss = self.c_dice_loss(y_true_final, y_pred, supervised_flag)
 
+            # for validation loss, make unsup_loss_class_wt zero
+            supervised_flag = input[1, :, :, :, :]
+
+
             unsupervised_loss = self.unsup_c_dice_loss(unsupervised_gt, y_pred)
+            if supervised_flag[0, 0, 0, 0] is 3:
+                unsupervised_loss =0
 
             return supervised_loss + unsup_loss_class_wt * unsupervised_loss
 
@@ -327,6 +342,7 @@ class weighted_model:
             p_model = Model([input_img, unsupervised_label, supervised_flag],
                             [pz_sm_out, cz_sm_out, us_sm_out, afs_sm_out, bg_sm_out])
             if trained_model is not None:
+                print("loading model" + trained_model)
                 p_model.load_weights(trained_model, by_name=True)
 
             # model_copy = Model([input_img, unsupervised_label, supervised_flag, unsupervised_weight],[pz_out, cz_out, us_out, afs_out, bg_out])
@@ -355,6 +371,7 @@ class weighted_model:
                 model = Model([input_img, unsupervised_label, supervised_flag],
                               [pz_sm_out, cz_sm_out, us_sm_out, afs_sm_out, bg_sm_out])
                 if trained_model is not None:
+                    print("loading model" + trained_model)
                     model.load_weights(trained_model, by_name=True)
 
                 p_model = multi_gpu_model(model, gpus=nb_gpus)

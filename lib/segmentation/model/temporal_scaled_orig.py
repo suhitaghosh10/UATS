@@ -1,4 +1,3 @@
-import numpy as np
 import tensorflow as tf
 from keras import backend as K
 from keras.callbacks import Callback
@@ -7,9 +6,6 @@ from keras.layers import concatenate, Input, Conv3D, MaxPooling3D, Conv3DTranspo
 from keras.models import Model
 from keras.optimizers import Adam
 from keras.utils import multi_gpu_model
-from keras.layers import average
-
-from lib.segmentation.model import Temp_Scaling
 
 
 # from lib.segmentation.weight_norm import AdamWithWeightnorm
@@ -38,7 +34,7 @@ class weighted_model:
             supervised_flag = input[1, :, :, :, :]
             unsupervised_gt = input[0, :, :, :, :]
             alpha = 0.6
-            # unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
+            unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
             y_true_final = tf.where(tf.equal(supervised_flag, 2), unsupervised_gt, y_true)
             supervised_flag = tf.where(tf.equal(supervised_flag, 2), K.ones_like(supervised_flag), supervised_flag)
             y_true = y_true_final * supervised_flag
@@ -96,35 +92,43 @@ class weighted_model:
         return - K.mean((2. * intersection + smooth) / ((c * y_pred_sum) + y_true_sum + smooth))
 
     def unsup_dice_tb(self, input, class_wt=1.):
-        unsupervised_gt = input[0, :, :, :, :]
 
-        # unsupervised_gt = unsupervised_gt / (1 -  (0.6** (self.epoch_ctr + 1)))
+        def unsup_dice_loss(y_true, y_pred, smooth=1., axis=(1, 2, 3), alpha=0.6):
+            supervised_flag = input[1, :, :, :, :]
+            val_flag = False
 
-        def unsup_dice_loss(y_true, y_pred, smooth=1., axis=(1, 2, 3)):
-            y_true = unsupervised_gt
-            y_pred = y_pred
+            unsupervised_gt = input[0, :, :, :, :]
+            unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
+            # for confident voxels (denoted by 2) change from 0 to 1 (unlabelled to labelled), but keep the background(0) as 0
+            y_true_final = tf.where(tf.equal(supervised_flag, 2), unsupervised_gt, y_true)
+            # reset flag
+            supervised_flag = tf.where(tf.equal(supervised_flag, 2), K.ones_like(supervised_flag), supervised_flag)
+            # check its validation data, then no consistency loss
+            # validation data (denoted by 3)
+            supervised_flag = tf.where(tf.equal(supervised_flag, 3), K.ones_like(supervised_flag), supervised_flag)
+            supervised_loss = self.c_dice_loss(y_true_final, y_pred, supervised_flag)
 
-            intersection = K.sum(y_true * y_pred, axis=axis)
-            y_true_sum = K.sum(y_true, axis=axis)
-            y_pred_sum = K.sum(y_pred, axis=axis)
-
-            sign_pred = tf.where(tf.greater(y_pred, 0), K.ones_like(y_pred), K.zeros_like(y_pred))
-            if tf.greater(intersection, 0) is not None:
-                c = K.sum(y_true * y_pred) / (K.sum(y_true * sign_pred) + K.epsilon())
+            # for validation loss, make unsup_loss_class_wt zero
+            if val_flag:
+                return 0
             else:
-                c = 1
+                intersection = K.sum(y_true * y_pred, axis=axis)
+                y_true_sum = K.sum(y_true, axis=axis)
+                y_pred_sum = K.sum(y_pred, axis=axis)
+
+                sign_pred = tf.where(tf.greater(y_pred, 0), K.ones_like(y_pred), K.zeros_like(y_pred))
+                if tf.greater(intersection, 0) is not None:
+                    c = K.sum(y_true * y_pred) / (K.sum(y_true * sign_pred) + K.epsilon())
+                else:
+                    c = 1
 
             avg_dice_coef = K.mean((2. * intersection + smooth) / ((c * y_pred_sum) + y_true_sum + smooth))
+            temp = 1 - avg_dice_coef
+            unsupervised_loss = tf.where(tf.greater(K.abs(temp), K.abs(supervised_loss)), K.zeros_like(temp), temp)
 
-            return 1 - avg_dice_coef
+            return unsupervised_loss
 
         return unsup_dice_loss
-
-    def get_Temp_val(self, model):
-        def temp(y_true, y_pred, ):
-            return model.layers[43].trainable_weights[0]
-
-        return temp
 
     def dice_loss(self, y_true, y_pred, weight, smooth=1., axis=(1, 2, 3)):
 
@@ -170,28 +174,35 @@ class weighted_model:
 
     def semi_supervised_loss(self, input, unsup_loss_class_wt=1., alpha=0.6):
 
-        def loss_func(y_true, y_pred):
+        # unsup_loss_class_wt = unsup_loss_class_wt
+
+        def loss_func(y_true, y_pred, unsup_loss_class_wt=unsup_loss_class_wt):
             # print(K.eval(self.epoch_ctr))
 
-            # unsupervised_gt = input[0, :, :, :, :]
-            # unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
-
             supervised_flag = input[1, :, :, :, :]
+            val_flag = False
+            if supervised_flag[0, 0, 0, 0] is 3:
+                val_flag = True
 
-            # y_true_final = tf.where(tf.equal(supervised_flag, 2), unsupervised_gt, y_true)
-            # supervised_flag = tf.where(tf.equal(supervised_flag, 2), K.ones_like(supervised_flag), supervised_flag)
-            # supervised_loss = self.c_dice_loss(y_true_final, y_pred, supervised_flag)
+            unsupervised_gt = input[0, :, :, :, :]
+            unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
+            # for confident voxels (denoted by 2) change from 0 to 1 (unlabelled to labelled), but keep the background(0) as 0
+            y_true_final = tf.where(tf.equal(supervised_flag, 2), unsupervised_gt, y_true)
+            # reset flag
+            supervised_flag = tf.where(tf.equal(supervised_flag, 2), K.ones_like(supervised_flag), supervised_flag)
+            # check its validation data, then no consistency loss
+            # validation data (denoted by 3)
+            supervised_flag = tf.where(tf.equal(supervised_flag, 3), K.ones_like(supervised_flag), supervised_flag)
+            supervised_loss = self.c_dice_loss(y_true_final, y_pred, supervised_flag)
 
-            # unsupervised_loss = self.unsup_c_dice_loss(unsupervised_gt, y_pred)
+            # for validation loss, make unsup_loss_class_wt zero
+            if val_flag:
+                unsupervised_loss = 0
+            else:
+                temp = self.unsup_c_dice_loss(unsupervised_gt, y_pred)
+                unsupervised_loss = tf.where(tf.greater(K.abs(temp), K.abs(supervised_loss)), K.zeros_like(temp), temp)
 
-            # return supervised_loss + unsup_loss_class_wt * unsupervised_loss
-
-            p = K.clip(y_pred, K.epsilon(), 1 - K.epsilon())
-            temp = tf.where(y_true == 1, -K.log(p), -K.log(1 - p))
-            # return K.sum(temp)
-            return tf.reduce_mean(temp)
-            # supervised_loss = self.c_dice_loss(y_true, y_pred, supervised_flag)
-            # return supervised_loss
+            return supervised_loss + unsup_loss_class_wt * unsupervised_loss
 
         return loss_func
 
@@ -226,7 +237,7 @@ class weighted_model:
 
     def build_model(self, img_shape=(32, 168, 168), use_dice_cl=None, num_class=5, learning_rate=5e-5, gpu_id=None,
                     nb_gpus=None,
-                    trained_model=None):
+                    trained_model=None, temp=None):
         input_img = Input((*img_shape, 1), name='img_inp')
         unsupervised_label = Input((*img_shape, 5), name='unsup_label_inp')
         supervised_flag = Input(shape=img_shape, name='flag_inp')
@@ -295,9 +306,9 @@ class weighted_model:
         # conv_out_afs_sig = Activation('sigmoid')(conv_out_afs_sig)
 
         # conv_out = Lambda(lambda x: x / temp, name='scaling')(conv_out)
-        conv_out = Temp_Scaling.SadLayer(name='scaling')(conv_out)
+        # conv_out = Temp_Scaling.SadLayer(name='scaling')(conv_out)
 
-        # conv_out = Lambda(lambda x: x/temp)(conv_out)
+        conv_out = Lambda(lambda x: x / temp)(conv_out)
 
         # conv_out = Lambda(lambda x: Temp_Scaling.SadLayer(x), name='scaling')(conv_out)
 
@@ -342,11 +353,6 @@ class weighted_model:
                             [pz_sm_out, cz_sm_out, us_sm_out, afs_sm_out, bg_sm_out])
             if trained_model is not None:
                 p_model.load_weights(trained_model, by_name=True)
-                for l in np.arange(0, len(p_model.layers)):
-                    if p_model.layers[l].name == 'scaling':
-                        print('scaling')
-                    else:
-                        p_model.layers[l].trainable = False
 
             # model_copy = Model([input_img, unsupervised_label, supervised_flag, unsupervised_weight],[pz_out, cz_out, us_out, afs_out, bg_out])
 
@@ -356,17 +362,18 @@ class weighted_model:
             p_model.compile(optimizer=optimizer,
                             loss={'pz': self.semi_supervised_loss(pz, unsup_loss_class_wt=1),
                                   'cz': self.semi_supervised_loss(cz, 1),
-                                  'us': self.semi_supervised_loss(us, 2),
-                                  'afs': self.semi_supervised_loss(afs, 2),
+                                  'us': self.semi_supervised_loss(us, 1),
+                                  'afs': self.semi_supervised_loss(afs, 1),
                                   'bg': self.semi_supervised_loss(bg, 1)
                                   }
                             ,
-                            metrics={'pz': [self.dice_coef, self.get_Temp_val(p_model)],
-                                     'cz': [self.dice_coef],
-                                     'us': [self.dice_coef],
-                                     'afs': [self.dice_coef],
-                                     'bg': [self.dice_coef]
-                                     }
+                            metrics={'pz': [self.dice_coef, self.unsup_dice_tb(pz, 1), self.dice_tb(pz, 1)],
+                                     'cz': [self.dice_coef, self.unsup_dice_tb(cz, 1), self.dice_tb(cz, 1)],
+                                     'us': [self.dice_coef, self.unsup_dice_tb(us, 1), self.dice_tb(us, 1)],
+                                     'afs': [self.dice_coef, self.unsup_dice_tb(afs, 1), self.dice_tb(afs, 1)],
+                                     'bg': [self.dice_coef, self.unsup_dice_tb(bg, 1), self.dice_tb(bg, 1)]
+                                     },
+                            loss_weights={'pz': 1, 'cz': 1, 'us': 1, 'afs': 1, 'bg': 1}
                             )
         else:
             with tf.device(gpu_id):
@@ -374,11 +381,6 @@ class weighted_model:
                               [pz_sm_out, cz_sm_out, us_sm_out, afs_sm_out, bg_sm_out])
                 if trained_model is not None:
                     model.load_weights(trained_model, by_name=True)
-                    for l in np.arange(0, len(model.layers)):
-                        if model.layers[l].name == 'scaling':
-                            print('scaling')
-                        else:
-                            model.layers[l].trainable = False
 
                 p_model = multi_gpu_model(model, gpus=nb_gpus)
 
@@ -390,17 +392,18 @@ class weighted_model:
                 p_model.compile(optimizer=optimizer,
                                 loss={'pz': self.semi_supervised_loss(pz, unsup_loss_class_wt=1),
                                       'cz': self.semi_supervised_loss(cz, 1),
-                                      'us': self.semi_supervised_loss(us, 2),
-                                      'afs': self.semi_supervised_loss(afs, 2),
+                                      'us': self.semi_supervised_loss(us, 1),
+                                      'afs': self.semi_supervised_loss(afs, 1),
                                       'bg': self.semi_supervised_loss(bg, 1)
                                       }
                                 ,
-                                metrics={'pz': [self.dice_coef, self.get_Temp_val(model)],
-                                         'cz': [self.dice_coef],
-                                         'us': [self.dice_coef],
-                                         'afs': [self.dice_coef],
-                                         'bg': [self.dice_coef]
-                                         }
+                                metrics={'pz': [self.dice_coef, self.unsup_dice_tb(pz, 1), self.dice_tb(pz, 1)],
+                                         'cz': [self.dice_coef, self.unsup_dice_tb(cz, 1), self.dice_tb(cz, 1)],
+                                         'us': [self.dice_coef, self.unsup_dice_tb(us, 1), self.dice_tb(us, 1)],
+                                         'afs': [self.dice_coef, self.unsup_dice_tb(afs, 1), self.dice_tb(afs, 1)],
+                                         'bg': [self.dice_coef, self.unsup_dice_tb(bg, 1), self.dice_tb(bg, 1)]
+                                         },
+                                loss_weights={'pz': 1, 'cz': 1, 'us': 1, 'afs': 1, 'bg': 1}
                                 )
 
         return p_model
