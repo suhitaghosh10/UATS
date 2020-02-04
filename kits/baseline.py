@@ -1,6 +1,8 @@
 import sys
 sys.path.append('../')
 
+from kits import preprocess
+
 import os
 
 import numpy as np
@@ -174,10 +176,66 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
     # model_impl.save('temporal_max_ramp_final.h5')
 
 
+
+def predict_unlabeled(model_name, pred_dir = '/home/anneke/projects/uats/code/kits/output/predictions/'):
+
+
+    DIM = [80,200,200]
+    SPACING = [4.0, 1.0, 1.0]
+
+
+    img_dir = '/data/anneke/kits_challenge/kits19/data/preprocessed_unlabeled'
+    cases = sorted(os.listdir(img_dir))
+
+    print('load_weights')
+    wm = weighted_model()
+    model = wm.build_model(img_shape=(DIM[2], DIM[1], DIM[0]), learning_rate=learning_rate)
+    model.load_weights(model_name)
+
+    for i in range(2):#len(cases)):
+        img_arr = np.zeros([2, DIM[2], DIM[1], DIM[0],1])
+
+
+        img_l = sitk.ReadImage(os.path.join(img_dir, cases[i], 'img_left.nrrd'))
+        img_r = sitk.ReadImage(os.path.join(img_dir, cases[i], 'img_right.nrrd'))
+
+        img_l, img_r = preprocess.normalizeIntensities(img_l, img_r)
+
+
+        img_arr[0,:,:,:,0] = sitk.GetArrayFromImage(img_l)
+        img_arr[1,:,:,:,0] = sitk.GetArrayFromImage(img_r)
+
+        out_arr = model.predict(img_arr, batch_size=2 )
+        pred_l = sitk.GetImageFromArray(out_arr[0,:,:,:,0])
+        pred_r = sitk.GetImageFromArray(out_arr[1, :, :, :, 0])
+
+        pred_l.CopyInformation(img_l)
+        pred_r.CopyInformation(img_r)
+
+        castImageFilter = sitk.CastImageFilter()
+        castImageFilter.SetOutputPixelType(sitk.sitkUInt8)
+
+        pred_l = castImageFilter.Execute(pred_l)
+        del castImageFilter
+        castImageFilter = sitk.CastImageFilter()
+        castImageFilter.SetOutputPixelType(sitk.sitkUInt8)
+        pred_r = castImageFilter.Execute(pred_r)
+
+        pred_l= utils.getLargestConnectedComponents(pred_l)
+        pred_r = utils.getLargestConnectedComponents(pred_r)
+
+
+
+        utils.makeDirectory(pred_dir+'/'+cases[i])
+
+        sitk.WriteImage(pred_r, os.path.join(pred_dir, cases[i], 'segm_right.nrrd'))
+        sitk.WriteImage(pred_l, os.path.join(pred_dir, cases[i], 'segm_left.nrrd'))
+
+
 def predict(model_name, onlyEval=False):
+
+
     pred_dir = '/home/anneke/projects/uats/code/kits/output/predictions/'
-
-
 
     val_fold = np.load('Folds/val_fold' + str(FOLD_NUM) + '.npy')
 
@@ -236,7 +294,7 @@ def predict(model_name, onlyEval=False):
 
 if __name__ == '__main__':
 
-    GPU_ID = '3'
+    GPU_ID = '2'
     # gpu = '/GPU:0'
     gpu = '/GPU:0'
     batch_size = batch_size
@@ -263,11 +321,13 @@ if __name__ == '__main__':
     # train(None, None, perc=perc, augmentation=True)
     # #train(None, None, perc=perc, augmentation=False)
     #
-    perc = 0.1
-    train(None, None, perc = perc, augmentation = True)
+    # perc = 0.1
+    # train(None, None, perc = perc, augmentation = True)
     # train(None, None, perc=perc, augmentation=False)
 
     # perc = 1.0
     # train(None, None, perc=perc, augmentation=True)
 
     #predict(out_dir+'/supervised_F_centered_BB_1_50_0.0005_Perc_0.5_augm.h5', onlyEval=True)
+
+    predict_unlabeled('/home/anneke/projects/uats/code/kits/output/models/supervised_F_centered_BB_1_50_5e-05_Perc_1.0_augm.h5')

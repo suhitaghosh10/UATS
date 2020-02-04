@@ -313,16 +313,16 @@ if __name__ == '__main__':
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
 
+    #
+    # perc = 0.25
+    # train(None, None, perc=perc, augmentation=True)
+    # perc = 0.1
+    # train(None, None, perc = perc, augmentation = True)
+    # perc = 0.5
+    # train(None, None, perc=perc, augmentation=True)
 
-    perc = 0.25
+    perc = 1.0
     train(None, None, perc=perc, augmentation=True)
-    perc = 0.1
-    train(None, None, perc = perc, augmentation = True)
-    perc = 0.5
-    train(None, None, perc=perc, augmentation=True)
-
-    # perc = 1.0
-    # train(None, None, perc=perc, augmentation=False)
 
     # predict(out_dir+'/supervised_F_centered_BB_1_50_0.0005_Perc_0.5_augm.h5', onlyEval=True)
     #

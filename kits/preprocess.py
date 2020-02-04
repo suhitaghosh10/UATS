@@ -4,6 +4,7 @@ import os
 from kits import utils
 import csv
 import cv2
+import pandas as pd
 
 import math
 
@@ -487,11 +488,11 @@ def preprocess_centered_BB():
         sitk.WriteImage(segm_l_final, os.path.join(out_dir, 'segm_left.nrrd'))
         sitk.WriteImage(segm_r_final, os.path.join(out_dir, 'segm_right.nrrd'))
 
-def preprocess_unlabeled(files_dir, preprocessed_dir):
+def preprocess_unlabeled_1st(files_dir, preprocessed_dir):
     utils.makedir(preprocessed_dir)
 
     #bb_size = [80, 200, 200]  # will be extended by [10,20,20] per side for augmentation
-
+    BB_SIZE = [80,200,200]
     # get_left_and_right_BB()
     cases = sorted(os.listdir(files_dir))
     cases = [x for x in cases if 'case' in x]
@@ -541,10 +542,10 @@ def preprocess_unlabeled(files_dir, preprocessed_dir):
             if start_X + BB_SIZE[0] > img.GetSize()[0]:
                 start_X = img.GetSize()[0] - size_X - 1
 
-            start_y = max(0,(start_y_w_img[1]+bb_lung[4]-BB_SIZE[1])) ## according to bones bounding box
-            #start_y = max(0, bb[1] + bb[4] - BB_SIZE[1])
-            start_z_r = int((bb[2] + bb[5]) / 2)
-            start_z_l = max(0, int((bb[2] + bb[5]) / 2) - BB_SIZE[2])
+            #start_y = max(0,(start_y_w_img[1]+bb_lung[4]-BB_SIZE[1]))
+            start_y = max(0, bb[1] + bb[4] - BB_SIZE[1])  ## according to bones bounding box
+            start_z_r = int((bb[2] + bb[5])/ 2)
+            start_z_l = max(0, int((bb[2] + bb[5]) / 2) - BB_SIZE[2])   # -int(0.1*BB_SIZE[2])
 
 
         else:
@@ -553,9 +554,10 @@ def preprocess_unlabeled(files_dir, preprocessed_dir):
 
             # values for final ROI
             start_X = 0  # start 20 voxel above bottom of lung
-            start_y = max(0, (bb[1] + bb[4]+20 - BB_SIZE[1]))  ## according to bones bounding box
+            #start_y = max(0, (bb[1] + bb[4]+20 - BB_SIZE[1]))  ## according to bones bounding box
+            start_y = max(0, bb[1] + bb[4] - BB_SIZE[1])
             start_z_r = int((bb[2] + bb[5]) / 2)
-            start_z_l = max(0,int((bb[2] + bb[5]) / 2)-BB_SIZE[2])
+            start_z_l = max(0,int((bb[2] + bb[5]) / 2) - BB_SIZE[2])
 
 
         left_img = get_final_roi(img, start_X, start_y, start_z_l,
@@ -565,6 +567,112 @@ def preprocess_unlabeled(files_dir, preprocessed_dir):
 
         sitk.WriteImage(left_img, os.path.join(out_dir, 'img_left.nrrd'))
         sitk.WriteImage(right_img, os.path.join(out_dir, 'img_right.nrrd'))
+
+def common_member(a, b):
+    a_set = set(a)
+    b_set = set(b)
+    if len(a_set.intersection(b_set)) > 0:
+        return(True)
+    return(False)
+
+
+def get_fiducials_from_csv(csv_file):
+
+    # with open(csv_file, newline='', ) as csvfile:
+    #     reader = csv.reader(csvfile)
+    #     for row in reader:
+    #         if row==
+    df = pd.read_csv(csv_file, skiprows=2, header = None)
+    x_l = float(df.iloc[[1],[1]].values[0][0])
+    y_l =  float(df.iloc[[1],[2]].values[0][0])
+    z_l = float(df.iloc[[1],[3]].values[0][0])
+
+    x_r = float(df.iloc[[2], [1]].values[0][0])
+    y_r = float(df.iloc[[2], [2]].values[0][0])
+    z_r = float(df.iloc[[2], [3]].values[0][0])
+
+    return (x_l, y_l, z_l),(x_r, y_r, z_r)
+
+def transform_index_fro_RAS_to_LPS(index):
+
+    return (index[0], index[1]*-1, index[2]*-1)
+
+def preprocess_unlabeled_2nd(files_dir,  roi_dir, predicted_dir='', preprocessed_dir=''):
+
+    cases = sorted(os.listdir(files_dir))
+    rois_csv = os.listdir(roi_dir)
+    roi_csv_cases = []
+
+    for c in rois_csv:
+        c=c.replace('.fcsv', '')
+        c= 'case_00'+c
+        roi_csv_cases.append(c)
+
+    del rois_csv
+
+    for case in cases:
+        print(case)
+        #if case == 'case_00219':
+        img = sitk.ReadImage(os.path.join(files_dir, case, 'imaging.nii.gz'))
+        img_r = utils.resampleImage(img, SPACING, sitk.sitkLinear, 0, sitk.sitkInt16)
+        [size_x, size_y, size_z] = img_r.GetSize()
+        img_left = sitk.RegionOfInterest(img_r, [size_x, size_y, int(size_z / 2)], [0, 0, 0])
+        img_right = sitk.RegionOfInterest(img_r, [size_x, size_y, int(size_z / 2)], [0, 0, int(size_z / 2) - 1])
+
+
+        img_left, img_right = normalizeIntensities(img_left, img_right)
+
+
+
+        if case in roi_csv_cases:
+            prefix = case[7:]
+            centroid_l, centroid_r = get_fiducials_from_csv(os.path.join(roi_dir, prefix+'.fcsv'))
+            # calculate to voxel coordinates
+            centroid_l = img.TransformPhysicalPointToIndex(centroid_l)
+            centroid_l = transform_index_fro_RAS_to_LPS(centroid_l)
+            centroid_r = img.TransformPhysicalPointToIndex(centroid_r)
+            centroid_r= transform_index_fro_RAS_to_LPS(centroid_r)
+            centroid_l_w = img.TransformIndexToPhysicalPoint(centroid_l)
+            centroid_r_w = img.TransformIndexToPhysicalPoint(centroid_r)
+
+            centroid_l = img_left.TransformPhysicalPointToIndex(centroid_l_w)
+            centroid_r = img_right.TransformPhysicalPointToIndex(centroid_r_w)
+
+        else:
+            pred_l = sitk.ReadImage(os.path.join(predicted_dir, case, 'segm_left.nrrd'))
+            pred_r = sitk.ReadImage(os.path.join(predicted_dir, case, 'segm_right.nrrd'))
+            size, centroid_l = get_segmentation_statistics(pred_l, physical_centroid=True, return_BB= False)
+            size, centroid_r = get_segmentation_statistics(pred_r, physical_centroid=True,return_BB= False)
+            centroid_l = img_left.TransformPhysicalPointToIndex(centroid_l)
+            centroid_r = img_right.TransformPhysicalPointToIndex(centroid_r)
+            del size
+
+        start_l_x = max(0, centroid_l[0] - int(BB_SIZE[0] / 2))
+        start_l_y = max(0, centroid_l[1] - int(BB_SIZE[1] / 2))
+        start_l_z = max(0, centroid_l[2] - int(BB_SIZE[2] / 2))
+
+        start_r_x = max(0, centroid_r[0] - int(BB_SIZE[0] / 2))
+        start_r_y = max(0, centroid_r[1] - int(BB_SIZE[1] / 2))
+        start_r_z = max(0, centroid_r[2] - int(BB_SIZE[2] / 2))
+
+
+
+
+        img_l_final = get_final_roi(img_left, start_l_x, start_l_y, start_l_z,
+                                    BB_SIZE[0], BB_SIZE[1], BB_SIZE[2])
+        img_r_final = get_final_roi(img_right, start_r_x, start_r_y, start_r_z,
+                                    BB_SIZE[0], BB_SIZE[1], BB_SIZE[2])
+
+        sitk.WriteImage(img_l_final, os.path.join(preprocessed_dir, case, 'img_left.nrrd'))
+        sitk.WriteImage(img_r_final, os.path.join(preprocessed_dir,case,  'img_right.nrrd'))
+
+
+
+
+
+
+
+
 
 
 if __name__ == '__main__':
@@ -581,77 +689,82 @@ if __name__ == '__main__':
     ### actual preprocessing ###
     #preprocess_centered_BB()
 
-    preprocess_unlabeled(files_dir = '/data/anneke/kits_challenge/kits19/data/unlabelled',
-                         preprocessed_dir = '/data/anneke/kits_challenge/kits19/data/preprocessed_unlabeled')
+    # for generating inputs for predictions to further define the ROI
+    # preprocess_unlabeled_1st(files_dir = '/data/anneke/kits_challenge/kits19/data/unlabelled',
+    #                      preprocessed_dir = '/data/anneke/kits_challenge/kits19/data/preprocessed_unlabeled')
 
-
-
-
-########################################
-#remove segmentations from other kidney in the background
-
-    # cases = sorted(os.listdir(files_dir))
-    # for i in range(0, len(cases)):
-    #     #if cases[i] == 'case_00002':
-    #     out_dir = os.path.join(preprocessed_dir,cases[i])
+    # preprocess_unlabeled_2nd(files_dir = '/data/anneke/kits_challenge/kits19/data/unlabelled',
+    #                          roi_dir='/data/anneke/kits_challenge/kits19/rois_unlabeled',
+    #                          predicted_dir='/home/anneke/projects/uats/code/kits/output/predictions',
+    #                          preprocessed_dir = '/data/anneke/kits_challenge/kits19/data/preprocessed_unlabeled')
     #
-    #     print(cases[i])
-    #
-    #     img_l = sitk.ReadImage(os.path.join(out_dir, 'img_left.nrrd'))
-    #     img_r = sitk.ReadImage(os.path.join(out_dir, 'img_right.nrrd'))
-    #     segm_l = sitk.ReadImage(os.path.join(out_dir, 'segm_left.nrrd'))
-    #     segm_r = sitk.ReadImage(os.path.join(out_dir, 'segm_right.nrrd'))
-    #
-    #     segm_left_final = remove_segmentations_in_background(img_l, segm_l)
-    #     segm_right_final = remove_segmentations_in_background(img_r, segm_r)
-    #
-    #     sitk.WriteImage(segm_left_final, os.path.join(out_dir, 'segm_left.nrrd'))
-    #     sitk.WriteImage(segm_right_final, os.path.join(out_dir, 'segm_right.nrrd'))
 
 
-########################################
-   # save as npy arrays
+######################################
+# #remove segmentations from other kidney in the background
+#
+#     cases = sorted(os.listdir(files_dir))
+#     for i in range(0, len(cases)):
+#         #if cases[i] == 'case_00002':
+#         out_dir = os.path.join(preprocessed_dir,cases[i])
+#
+#         print(cases[i])
+#
+#         img_l = sitk.ReadImage(os.path.join(out_dir, 'img_left.nrrd'))
+#         img_r = sitk.ReadImage(os.path.join(out_dir, 'img_right.nrrd'))
+#         segm_l = sitk.ReadImage(os.path.join(out_dir, 'segm_left.nrrd'))
+#         segm_r = sitk.ReadImage(os.path.join(out_dir, 'segm_right.nrrd'))
+#
+#         segm_left_final = remove_segmentations_in_background(img_l, segm_l)
+#         segm_right_final = remove_segmentations_in_background(img_r, segm_r)
+#
+#         sitk.WriteImage(segm_left_final, os.path.join(out_dir, 'segm_left.nrrd'))
+#         sitk.WriteImage(segm_right_final, os.path.join(out_dir, 'segm_right.nrrd'))
 
-    # cases = sorted(os.listdir(preprocessed_dir))
-    # for i in range(0, len(cases)):
-    #     #if cases[i] == 'case_00002':
-    #     out_dir = os.path.join(preprocessed_dir,cases[i])
-    #
-    #     print(cases[i])
-    #
-    #     img_l = sitk.ReadImage(os.path.join(out_dir, 'img_left.nrrd'))
-    #     img_r = sitk.ReadImage(os.path.join(out_dir, 'img_right.nrrd'))
-    #     # segm_l = sitk.ReadImage(os.path.join(out_dir, 'segm_left.nrrd'))
-    #     # segm_r = sitk.ReadImage(os.path.join(out_dir, 'segm_right.nrrd'))
-    #
-    #     np.save(os.path.join(out_dir, 'img_left.npy'), sitk.GetArrayFromImage(img_l))
-    #     np.save(os.path.join(out_dir, 'img_right.npy'), sitk.GetArrayFromImage(img_r))
-    #     # np.save(os.path.join(out_dir, 'segm_left.npy'), sitk.GetArrayFromImage(segm_l))
-    #     # np.save(os.path.join(out_dir, 'segm_right.npy'), sitk.GetArrayFromImage(segm_r))
+
+#######################################
+   #save as npy arrays
+
+    cases = sorted(os.listdir(preprocessed_dir))
+    for i in range(0, len(cases)):
+        #if cases[i] == 'case_00002':
+        out_dir = os.path.join(preprocessed_dir,cases[i])
+
+        print(cases[i])
+
+        img_l = sitk.ReadImage(os.path.join(out_dir, 'img_left.nrrd'))
+        img_r = sitk.ReadImage(os.path.join(out_dir, 'img_right.nrrd'))
+        # segm_l = sitk.ReadImage(os.path.join(out_dir, 'segm_left.nrrd'))
+        # segm_r = sitk.ReadImage(os.path.join(out_dir, 'segm_right.nrrd'))
+
+        np.save(os.path.join(out_dir, 'img_left.npy'), sitk.GetArrayFromImage(img_l))
+        np.save(os.path.join(out_dir, 'img_right.npy'), sitk.GetArrayFromImage(img_r))
+        # np.save(os.path.join(out_dir, 'segm_left.npy'), sitk.GetArrayFromImage(segm_l))
+        # np.save(os.path.join(out_dir, 'segm_right.npy'), sitk.GetArrayFromImage(segm_r))
     #
     # ######other stuff
     #
-    # # save median slice of training cases to jpeg
-    #
-    # cases = sorted(os.listdir(preprocessed_dir))
-    # for i in range(0, len(cases)):
-    #     #if cases[i] == 'case_00002':
-    #     out_dir = os.path.join('screenshots')
-    #
-    #     print(cases[i])
-    #     img_l =np.load(os.path.join(preprocessed_dir, cases[i], 'img_left.npy'))
-    #     img_r = np.load(os.path.join(preprocessed_dir, cases[i], 'img_right.npy'))
-    #     # segm_l = np.load(os.path.join(preprocessed_dir, cases[i], 'segm_left.npy'))
-    #     # segm_r = np.load(os.path.join(preprocessed_dir, cases[i], 'segm_right.npy'))
-    #
-    #     cv2.imwrite(os.path.join(out_dir, cases[i]+ '_img_left.jpeg'), img_l[:,:,25])
-    #     cv2.imwrite(os.path.join(out_dir, cases[i] + '_img_right.jpeg'),  img_r[:,:,25])
-    #     # cv2.imwrite(os.path.join(out_dir, cases[i] + '_segm_left.jpeg'),  segm_l[:,:,25]*255)
-    #     # cv2.imwrite(os.path.join(out_dir, cases[i] + '_segm_right.jpeg'), segm_r[:, :, 25]*255)
+    # save median slice of training cases to jpeg
+
+    cases = sorted(os.listdir(preprocessed_dir))
+    for i in range(0, len(cases)):
+        #if cases[i] == 'case_00002':
+        out_dir = os.path.join('screenshots')
+
+        print(cases[i])
+        img_l =np.load(os.path.join(preprocessed_dir, cases[i], 'img_left.npy'))
+        img_r = np.load(os.path.join(preprocessed_dir, cases[i], 'img_right.npy'))
+        # segm_l = np.load(os.path.join(preprocessed_dir, cases[i], 'segm_left.npy'))
+        # segm_r = np.load(os.path.join(preprocessed_dir, cases[i], 'segm_right.npy'))
+
+        cv2.imwrite(os.path.join(out_dir, cases[i]+ '_img_left.jpeg'), img_l[:,:,29]*255)
+        cv2.imwrite(os.path.join(out_dir, cases[i] + '_img_right.jpeg'),  img_r[:,:,29]*255)
+        # cv2.imwrite(os.path.join(out_dir, cases[i] + '_segm_left.jpeg'),  segm_l[:,:,29]*255)
+        # cv2.imwrite(os.path.join(out_dir, cases[i] + '_segm_right.jpeg'), segm_r[:, :, 29]*255)
 
 
 
-    #############
+    ############
 
 
     # cases = sorted(os.listdir(files_dir))
