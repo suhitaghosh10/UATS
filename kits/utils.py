@@ -294,7 +294,7 @@ def pad_volume(img, target_size_x=0, target_size_y=0, target_size_z=0, padValue 
 
     filter = sitk.ConstantPadImageFilter()
     filter.SetPadLowerBound([int(math.floor(cX / 2)), int(math.floor(cY / 2)), int(math.floor(cZ / 2))])
-    filter.SetPadUpperBound([math.ceil(cX / 2), math.ceil(cY), math.ceil(cZ / 2)])
+    filter.SetPadUpperBound([math.ceil(cX / 2), math.ceil(cY/2), math.ceil(cZ / 2)])
     filter.SetConstant(padValue)
     outPadding = filter.Execute(img)
 

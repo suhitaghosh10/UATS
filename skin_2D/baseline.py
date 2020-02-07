@@ -229,53 +229,52 @@ def predict_unlabeled(model_name, pred_dir = '/home/anneke/projects/uats/code/ki
         sitk.WriteImage(pred_l, os.path.join(pred_dir, cases[i], 'segm_left.nrrd'))
 
 
-def predict(model_name, onlyEval=False):
+def predict(model_name, pred_dir, onlyEval=False):
+
+    import cv2
+
+    input_dir = '/cache/anneke/skin/preprocessed/labelled/test'
 
 
-    pred_dir = '/home/anneke/projects/uats/code/kits/output/predictions/'
+    if not os.path.exists(pred_dir):
+        os.makedirs(pred_dir)
 
-    val_fold = np.load('Folds/val_fold' + str(FOLD_NUM) + '.npy')
+    test_imgs = os.listdir(input_dir+'/imgs')
+    val_img_arr = np.zeros((len(test_imgs), DIM[0], DIM[1], N_CHANNELS), dtype=float)
 
-    img_arr = np.zeros((val_fold.shape[0]*2, DIM[0],DIM[1],DIM[2],1), dtype = float)
-    GT_arr = np.zeros((val_fold.shape[0] * 2, DIM[0], DIM[1], DIM[2], 1), dtype=float)
+    val_GT_arr = np.zeros(((len(test_imgs)), DIM[0], DIM[1], 1), dtype=int)
 
-    for i in range(val_fold.shape[0]):
-        img_arr[i*2,:,:,:,0] = np.load(os.path.join(data_path, val_fold[i], 'img_left.npy'))
-        img_arr[i * 2 +1,:,:,:,0] = np.load(os.path.join(data_path, val_fold[i], 'img_right.npy'))
-        GT_arr[i * 2, :, :, :, 0] = np.load(os.path.join(data_path, val_fold[i], 'segm_left.npy'))
-        GT_arr[i * 2 + 1, :, :, :, 0] = np.load(os.path.join(data_path, val_fold[i], 'segm_right.npy'))
+    for i in range(len(test_imgs)):
+        val_img_arr[i] = np.load(os.path.join(input_dir, 'imgs',test_imgs[i]))
+        val_GT_arr[i, :, :, 0] = np.load(os.path.join(input_dir, 'GT', test_imgs[i][:-4] + '_segmentation.npy', ))[:, :,
+                                 0]
+
+    val_img_arr = val_img_arr / 255
+    val_GT_arr = val_GT_arr / 255
 
 
     print('load_weights')
     wm = weighted_model()
-    model = wm.build_model(img_shape=(DIM[0],DIM[1],DIM[2]), learning_rate=learning_rate)
+    model = wm.build_model(img_shape=(DIM[0],DIM[1], N_CHANNELS), learning_rate=learning_rate)
     model.load_weights(model_name)
 
     if onlyEval:
-        out_value = model.evaluate(img_arr, GT_arr, batch_size=1, verbose=0)
+        out_value = model.evaluate(val_img_arr, val_GT_arr, batch_size=1, verbose=0)
         print(out_value)
     else:
-        out = model.predict(img_arr, batch_size=2, verbose=1)
+        out = model.predict(val_img_arr, batch_size=2, verbose=1)
         #np.save(os.path.join(out_dir, 'predicted.npy'), out)
         for i in range(out.shape[0]):
-            segm = sitk.GetImageFromArray(out[i,:,:,:,0])
-            utils.makeDirectory(os.path.join(pred_dir, val_fold[int(i/2)]))
-            if i%2 ==0:
-                img = sitk.ReadImage(os.path.join(data_path, val_fold[int(i / 2)], 'img_left.nrrd'))
-                segm.CopyInformation(img)
-                sitk.WriteImage(img, os.path.join(pred_dir, val_fold[int(i / 2)], 'img_left.nrrd'))
-                sitk.WriteImage(segm, os.path.join(pred_dir, val_fold[int(i/2)], 'segm_left.nrrd'))
+            img = np.load(os.path.join(input_dir, 'imgs', test_imgs[i]))
+            cv2.imwrite(os.path.join(pred_dir, test_imgs[i][:-4]+'.jpg'), img)
+            segm = out[i,:,:,0].astype(np.uint8)
+            segm_3ch = np.zeros([segm.shape[0], segm.shape[1], 3], dtype=np.uint8)
+            segm_3ch[:,:,0] = segm*255
+            segm_3ch[:, :, 1] = segm * 255
+            segm_3ch[:, :, 2] = segm * 255
+            filename = os.path.join(pred_dir, test_imgs[i][:-4]+'_segm.jpg')
+            cv2.imwrite(filename, segm_3ch)
 
-            else:
-                img = sitk.ReadImage(os.path.join(data_path, val_fold[int(i / 2)], 'img_right.nrrd'))
-                segm.CopyInformation(img)
-                sitk.WriteImage(img, os.path.join(pred_dir, val_fold[int(i / 2)], 'img_right.nrrd'))
-                sitk.WriteImage(segm, os.path.join(pred_dir, val_fold[int(i/2)], 'segm_right.nrrd'))
-
-        # single image evaluation
-        for i in range(0,val_fold.shape[0]*2):
-            out_eval = model.evaluate(img_arr[i:i+1], GT_arr[i:i+1], batch_size=1, verbose=0)
-            print(val_fold[int(i/2)],out_eval)
 
 
 
@@ -318,12 +317,15 @@ if __name__ == '__main__':
     # train(None, None, perc=perc, augmentation=True)
     # perc = 0.1
     # train(None, None, perc = perc, augmentation = True)
-    # perc = 0.5
+    # perc = 0.05
+    # train(None, None, perc=perc, augmentation=True)
+
+    # perc = 1.0
     # train(None, None, perc=perc, augmentation=True)
 
     perc = 1.0
-    train(None, None, perc=perc, augmentation=True)
-
-    # predict(out_dir+'/supervised_F_centered_BB_1_50_0.0005_Perc_0.5_augm.h5', onlyEval=True)
+    model_name = '/home/anneke/projects/uats/code/skin_2D/output/models/supervised_sfs32_F_1_1000_5e-05_Perc_'+str(perc)+'_augm.h5'
+    pred_dir = '/home/anneke/projects/uats/code/skin_2D/output/predictions/'+str(perc)
+    predict(model_name= model_name, pred_dir = pred_dir, onlyEval=False)
     #
     # predict_unlabeled('/home/anneke/projects/uats/code/kits/output/models/supervised_F_centered_BB_1_50_5e-05_Perc_1.0_augm.h5')

@@ -500,14 +500,14 @@ def create_test_arrays(test_dir):
     return img_arr/255, GT_arr/255
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+    os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
     from skin_2D.model import weighted_model
 
     learning_rate = 5e-5
     AUGMENTATION_NO = 5
     TRAIN_NUM = 1000
-    PERC = 1.0
+    PERC = 0.05
     FOLD_NUM = 1
     augm = 'augm'
     batch_size = 16
