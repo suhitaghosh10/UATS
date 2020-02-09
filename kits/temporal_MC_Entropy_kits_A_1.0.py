@@ -6,8 +6,8 @@ from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import Callback, ReduceLROnPlateau
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
 
-from kits.data_generation_uats import DataGenerator as train_gen
-from kits.model_softmax import weighted_model
+from kits.data_generation_mc import DataGenerator as train_gen
+from kits.model_mc import weighted_model
 from lib.segmentation.ops import ramp_down_weight
 from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
 from lib.segmentation.utils import get_array_kits, save_array_kits
@@ -20,16 +20,16 @@ SEGM_RIGHT_NPY = 'segm_right.npy'
 SEGM_LEFT_NPY = 'segm_left.npy'
 learning_rate = 2.5e-5
 AUGMENTATION_NO = 5
-TEMP = 1
 augmentation = True
+DROPOUT_NUM = 20
 # TEMP = 2.908655
 
 FOLD_NUM = 1
-PERCENTAGE_OF_PIXELS = 50
-PERCENTAGE_OF_LABELLED = 0.25
+PERCENTAGE_OF_PIXELS = 75
+PERCENTAGE_OF_LABELLED = 1.0
 DATA_PATH = '/cache/suhita/data/kits/fold_' + str(FOLD_NUM) + '_P' + str(PERCENTAGE_OF_LABELLED) + '/'
 TRAIN_NUM = len(np.load('/data/suhita/temporal/kits/Folds/train_fold1.npy'))
-NAME = 'kits_softmax_F' + str(FOLD_NUM) + '_' + str(TRAIN_NUM) + '_Perct_Labelled_' + str(PERCENTAGE_OF_LABELLED)
+NAME = 'kits_mc_F' + str(FOLD_NUM) + '_' + str(TRAIN_NUM) + '_Perct_Labelled_' + str(PERCENTAGE_OF_LABELLED)
 
 TB_LOG_DIR = '/data/suhita/temporal/tb/kits/' + NAME + '_' + str(learning_rate) + '/'
 MODEL_NAME = '/data/suhita/temporal/' + NAME + '.h5'
@@ -38,8 +38,9 @@ CSV_NAME = '/data/suhita/temporal/CSV/' + NAME + '.csv'
 
 TRAINED_MODEL_PATH = '/data/suhita/temporal/kits/models/' + str(FOLD_NUM) + '_supervised_Perc_' + str(
     PERCENTAGE_OF_LABELLED) + '.h5'
+
 TRAINED_MODEL_PATH = MODEL_NAME
-ENS_GT_PATH = '/data/suhita/temporal/kits/output/sadv6/'
+ENS_GT_PATH = '/data/suhita/temporal/kits/output/sadv1/'
 
 NUM_CLASS = 1
 num_epoch = 1000
@@ -61,10 +62,9 @@ def train(gpu_id, nb_gpus):
     num_labeled_train = int(PERCENTAGE_OF_LABELLED * TRAIN_NUM)
     num_train_data = len(os.listdir(DATA_PATH))
     num_un_labeled_train = num_train_data - num_labeled_train
-    IMGS_PER_ENS_BATCH = num_un_labeled_train // 3
-    # num_val_data = len(os.listdir(VAL_IMGS_PATH))
+    IMGS_PER_ENS_BATCH = num_un_labeled_train // 2
 
-    # gen_lr_weight = ramp_down_weight(ramp_down_period)
+    gen_lr_weight = ramp_down_weight(ramp_down_period)
 
     # prepare dataset
     print('-' * 30)
@@ -74,9 +74,9 @@ def train(gpu_id, nb_gpus):
     # Build Model
     wm = weighted_model()
 
-    model = wm.build_model(img_shape=(DIM[0], DIM[1], DIM[2]),
-                           learning_rate=learning_rate, gpu_id=gpu_id,
-                           nb_gpus=nb_gpus, trained_model=TRAINED_MODEL_PATH, temp=TEMP)
+    model, p_model_MC, normal_model = wm.build_model(img_shape=(DIM[0], DIM[1], DIM[2]), learning_rate=learning_rate,
+                                                     gpu_id=gpu_id,
+                                                     nb_gpus=nb_gpus, trained_model=TRAINED_MODEL_PATH)
 
     print("Images Size:", num_train_data)
     print("Unlabeled Size:", num_un_labeled_train)
@@ -96,13 +96,13 @@ def train(gpu_id, nb_gpus):
             self.data_path = data_path
             self.ensemble_path = ensemble_path
             self.train_idx_list = train_idx_list  # list of indexes of training eg
-            # self.confident_pixels_no = (PERCENTAGE_OF_PIXELS * DIM[0] * DIM[1] * DIM[2] * IMGS_PER_ENS_BATCH *2 ) // 100
+            # self.confident_pixels_no = (PERCENTAGE_OF_PIXELS * DIM[0] * DIM[1] * DIM[2] * num_un_labeled_train * 2) // 100
+
             flag = np.ones((*DIM, 1)).astype('float16')
             if os.path.exists(self.ensemble_path):
                 raise Exception('the path exists!', self.ensemble_path)
             else:
                 makedir(self.ensemble_path)
-
             for patient in np.arange(num_train_data):
 
                 makedir(os.path.join(self.ensemble_path, 'case_' + str(patient)))
@@ -134,21 +134,18 @@ def train(gpu_id, nb_gpus):
             return flag_save, val_save
 
         def on_epoch_begin(self, epoch, logs=None):
-            '''
             if epoch > num_epoch - ramp_down_period:
                 weight_down = next(gen_lr_weight)
                 K.set_value(model.optimizer.lr, weight_down * learning_rate)
                 K.set_value(model.optimizer.beta_1, 0.4 * weight_down + 0.5)
                 print('LR: alpha-', K.eval(model.optimizer.lr), K.eval(model.optimizer.beta_1))
-            # print(K.eval(model.layers[43].trainable_weights[0]))
-'''
-            pass
 
         def on_epoch_end(self, epoch, logs={}):
             # print(time() - self.starttime)
             # model_temp = model
 
             save, self.val_dice_coef = self.shall_save(logs['val_dice_coef'], self.val_dice_coef)
+            p_model_MC.set_weights(normal_model.get_weights())
 
             if epoch > 0:
 
@@ -178,14 +175,15 @@ def train(gpu_id, nb_gpus):
                     inp = [imgs, ensemble_prediction, supervised_flag]
                     del imgs, supervised_flag
 
-                    cur_pred = np.zeros((actual_batch_size * 2, DIM[0], DIM[1], DIM[2], 1))
+                    cur_pred = np.zeros((actual_batch_size, DIM[0], DIM[1], DIM[2], 1))
                     # cur_sigmoid_pred = np.zeros((actual_batch_size, 32, 168, 168, NUM_CLASS))
                     model_out = model.predict(inp, batch_size=2, verbose=1)  # 1
 
                     # model_out = np.add(model_out, model_impl.predict(inp, batch_size=2, verbose=1))  # 2
-                    del inp
+                    # del inp
 
                     cur_pred = model_out if save else ensemble_prediction
+                    mc_pred = np.zeros((actual_batch_size * 2, DIM[0], DIM[1], DIM[2], NUM_CLASS))
 
                     del model_out
 
@@ -194,9 +192,17 @@ def train(gpu_id, nb_gpus):
                     save_array_kits(self.ensemble_path, ensemble_prediction, 'segm', start, end)
                     del ensemble_prediction
 
-                    # flag = np.where(np.reshape(np.max(ensemble_prediction, axis=-1),supervised_flag.shape) >= THRESHOLD, np.ones_like(supervised_flag),np.zeros_like(supervised_flag))
-                    # dont consider background
-                    # cur_pred[:, :, :, :, 4] = np.zeros((actual_batch_size, 32, 168, 168))
+                    # mc dropout chnages
+                    T = DROPOUT_NUM
+                    for i in np.arange(T):
+                        print(b_no, i)
+                        model_out = p_model_MC.predict(inp, batch_size=2, verbose=1)
+                        mc_pred = np.add(model_out, mc_pred)
+
+                    # avg_pred = mc_pred / T#
+                    entropy = -((mc_pred / T) * np.log((mc_pred / T) + 1e-5))
+                    del mc_pred, inp, model_out
+
                     max_pred_ravel = np.ravel(np.max(cur_pred, axis=-1))
                     indices = np.argpartition(max_pred_ravel, -confident_pixels_no)[-confident_pixels_no:]
 
@@ -286,7 +292,7 @@ def train(gpu_id, nb_gpus):
         val_GT_arr[i * 2 + 1, :, :, :, 0] = np.load(os.path.join(VAL_DATA, val_fold[i], 'segm_right.npy'))
 
     x_val = [val_img_arr, val_GT_arr, val_supervised_flag]
-    y_val = val_GT_arr
+    y_val = [val_GT_arr]
     history = model.fit_generator(generator=training_generator,
                                   steps_per_epoch=steps,
                                   validation_data=[x_val, y_val],
@@ -315,18 +321,16 @@ def predict(model_name):
 
     print('load_weights')
     wm = weighted_model()
-    model = wm.build_model(img_shape=(DIM[0], DIM[1], DIM[2]),
-                           learning_rate=learning_rate, gpu_id=None,
-                           nb_gpus=None, trained_model=model_name, temp=1)
-    model.load_weights(model_name)
+    model = wm.build_model(img_shape=(DIM[0], DIM[1], DIM[2]), learning_rate=learning_rate, gpu_id=None,
+                           nb_gpus=None, trained_model=model_name, )
+    # model.load_weights(model_name)
 
     # single image evaluation
     # for i in range(0,val_fold.shape[0]*2):
     #   out_eval = model.evaluate([img_arr[i:i+1],GT_arr[i:i+1],val_supervised_flag[i:i+1]], GT_arr[i:i+1], batch_size=1, verbose=0)
     #  print(val_fold[int(i/2)],out_eval)
 
-    out_eval = model.evaluate([img_arr, GT_arr, val_supervised_flag], GT_arr, batch_size=1, verbose=0)
-    print(model.metrics_names)
+    out_eval = model[0].evaluate([img_arr, GT_arr, val_supervised_flag], GT_arr, batch_size=2, verbose=1)
     print(out_eval)
 
 
@@ -334,7 +338,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = batch_size
-    gpu_id = '0'
+    gpu_id = '2'
 
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
@@ -358,5 +362,5 @@ if __name__ == '__main__':
 
     val_x = np.load('/cache/suhita/data/final_test_array_imgs.npy')
     val_y = np.load('/cache/suhita/data/final_test_array_GT.npy').astype('int8')
-    model_name = '/data/suhita/temporal/kits_softmax_F1_132_Perct_Labelled_0.25.h5'
-    predict(model_name)
+    # model_name = '/data/suhita/temporal/kits_softmax_F1_150_Perct_UL50_Labelled_P_0.5.h5'
+    predict(MODEL_NAME)

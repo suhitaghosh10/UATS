@@ -199,6 +199,27 @@ def get_array(folder_path, start, end, dtype=None):
     return total_arr
 
 
+def get_array_kits(folder_path, start, end, npy_name, dtype=None):
+    img_num = (end - start) * 2
+    if dtype is None:
+        total_arr = np.zeros((img_num, 152, 152, 56, 1))
+    else:
+        total_arr = np.zeros((img_num, 152, 152, 56, 1), dtype=dtype)
+    for idx in np.arange(start, end):
+        arr_idx = (idx - start) * 2
+        shape = np.load(folder_path + '/case_' + str(idx) + '/' + npy_name + '_left.npy').shape
+        if shape == (152, 152, 56):
+            total_arr[arr_idx, :, :, :, 0] = np.load(folder_path + '/case_' + str(idx) + '/' + npy_name + '_left.npy')
+            total_arr[arr_idx + 1, :, :, :, 0] = np.load(
+                folder_path + '/case_' + str(idx) + '/' + npy_name + '_right.npy')
+        else:
+            total_arr[arr_idx] = np.load(folder_path + '/case_' + str(idx) + '/' + npy_name + '_left.npy')
+            total_arr[arr_idx + 1] = np.load(
+                folder_path + '/case_' + str(idx) + '/' + npy_name + '_right.npy')
+
+    return total_arr
+
+
 def get_array_from_list(folder_path, imgs_no=[], dtype=None):
     arr = np.load(folder_path + '/0.npy')
     size = len(imgs_no)
@@ -215,9 +236,16 @@ def get_array_from_list(folder_path, imgs_no=[], dtype=None):
 
 def save_array(path, arr, start, end):
     for idx in np.arange(start, end):
+
         arr_idx = idx - start
         np.save(path + str(idx) + '.npy', arr[arr_idx])
 
+
+def save_array_kits(path, arr, npy_name, start, end):
+    for idx in np.arange(start, end):
+        arr_idx = (idx - start) * 2
+        np.save(path + 'case_' + str(idx) + '/' + npy_name + '_left.npy', arr[arr_idx])
+        np.save(path + 'case_' + str(idx) + '/' + npy_name + '_right.npy', arr[arr_idx + 1])
 
 def save_dice_array(path, cur_pred, ens_pred, start, end, T=1.5):
     axis = (1, 2, 3)

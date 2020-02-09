@@ -36,9 +36,8 @@ MODEL_NAME = '/data/suhita/temporal/' + NAME + '.h5'
 
 CSV_NAME = '/data/suhita/temporal/CSV/' + NAME + '.csv'
 
-TRAINED_MODEL_PATH = '/data/suhita/temporal/kits/models/' + str(FOLD_NUM) + '_supervised_Perc_' + str(
-    PERCENTAGE_OF_LABELLED) + '.h5'
-
+# TRAINED_MODEL_PATH = '/data/suhita/temporal/kits/models/' + str(FOLD_NUM) + '_supervised_Perc_' + str(PERCENTAGE_OF_LABELLED) + '.h5'
+TRAINED_MODEL_PATH = MODEL_NAME
 ENS_GT_PATH = '/data/suhita/temporal/kits/output/sadv2/'
 
 NUM_CLASS = 1
@@ -74,8 +73,7 @@ def train(gpu_id, nb_gpus):
     # Build Model
     wm = weighted_model()
 
-    model = wm.build_model(img_shape=(DIM[0], DIM[1], DIM[2]), num_class=NUM_CLASS, use_dice_cl=False,
-                           learning_rate=learning_rate, gpu_id=gpu_id,
+    model = wm.build_model(img_shape=(DIM[0], DIM[1], DIM[2]), learning_rate=learning_rate, gpu_id=gpu_id,
                            nb_gpus=nb_gpus, trained_model=TRAINED_MODEL_PATH, temp=TEMP)
 
     print("Images Size:", num_train_data)
@@ -246,7 +244,7 @@ def train(gpu_id, nb_gpus):
     np.random.shuffle(train_id_list)
     tcb = TemporalCallback(DATA_PATH, ENS_GT_PATH, train_id_list)
     lcb = wm.LossCallback()
-    es = EarlyStopping(monitor='val_dice_coef', mode='max', verbose=1, patience=100)
+    es = EarlyStopping(monitor='val_dice_coef', mode='max', verbose=1, patience=50)
     # del unsupervised_target, unsupervised_weight, supervised_flag, imgs
     # del supervised_flag
     cb = [model_checkpoint, tcb, tensorboard, lcb, csv_logger, es]
@@ -271,7 +269,7 @@ def train(gpu_id, nb_gpus):
     else:
         augm_no = AUGMENTATION_NO
     steps = (num_train_data * augm_no) / batch_size
-    steps = 2
+    #steps = 2
 
     val_fold = np.load('/data/suhita/temporal/kits/Folds/val_fold' + str(FOLD_NUM) + '.npy')
     num_val_data = len(val_fold)
@@ -351,7 +349,7 @@ if __name__ == '__main__':
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
     # train(gpu, nb_gpus)
-    # train(None, None)
+    train(None, None)
     # val_x = np.load('/cache/suhita/data/validation/valArray_imgs_fold1.npy')
     # val_y = np.load('/cache/suhita/data/validation/valArray_GT_fold1.npy').astype('int8')
 

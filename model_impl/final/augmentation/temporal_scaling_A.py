@@ -7,7 +7,7 @@ from keras.callbacks import Callback, ReduceLROnPlateau
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
 
 from generator.temporal_A import DataGenerator as train_gen
-from lib.segmentation.model.temporal_scaled import weighted_model
+from lib.segmentation.model.temporal_scaled_orig import weighted_model
 from lib.segmentation.ops import ramp_down_weight
 from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
 from lib.segmentation.utils import get_complete_array, get_array, save_array
@@ -15,26 +15,27 @@ from zonal_utils.AugmentationGenerator import *
 
 # 294 Training 58 have gt
 learning_rate = 5e-5
+# TEMP = 2
 TEMP = 2.908655
 
 FOLD_NUM = 1
 TRAIN_NUM = 40
-NAME = 'Scaled_F' + str(FOLD_NUM) + '_' + str(TRAIN_NUM)
+NAME = 'Scaled_F_Orig_Greater_than_logic' + str(FOLD_NUM) + '_' + str(TRAIN_NUM) + '_' + str(TEMP)
 TB_LOG_DIR = '/data/suhita/temporal/tb/' + NAME + '_' + str(learning_rate) + '/'
 MODEL_NAME = '/data/suhita/temporal/' + NAME + '.h5'
 
 CSV_NAME = '/data/suhita/temporal/CSV/' + NAME + '.csv'
 
-TRAIN_IMGS_PATH = '/cache/suhita/data/fold1/train/imgs/'
-TRAIN_GT_PATH = '/cache/suhita/data/fold1/train/gt/'
+TRAIN_IMGS_PATH = '/cache/suhita/data/fold1_' + str(TRAIN_NUM) + '/train/imgs/'
+TRAIN_GT_PATH = '/cache/suhita/data/fold1_' + str(TRAIN_NUM) + '/train/gt/'
 
-VAL_IMGS_PATH = '/cache/suhita/data/fold1/val/imgs/'
-VAL_GT_PATH = '/cache/suhita/data/fold1/val/gt/'
+VAL_IMGS_PATH = '/cache/suhita/data/fold1_' + str(TRAIN_NUM) + '/val/imgs/'
+VAL_GT_PATH = '/cache/suhita/data/fold1_' + str(TRAIN_NUM) + '/val/gt/'
 
 TRAINED_MODEL_PATH = '/data/suhita/temporal/' + 'supervised_F' + str(FOLD_NUM) + '_' + str(TRAIN_NUM) + '.h5'
 
-ENS_GT_PATH = '/data/suhita/temporal/sadv2/ens_gt/'
-FLAG_PATH = '/data/suhita/temporal/sadv2/flag/'
+ENS_GT_PATH = '/data/suhita/temporal/sadv3/ens_gt/'
+FLAG_PATH = '/data/suhita/temporal/sadv3/flag/'
 
 PERCENTAGE_OF_PIXELS = 5
 
@@ -48,7 +49,7 @@ SAVE_WTS_AFTR_EPOCH = 0
 ramp_up_period = 50
 ramp_down_period = 50
 # weight_max = 40
-weight_max = 30
+#weight_max = 30
 
 alpha = 0.6
 
@@ -71,6 +72,7 @@ def train(gpu_id, nb_gpus):
 
     model = wm.build_model(num_class=NUM_CLASS, use_dice_cl=False, learning_rate=learning_rate, gpu_id=gpu_id,
                            nb_gpus=nb_gpus, trained_model=TRAINED_MODEL_PATH, temp=TEMP)
+
     print("Images Size:", num_train_data)
     print("Unlabeled Size:", num_un_labeled_train)
 
@@ -134,7 +136,7 @@ def train(gpu_id, nb_gpus):
             # print(K.eval(model.layers[43].trainable_weights[0]))
 '''
         def on_epoch_end(self, epoch, logs={}):
-            print(time() - self.starttime)
+            #print(time() - self.starttime)
             sup_count = self.count
             pz_save, self.val_pz_dice_coef = self.shall_save(logs['val_pz_dice_coef'], self.val_pz_dice_coef)
             cz_save, self.val_cz_dice_coef = self.shall_save(logs['val_cz_dice_coef'], self.val_cz_dice_coef)
@@ -268,7 +270,7 @@ def train(gpu_id, nb_gpus):
     steps = num_train_data / batch_size
     #steps =2
 
-    val_supervised_flag = np.ones((num_val_data, 32, 168, 168), dtype='int8')
+    val_supervised_flag = np.ones((num_val_data, 32, 168, 168), dtype='int8') *3
     # val_x_arr = get_complete_array(VAL_IMGS_PATH)
     # val_y_arr = get_complete_array(VAL_GT_PATH, dtype='int8')
 
@@ -345,6 +347,6 @@ if __name__ == '__main__':
     # val_x = np.load('/cache/suhita/data/validation/valArray_imgs_fold1.npy')
     # val_y = np.load('/cache/suhita/data/validation/valArray_GT_fold1.npy').astype('int8')
 
-    val_x = np.load('/cache/suhita/data/test_anneke/final_test_array_imgs.npy')
-    val_y = np.load('/cache/suhita/data/test_anneke/final_test_array_GT.npy').astype('int8')
-    predict(val_x, val_y, model=MODEL_NAME)
+    val_x = np.load('/cache/suhita/data/final_test_array_imgs.npy')
+    val_y = np.load('/cache/suhita/data/final_test_array_GT.npy').astype('int8')
+    predict(val_x, val_y, model=TRAINED_MODEL_PATH)

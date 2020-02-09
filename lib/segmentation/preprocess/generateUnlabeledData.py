@@ -1,7 +1,7 @@
 import numpy as np
 
 unlabeled_imgs = np.load('/cache/suhita/data/npy_img_unlabeled.npy')
-unlabeled_imgs_gt = np.load('/data/suhita/tempora/predicted_final_.npy')
+unlabeled_imgs_gt = np.load('/data/suhita/temporal/p/predicted_final_30.npy')
 
 good_count = unlabeled_imgs.shape[0] - 8
 

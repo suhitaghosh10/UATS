@@ -283,6 +283,53 @@ def predict(model_name, onlyEval=False):
             out_eval = model.evaluate(img_arr[i:i+1], GT_arr[i:i+1], batch_size=1, verbose=0)
             print(val_fold[int(i/2)],out_eval)
 
+
+def predict_test(model_name, onlyEval=False):
+    pred_dir = '/home/anneke/projects/uats/code/kits/output/predictions/'
+
+    test_path = np.load('/cache/suhita/data/kidney_anneke/preprocessed_labeled_test')
+    val_len = len(os.listdir(test_path))
+
+    img_arr = np.zeros((val_len * 2, DIM[0], DIM[1], DIM[2], 1), dtype=float)
+    GT_arr = np.zeros((val_len * 2, DIM[0], DIM[1], DIM[2], 1), dtype=float)
+
+    for i in os.listdir(test_path):
+        img_arr[i * 2, :, :, :, 0] = np.load(os.path.join(data_path, i, 'img_left.npy'))
+        img_arr[i * 2 + 1, :, :, :, 0] = np.load(os.path.join(data_path, i, 'img_right.npy'))
+        GT_arr[i * 2, :, :, :, 0] = np.load(os.path.join(data_path, i, 'segm_left.npy'))
+        GT_arr[i * 2 + 1, :, :, :, 0] = np.load(os.path.join(data_path, i, 'segm_right.npy'))
+
+    print('load_weights')
+    wm = weighted_model()
+    model = wm.build_model(img_shape=(DIM[0], DIM[1], DIM[2]), learning_rate=learning_rate)
+    model.load_weights(model_name)
+
+    if onlyEval:
+        out_value = model.evaluate(img_arr, GT_arr, batch_size=1, verbose=0)
+        print(out_value)
+    else:
+        out = model.predict(img_arr, batch_size=1, verbose=1)
+        # np.save(os.path.join(out_dir, 'predicted.npy'), out)
+        for i in os.listdir(test_path):
+            segm = sitk.GetImageFromArray(out[i, :, :, :, 0])
+            utils.makeDirectory(os.path.join(pred_dir, test_path))
+            if i % 2 == 0:
+                img = sitk.ReadImage(os.path.join(data_path, i, 'img_left.nrrd'))
+                segm.CopyInformation(img)
+                sitk.WriteImage(img, os.path.join(pred_dir, i, 'img_left.nrrd'))
+                sitk.WriteImage(segm, os.path.join(pred_dir, i, 'segm_left.nrrd'))
+
+            else:
+                img = sitk.ReadImage(os.path.join(data_path, i, 'img_right.nrrd'))
+                segm.CopyInformation(img)
+                sitk.WriteImage(img, os.path.join(pred_dir, i, 'img_right.nrrd'))
+                sitk.WriteImage(segm, os.path.join(pred_dir, i, 'segm_right.nrrd'))
+
+        # single image evaluation
+        for i in range(0, val_len * 2):
+            out_eval = model.evaluate(img_arr[i:i + 1], GT_arr[i:i + 1], batch_size=1, verbose=0)
+            print(i, out_eval)
+
 if __name__ == '__main__':
 
 
@@ -311,8 +358,8 @@ if __name__ == '__main__':
     # train(None, None, perc=perc, augmentation=True)
     # #train(None, None, perc=perc, augmentation=False)
 
-    model_name = '/data/suhita/temporal/kits/models/1_supervised_Perc_0.5.h5'
+    model_name = '/data/suhita/temporal/kits/models/1_supervised_Perc_1.0.h5'
     img_path = '/cache/suhita/data/kidney_anneke/preprocessed_unlabeled/'
     # generate_prediction_for_ul(model_name, onlyEval=False, img_path=img_path, ens_path=out_dir+'/output/UL_1.0')
 
-    predict(model_name, onlyEval=True)
+    predict_test(model_name, onlyEval=True)

@@ -3,7 +3,6 @@ import numpy as np
 import os
 from kits import utils
 import csv
-import cv2
 
 import math
 
@@ -160,8 +159,7 @@ def get_segmentation_statistics(segm, physical_centroid = True, return_BB = True
         return size,center
 
 
-
-def check_if_segm_in_ROI(cropped_img_right, cropped_img_left, segm_left, segm_right):
+def check_if_segm_in_ROI(cropped_img_right, cropped_img_left, segm):
 
     [size_x, size_y, size_z] = segm.GetSize()
 

@@ -7,7 +7,7 @@ import numpy as np
 
 rn.seed(1235)
 write_flag = False
-OUTPUT_DIR = '/cache/suhita/'
+OUTPUT_DIR = 'D:\\Thesis\\kits\\'
 
 reference_size = [56,152,152]
 reference_spacing = [1.0,1.0,4.0]
@@ -293,7 +293,6 @@ def get_transformed_gt(orig_gt, ref_image, augmentation_type, centered_transform
             orig_img_gt.SetSpacing(reference_spacing)
 
 
-            #write_image(orig_img_gt, os.path.join(OUTPUT_DIR, 'orig_gt' + str(zone) + '.nrrd'), orig_img_gt, is_image=True)
 
             gt_dist = sitk.SignedMaurerDistanceMap(orig_img_gt, insideIsPositive=True, squaredDistance=False,
                                                    useImageSpacing=True)
@@ -337,15 +336,37 @@ def get_transformed_gt(orig_gt, ref_image, augmentation_type, centered_transform
 
 def get_single_image_augmentation(augmentation_type, orig_image, orig_gt, img_no,  nrClasses = 1):
     out_img = np.zeros([reference_size[2], reference_size[1], reference_size[0], 1], dtype=np.float32)
-    #out_gt = np.zeros([reference_size[2], reference_size[1], reference_size[0], nrClasses], dtype=np.uint8)
 
     img = sitk.GetImageFromArray(orig_image)
-    #img1.SetSpacing(reference_spacing)
     reference_image = get_reference_image(img)
 
-    #img = sitk.GetImageFromArray(orig_image)
     img.SetSpacing(reference_spacing)
-    # write_image(img, os.path.join(OUTPUT_DIR, 'orig_image' + str(img_no) + '.nrrd'), reference_image, is_image=True)
+    centered_transform, aug_transform, transformation_parameters_list = get_augmentation_transform(img, reference_image,
+                                                                                                   augmentation_type)
+
+    # transform image
+    res_img = augment_images_spatial(img, reference_image, augmentation_type, centered_transform,
+                                     aug_transform, transformation_parameters_list)
+    out_img[:, :, :, 0] = sitk.GetArrayFromImage(res_img)
+
+    # transform gt
+    gt_ref = sitk.GetImageFromArray(orig_gt)
+    gt_ref.SetSpacing(reference_spacing)
+
+    res_gt = get_transformed_gt(orig_gt, reference_image, augmentation_type, centered_transform, aug_transform,
+                                transformation_parameters_list)
+
+    return out_img, res_gt
+
+
+def get_single_image_augmentation_with_ensemble(augmentation_type, orig_image, orig_gt, ens_gt, img_no, nrClasses=1):
+    out_img = np.zeros([reference_size[2], reference_size[1], reference_size[0], 1], dtype=np.float32)
+
+    img = sitk.GetImageFromArray(orig_image)
+    reference_image = get_reference_image(img)
+
+    img.SetSpacing(reference_spacing)
+    write_image(img, os.path.join(OUTPUT_DIR, 'orig_img.nrrd'), img, is_image=True)
 
     centered_transform, aug_transform, transformation_parameters_list = get_augmentation_transform(img, reference_image,
                                                                                                    augmentation_type)
@@ -353,45 +374,47 @@ def get_single_image_augmentation(augmentation_type, orig_image, orig_gt, img_no
     # transform image
     res_img = augment_images_spatial(img, reference_image, augmentation_type, centered_transform,
                                      aug_transform, transformation_parameters_list)
-    #sitk.WriteImage(res_img, 'res_img.nrrd')
-
     out_img[:, :, :, 0] = sitk.GetArrayFromImage(res_img)
+    res_img.SetSpacing(reference_spacing)
+    write_image(res_img, os.path.join(OUTPUT_DIR, 'ch_img.nrrd'), reference_image, is_image=True)
 
     # transform gt
     gt_ref = sitk.GetImageFromArray(orig_gt)
     gt_ref.SetSpacing(reference_spacing)
-    # write_image(res_img, os.path.join(OUTPUT_DIR, 'changed_image' + str(img_no) + '_' + AugmentTypes(
-    #     augmentation_type).name + '.nrrd'), reference_image, is_image=True)
-
+    write_image(gt_ref, os.path.join(OUTPUT_DIR, 'gt_orig.nrrd'), reference_image, is_image=True)
     res_gt = get_transformed_gt(orig_gt, reference_image, augmentation_type, centered_transform, aug_transform,
                                 transformation_parameters_list)
+    temp = sitk.GetImageFromArray(res_gt)
+    temp.SetSpacing(reference_spacing)
+    write_image(temp, os.path.join(OUTPUT_DIR, 'ch_gt.nrrd'), reference_image, is_image=True)
+    # transform ensemble gt
+    # transform gt
+    ens_ref = sitk.GetImageFromArray(ens_gt)
+    ens_ref.SetSpacing(reference_spacing)
+    write_image(ens_ref, os.path.join(OUTPUT_DIR, 'orig_ens_gt.nrrd'), reference_image, is_image=True)
 
-    # write_image(res_gt[:, :, :, 0], os.path.join(OUTPUT_DIR, 'ch_gt' + str(img_no) + '_' + str(0) + '_' + AugmentTypes(
-    #     augmentation_type).name + '.nrrd'), gt_ref)
-    # write_image(res_gt[:, :, :, 1], os.path.join(OUTPUT_DIR, 'ch_gt' + str(img_no) + '_' + str(1) + '_' + AugmentTypes(
-    #     augmentation_type).name + '.nrrd'), gt_ref)
-    # write_image(res_gt[:, :, :, 2], os.path.join(OUTPUT_DIR, 'ch_gt' + str(img_no) + '_' + str(2) + '_' + AugmentTypes(
-    #     augmentation_type).name + '.nrrd'), gt_ref)
-    # write_image(res_gt[:, :, :, 3], os.path.join(OUTPUT_DIR, 'ch_gt' + str(img_no) + '_' + str(3) + '_' + AugmentTypes(
-    #     augmentation_type).name + '.nrrd'), gt_ref)
-    # write_image(res_gt[:, :, :, 4], os.path.join(OUTPUT_DIR, 'ch_gt' + str(img_no) + '_' + str(4) + '_' + AugmentTypes(
-    #     augmentation_type).name + '.nrrd'), gt_ref)
+    ens_gt = get_transformed_gt(ens_gt, reference_image, augmentation_type, centered_transform, aug_transform,
+                                transformation_parameters_list)
+    temp = sitk.GetImageFromArray(ens_gt)
+    temp.SetSpacing(reference_spacing)
+    write_image(temp, os.path.join(OUTPUT_DIR, 'ch_ens_gt.nrrd'), reference_image, is_image=True)
 
-    return out_img, res_gt
+    return out_img, res_gt, ens_gt
+
 
 
 
 if __name__ == '__main__':
-    img_path = '/cache/suhita/data/fold1/train/imgs/'
+    # img_path = 'D:\Thesis\kits\\case_197\\img_left.npy'
     #gt_path = '/home/suhita/zonals/temporal/sadv2/gt/'
-    gt_path = '/cache/suhita/data/fold1/train/gt/'
-    ens_gt = '/data/suhita/temporal/sadv1/ens_gt/'
+    # gt_path = '/cache/suhita/data/fold1/train/gt/'
+    #ens_gt = '/data/suhita/temporal/sadv1/ens_gt/'
     img_no = 1
-    img = np.load(img_path + str(img_no) + '.npy')
-    gt = np.load(gt_path + str(img_no) + '.npy')
-    ens_gt = np.load(ens_gt + str(img_no) + '.npy')
+    img = np.load('D:\Thesis\kits\\case_197\\img_left.npy')
+    gt = np.load('D:\Thesis\kits\\case_197\\segm_left.npy')
+    ens_gt = np.load('D:\Thesis\kits\\case_197_sad\\segm_left.npy')
     augmentation_type = AugmentTypes.TRANSLATION_3D
 
-    #out_img, out_gt, out_ens_gt = get_single_image_augmentation_with_ensemble2(augmentation_type, img, gt, ens_gt,
-      #                                                                         img_no)
+    out_img, out_gt, out_ens_gt = get_single_image_augmentation_with_ensemble(augmentation_type, img, gt, ens_gt,
+                                                                              img_no)
     #out_img, out_gt = get_single_image_augmentation(augmentation_type, img, gt, img_no)

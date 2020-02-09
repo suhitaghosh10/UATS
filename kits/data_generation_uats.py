@@ -37,7 +37,7 @@ class DataGenerator(keras.utils.Sequence):
         # 32,168,168
         X = np.empty((self.batch_size, *self.dim, self.n_channels))
         Y = np.empty((self.batch_size, *self.dim, 1), dtype=np.uint8)
-        ENS = np.empty((self.batch_size, *self.dim, 1), dtype=np.uint8)
+        ENS = np.empty((self.batch_size, *self.dim, 1))
         flag = np.zeros((self.batch_size, *self.dim, 1))
 
         # Generate data

@@ -936,16 +936,16 @@ def get_mask(gt_arr_inp, write=False):
 
 
 if __name__ == '__main__':
-    img_path = '/cache/suhita/data/fold1/train/imgs/'
+    img_path = '/cache/suhita/data/fold1_58/train/imgs/'
     #gt_path = '/home/suhita/zonals/temporal/sadv2/gt/'
-    gt_path = '/cache/suhita/data/fold1/train/gt/'
-    ens_gt = '/data/suhita/temporal/sadv1/ens_gt/'
-    img_no = 1
+    gt_path = '/cache/suhita/data/fold1_58/train/gt/'
+    ens_gt = '/cache/suhita/data/fold1_58/train/gt/'
+    img_no = 271
     img = np.load(img_path + str(img_no) + '.npy')
     gt = np.load(gt_path + str(img_no) + '.npy')
     ens_gt = np.load(ens_gt + str(img_no) + '.npy')
     augmentation_type = AugmentTypes.TRANSLATION_3D
 
     out_img, out_gt, out_ens_gt = get_single_image_augmentation_with_ensemble2(augmentation_type, img, gt, ens_gt,
-                                                                               img_no)
-    out_img, out_gt = get_single_image_augmentation(augmentation_type, img, gt, img_no)
+                                                                               img_no, labelled_num=50)
+    # out_img, out_gt = get_single_image_augmentation(augmentation_type, img, gt, img_no)

@@ -235,7 +235,7 @@ class weighted_model:
 
         return conv
 
-    def build_model(self, img_shape=(32, 168, 168), use_dice_cl=None, num_class=5, learning_rate=5e-5, gpu_id=None,
+    def build_model(self, img_shape=(32, 168, 168), learning_rate=5e-5, gpu_id=None,
                     nb_gpus=None,
                     trained_model=None, temp=None):
         input_img = Input((*img_shape, 1), name='img_inp')

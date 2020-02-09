@@ -36,9 +36,8 @@ MODEL_NAME = '/data/suhita/temporal/' + NAME + '.h5'
 
 CSV_NAME = '/data/suhita/temporal/CSV/' + NAME + '.csv'
 
-TRAINED_MODEL_PATH = '/data/suhita/temporal/kits/models/' + str(FOLD_NUM) + '_supervised_Perc_' + str(
-    PERCENTAGE_OF_LABELLED) + '.h5'
-
+# TRAINED_MODEL_PATH = '/data/suhita/temporal/kits/models/' + str(FOLD_NUM) + '_supervised_Perc_' + str(PERCENTAGE_OF_LABELLED) + '.h5'
+TRAINED_MODEL_PATH = MODEL_NAME
 ENS_GT_PATH = '/data/suhita/temporal/kits/output/sadv3/'
 
 NUM_CLASS = 1
@@ -355,7 +354,7 @@ if __name__ == '__main__':
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
     # train(gpu, nb_gpus)
-    # train(None, None)
+    train(None, None)
     # val_x = np.load('/cache/suhita/data/validation/valArray_imgs_fold1.npy')
     # val_y = np.load('/cache/suhita/data/validation/valArray_GT_fold1.npy').astype('int8')
 

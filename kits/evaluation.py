@@ -5,6 +5,8 @@ from matplotlib.colors import LinearSegmentedColormap
 
 from eval.preprocess import *
 
+THRESHOLD = 0.5
+
 
 def getDice(prediction, groundTruth):
     filter = sitk.LabelOverlapMeasuresImageFilter()
@@ -75,96 +77,88 @@ def getBoundaryDistances(prediction, groundTruth):
     return (hausdorff, mean)
 
 
-def evaluateFiles_zones(GT_array, pred_directory, prediction_arr, csvName):
-    with open(csvName + '.csv', 'w') as csvfile:
+def evaluateFiles_arr(prediction, GT_array, csvName, connected_component=False):
+    with open(csvName, 'w') as csvfile:
         csvwriter = csv.writer(csvfile, delimiter=';', lineterminator='\n',
                                quotechar='|', quoting=csv.QUOTE_MINIMAL)
         csvwriter.writerow(
-            ['Case', 'PZ Dice', 'CZ Dice', 'US Dice', 'AFS Dice', 'Bg Dice', 'PZ MeanDis', 'CZ MeanDis', 'US MeanDis',
-             'AFS MeanDis', 'Bg MeanDis'])
+            ['Case', 'Dice', 'MeanDis', '95-HD'])
 
         nrImgs = GT_array.shape[0]
-        dices = np.zeros((nrImgs, 5), dtype=np.float32)
+        dices = np.zeros((nrImgs), dtype=np.float32)
         print(dices.shape)
-        mad = np.zeros((nrImgs, 5), dtype=np.float32)
+        mad = np.zeros((nrImgs), dtype=np.float32)
+        hdf = np.zeros((nrImgs), dtype=np.float32)
+        # auc = np.zeros((nrImgs, 4), dtype=np.float32)
 
         for imgNumber in range(0, nrImgs):
-            print('Case' + str(imgNumber))
-            values = ['Case' + str(imgNumber)]
+            print('Case' + str(int(imgNumber / 2)))
+            values = ['Case' + str(int(imgNumber / 2))]
             temp_dice = []
             temp_mad = []
-            predictions = np.load(prediction_arr + '.npy')
-            for zoneIndex in range(0, 5):
-                pred_arr = predictions[imgNumber, :, :, :, zoneIndex]
-                pred_arr = thresholdArray(pred_arr, 0.5)
-                # pred_arr = pred_arr.astype(int)
-                # maxValue = np.max(pred_arr)
-                pred_img = sitk.GetImageFromArray(pred_arr)
+            temp_hdf = []
+            # temp_auc = []
 
-                GT_label = sitk.GetImageFromArray(GT_array[imgNumber, :, :, :, zoneIndex])
-                #####pred_img = utils.resampleToReference(pred_img, GT_label, sitk.sitkNearestNeighbor, 0)
-                pred_img = castImage(pred_img, sitk.sitkUInt8)
-                ####GT_label = utils.resampleToReference(GT_label, pred_img, sitk.sitkNearestNeighbor, 0)
-                GT_label = castImage(GT_label, sitk.sitkUInt8)
+            pred_arr = prediction[imgNumber]
+            pred_arr = thresholdArray(pred_arr, 0.5)
+            # pred_arr = pred_arr.astype(int)
+            maxValue = np.max(pred_arr)
+            pred_img = sitk.GetImageFromArray(pred_arr[:, :, :, 0])
 
-                # sitk.WriteImage(pred_img, 'predImg.nrrd')
-                # sitk.WriteImage(GT_label, 'GT_label.nrrd')
+            GT_label = sitk.GetImageFromArray(GT_array[imgNumber, :, :, :, 0])
+            GT_label.SetSpacing([4.0, 1.0, 1.0])
+            #####pred_img = utils.resampleToReference(pred_img, GT_label, sitk.sitkNearestNeighbor, 0)
+            pred_img = castImage(pred_img, sitk.sitkUInt8)
+            pred_img.SetSpacing([4.0, 1.0, 1.0])
+            ####GT_label = utils.resampleToReference(GT_label, pred_img, sitk.sitkNearestNeighbor, 0)
+            GT_label = castImage(GT_label, sitk.sitkUInt8)
 
-                dice = getDice(pred_img, GT_label)
-                temp_dice.append(dice)
-                print(dice)
-                # avd = relativeAbsoluteVolumeDifference(pred_img, GT_label)
-                [hausdorff, avgDist] = getBoundaryDistances(pred_img, GT_label)
-                temp_mad.append(avgDist)
-                # values.append(dice)
-                # values.append(avgDist)
-                dices[imgNumber, zoneIndex] = dice
-                mad[imgNumber, zoneIndex] = avgDist
+            if connected_component:
+                pred_img = getConnectedComponents(pred_img)
+
+            # sitk.WriteImage(pred_img, 'predImg.nrrd')
+            # sitk.WriteImage(GT_label, 'GT_label.nrrd')
+
+            dice = getDice(pred_img, GT_label)
+            temp_dice.append(dice)
+            print(dice)
+            # avd = relativeAbsoluteVolumeDifference(pred_img, GT_label)
+            [hausdorff, avgDist] = getBoundaryDistances(pred_img, GT_label)
+
+            temp_mad.append(avgDist)
+            temp_hdf.append(hausdorff)
+
+            dices[imgNumber] = dice
+            mad[imgNumber] = avgDist
+            hdf[imgNumber] = hausdorff
+            # auc[imgNumber, zoneIndex] = roc_auc
 
             values.append(temp_dice[0])
-            values.append(temp_dice[1])
-            values.append(temp_dice[2])
-            values.append(temp_dice[3])
-            values.append(temp_dice[4])
-
             values.append(temp_mad[0])
-            values.append(temp_mad[1])
-            values.append(temp_mad[2])
-            values.append(temp_mad[3])
-            values.append(temp_mad[4])
-            # values.append(temp_mad)
+            values.append(temp_hdf[0])
+
             csvwriter.writerow(values)
 
         csvwriter.writerow('')
-        average = ['Average', np.average(dices[:, 0]), np.average(dices[:, 1]), np.average(dices[:, 2]),
-                   np.average(dices[:, 3]), np.average(dices[:, 4]), np.average(mad[:, 0]), np.average(mad[:, 1]),
-                   np.average(mad[:, 2]),
-                   np.average(mad[:, 3]), np.average(mad[:, 4])]
-        median = ['Median', np.median(dices[:, 0]), np.median(dices[:, 1]), np.median(dices[:, 2]),
-                  np.median(dices[:, 3]), np.median(dices[:, 4]), np.median(mad[:, 0]), np.median(mad[:, 1]),
-                  np.median(mad[:, 2]),
-                  np.median(mad[:, 3]), np.median(dices[:, 3])]
-        std = ['STD', np.std(dices[:, 0]), np.std(dices[:, 1]), np.std(dices[:, 2]),
-               np.std(dices[:, 3]), np.std(dices[:, 4]), np.std(mad[:, 0]), np.std(mad[:, 1]), np.std(mad[:, 2]),
-               np.std(mad[:, 3]), np.std(dices[:, 4])]
+        average = ['Average', np.average(dices),
+                   np.average(mad), np.average(hdf)]
+        median = ['Median', np.median(dices),
+                  np.median(mad), np.median(hdf)]
+        std = ['STD', np.std(dices),
+               np.std(mad), np.std(hdf)]
 
         csvwriter.writerow(average)
         csvwriter.writerow(median)
         csvwriter.writerow(std)
 
         print('Dices')
-        print(np.average(dices[:, 0]))
-        print(np.average(dices[:, 1]))
-        print(np.average(dices[:, 2]))
-        print(np.average(dices[:, 3]))
-        print(np.average(dices[:, 4]))
+        print(np.average(dices))
 
         print('Mean Dist')
-        print(np.average(mad[:, 0]))
-        print(np.average(mad[:, 1]))
-        print(np.average(mad[:, 2]))
-        print(np.average(mad[:, 3]))
-        print(np.average(mad[:, 4]))
+        print(np.average(mad))
+
+        print('Hausdorff 95%')
+        print(np.average(hdf))
 
 
 def evaluateFiles(GT_directory, pred_directory, csvName):
@@ -427,11 +421,11 @@ def getConnectedComponents(predictionImage):
 def removeIslands(predictedArray):
     pred = predictedArray
     print(pred.shape)
-    pred_pz = thresholdArray(pred[:, :, :, 0], 0.5)
-    pred_cz = thresholdArray(pred[:, :, :, 1], 0.5)
-    pred_us = thresholdArray(pred[:, :, :, 2], 0.5)
-    pred_afs = thresholdArray(pred[:, :, :, 3], 0.5)
-    pred_bg = thresholdArray(pred[:, :, :, 4], 0.5)
+    pred_pz = thresholdArray(pred[0, :, :, :], THRESHOLD)
+    pred_cz = thresholdArray(pred[1, :, :, :], THRESHOLD)
+    pred_us = thresholdArray(pred[2, :, :, :], THRESHOLD)
+    pred_afs = thresholdArray(pred[3, :, :, :], THRESHOLD)
+    pred_bg = thresholdArray(pred[4, :, :, :], THRESHOLD)
 
     pred_pz_img = sitk.GetImageFromArray(pred_pz)
     pred_cz_img = sitk.GetImageFromArray(pred_cz)
@@ -474,13 +468,14 @@ def removeIslands(predictedArray):
     array_afs = sitk.GetArrayFromImage(pred_afs_img_cc)
     array_bg = sitk.GetArrayFromImage(pred_bg_img_cc)
 
-    finalPrediction = np.zeros([32, 168, 168, 5])
-    finalPrediction[:, :, :, 0] = array_pz
-    finalPrediction[:, :, :, 1] = array_cz
-    finalPrediction[:, :, :, 2] = array_us
-    finalPrediction[:, :, :, 3] = array_afs
-    finalPrediction[:, :, :, 4] = array_bg
+    finalPrediction = np.zeros([5, 32, 168, 168])
+    finalPrediction[0] = array_pz
+    finalPrediction[1] = array_cz
+    finalPrediction[2] = array_us
+    finalPrediction[3] = array_afs
+    finalPrediction[4] = array_bg
 
+    array = np.zeros([1, 1, 1, 1])
 
     for x in range(0, pred_cz_img.GetSize()[0]):
         for y in range(0, pred_cz_img.GetSize()[1]):
@@ -493,88 +488,103 @@ def removeIslands(predictedArray):
                              afs_dis.GetPixel(x, y, z), bg_dis.GetPixel(x, y, z)]
                     maxValue = max(array)
                     max_index = array.index(maxValue)
-                    finalPrediction[z, y, x, max_index] = 1
+                    finalPrediction[max_index, z, y, x] = 1
 
     return finalPrediction
 
 
-def postprocesAndEvaluateFiles(outDir, prediction, GT_array, csvName, eval=True, prediction_arr_exists=False):
-    if not prediction_arr_exists:
-        if not os.path.exists(outDir):
-            os.makedirs(outDir)
+def create_test_arrays(test_dir):
+    cases = sorted(os.listdir(test_dir))
 
-        out_arr = np.zeros((prediction.shape[0], 32, 168, 168, 5))
-        for i in range(0, prediction.shape[0]):
-            print(i)
-            array = removeIslands(prediction[i, :, :, :, :])
-            # np.save(outDir + 'predicted_' + str(i) + '.npy', array)
-            print(array.shape)
-            out_arr[i] = array
-        # print('preditction', prediction.shape)
-        # array = prediction[:, i, :, :, :]
-        np.save(outDir + model_name, out_arr.astype('int8'))
+    # open first case to obtain dimensions
+    segm = np.load(os.path.join(test_dir, cases[0], 'segm_left.npy'))
+    DIM = segm.shape
+    img_arr = np.zeros((len(cases) * 2, DIM[0], DIM[1], DIM[2], 1), dtype=float)
+    GT_arr = np.zeros((len(cases) * 2, DIM[0], DIM[1], DIM[2], 1), dtype=float)
 
-    if eval:
-        evaluateFiles_zones(GT_array, pred_directory=outDir, prediction_arr=outDir + model_name, csvName=csvName)
+    for i in range(len(cases)):
+        img_arr[i * 2, :, :, :, 0] = np.load(os.path.join(test_dir, cases[i], 'img_left.npy'))
+        img_arr[i * 2 + 1, :, :, :, 0] = np.load(os.path.join(test_dir, cases[i], 'img_right.npy'))
+        GT_arr[i * 2, :, :, :, 0] = np.load(os.path.join(test_dir, cases[i], 'segm_left.npy'))
+        GT_arr[i * 2 + 1, :, :, :, 0] = np.load(os.path.join(test_dir, cases[i], 'segm_right.npy'))
+
+    return img_arr, GT_arr
 
 
-def predict_for_uats(val_x_arr, val_y_arr, model, mc=False):
-    val_supervised_flag = np.ones((val_x_arr.shape[0], 32, 168, 168), dtype='int8')
+def eval_for_uats_softmax(model_dir, model_name, batch_size=1):
+    GT_dir = '/cache/suhita/data/kidney_anneke/preprocessed_labeled_test'
+    img_arr, GT_arr = create_test_arrays(GT_dir)
+    DIM = img_arr.shape
+    from kits.model_softmax import weighted_model
+    wm = weighted_model()
+    model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=learning_rate, gpu_id=None,
+                           nb_gpus=None, trained_model=os.path.join(model_dir, model_name + '.h5'), temp=1)
+    # model.load_weights(os.path.join(model_dir, NAME,'.h5'))
+    val_supervised_flag = np.ones((DIM[0], DIM[1], DIM[2], DIM[3], 1), dtype='int8')
+    prediction = model.predict([img_arr, GT_arr, val_supervised_flag], batch_size=batch_size)
+    csvName = os.path.join(model_dir, 'kits', 'evaluation', model_name + '.csv')
 
-    x_val = [val_x_arr, val_y_arr, val_supervised_flag]
-    print('load_weights')
-    # model_impl.load_weights()
-    print('predict')
-    out = model.predict(x_val, batch_size=1, verbose=1)
-    output_arr = np.zeros((out[0].shape[0], 32, 168, 168, 5))
-
-    output_arr[:, :, :, :, 0] = out[0]
-    output_arr[:, :, :, :, 1] = out[1]
-    output_arr[:, :, :, :, 2] = out[2]
-    output_arr[:, :, :, :, 3] = out[3]
-    output_arr[:, :, :, :, 4] = out[4]
-    print(output_arr.shape)
-
-    if mc:
-        print(model.evaluate(x_val, out[0:5], batch_size=1, verbose=1))
-    else:
-        print(model.evaluate(x_val, out, batch_size=1, verbose=1))
-
-    return output_arr
+    # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
+    evaluateFiles_arr(prediction=prediction, GT_array=GT_arr, csvName=csvName)
 
 
-def predict_for_supervised(val_x_arr, val_y_arr, model):
-    print('predict')
-    out = model.predict(val_x_arr, batch_size=1, verbose=1)
-    output_arr = np.zeros((out[0].shape[0], 32, 168, 168, 5))
-    output_arr[:, :, :, :, 0] = out[0]
-    output_arr[:, :, :, :, 1] = out[1]
-    output_arr[:, :, :, :, 2] = out[2]
-    output_arr[:, :, :, :, 3] = out[3]
-    output_arr[:, :, :, :, 4] = out[4]
-    print(output_arr.shape)
-    # print(model.evaluate(x_val, y_val, batch_size=1, verbose=1))
+def eval_for_uats_mc(model_dir, model_name, batch_size=1):
+    GT_dir = '/cache/suhita/data/kidney_anneke/preprocessed_labeled_test'
+    img_arr, GT_arr = create_test_arrays(GT_dir)
+    DIM = img_arr.shape
+    from kits.model_mc import weighted_model
+    wm = weighted_model()
+    model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=learning_rate, gpu_id=None,
+                           nb_gpus=None, trained_model=os.path.join(model_dir, model_name + '.h5'))
+    # model.load_weights(os.path.join(model_dir, NAME,'.h5'))
+    val_supervised_flag = np.ones((DIM[0], DIM[1], DIM[2], DIM[3], 1), dtype='int8')
+    prediction = model[0].predict([img_arr, GT_arr, val_supervised_flag], batch_size=batch_size)
+    csvName = os.path.join(model_dir, 'kits', 'evaluation', model_name + '.csv')
 
-    return output_arr
+    # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
+    evaluateFiles_arr(prediction=prediction, GT_array=GT_arr, csvName=csvName)
 
+
+def eval_for_supervised(model_dir, model_name, ):
+    GT_dir = '/cache/suhita/data/kidney_anneke/preprocessed_labeled_test'
+    img_arr, GT_arr = create_test_arrays(GT_dir)
+    DIM = img_arr.shape
+    from kits.model import weighted_model
+    wm = weighted_model()
+    model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=learning_rate)
+    model.load_weights(os.path.join(model_dir, NAME + '.h5'))
+    prediction = model[0].predict([img_arr], batch_size=batch_size)
+    csvName = os.path.join(model_dir, 'kits', 'evaluation', model_name + '.csv')
+
+    # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
+    evaluateFiles_arr(prediction=prediction, GT_array=GT_arr, csvName=csvName)
 
 
 if __name__ == '__main__':
+    # gpu = '/GPU:0'
+    batch_size = 1
+
+    gpu_id = '1'
+    # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
+    os.environ["CUDA_VISIBLE_DEVICES"] = '2,3'
+    # os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
+    # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+
+    learning_rate = 5e-5
+    AUGMENTATION_NO = 5
+    TRAIN_NUM = 50
+    PERC = 1.0
+    FOLD_NUM = 1
+    augm = 'augm'
+    batch_size = 2
+
+    ### for baseline of 0.1 images,
+    # NAME = 'supervised_F_centered_BB_' + str(FOLD_NUM) + '_' + str(TRAIN_NUM) + '_' + str(
+    #     learning_rate) + '_Perc_' + str(PERC) + '_'+ augm
+
     model_dir = '/data/suhita/temporal/'
-    model_name = 'Entropy21_40'
+    NAME = 'kits_mc_F1_132_Perct_Labelled_0.1'
 
-    csvName = model_dir + model_name + '.csv'
-    val_x = np.load('/cache/suhita/data/final_test_array_imgs.npy')
-    val_y = np.load('/cache/suhita/data/final_test_array_GT.npy').astype('int8')
-
-    # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
-    # from lib.segmentation.model.temporal_scaled_orig import weighted_model
-    from lib.segmentation.model.temporalEns_MC_2model import weighted_model
-
-    wm = weighted_model()
-
-    # model = wm.build_model(trained_model=model_dir+model_name+'.h5', temp=1.0)
-    model = wm.build_model(trained_model=model_dir + model_name + '.h5')[0]
-    prediction_arr = predict_for_uats(val_x, val_y, model, mc=True)
-    # prediction_arr = predict_for_supervised(val_x, val_y, model)
-    postprocesAndEvaluateFiles(model_dir, prediction_arr, val_y, eval=True, csvName=csvName, prediction_arr_exists=False)
+    # eval_for_uats_softmax(model_dir, NAME, batch_size=1)
+    eval_for_uats_mc(model_dir, NAME, batch_size=1)
+    # eval_for_supervised(model_dir, NAME)

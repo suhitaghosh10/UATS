@@ -101,7 +101,7 @@ def evaluateFiles_zones(GT_array, pred_directory, csvName):
 
             for zoneIndex in range(0, 5):
                 pred_arr = np.load(pred_directory + 'predicted_' + str(imgNumber) + '.npy')[zoneIndex]
-                pred_arr = thresholdArray(pred_arr, 0.3)
+                pred_arr = thresholdArray(pred_arr, THRESHOLD)
                 # pred_arr = pred_arr.astype(int)
                 maxValue = np.max(pred_arr)
                 pred_img = sitk.GetImageFromArray(pred_arr)
@@ -550,14 +550,14 @@ def postprocesAndEvaluateFiles(name, GT_array, csvName, eval=True):
         out_arr[i] = np.transpose(array, (1, 2, 3, 0))
         # print('preditction', prediction.shape)
         # array = prediction[:, i, :, :, :]
-    np.save(outDir + 'predicted_final_', out_arr.astype('int8'))
+    np.save(outDir + 'predicted_final_15', out_arr.astype('int8'))
 
     if eval:
         evaluateFiles_zones(GT_array, pred_directory=outDir, csvName=csvName)
 
 
 if __name__ == '__main__':
-    name = '/cache/suhita/code/uats/model_impl/baseline/gn_predicted'
+    name = '/data/suhita/temporal/p_15'
     GT_array_name = None
     csvName = name
     GT_array = None

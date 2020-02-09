@@ -14,6 +14,7 @@ import math
 import SimpleITK as sitk
 import time
 import json
+import shutil
 
 
 ############################ utils functions ##############################
@@ -362,6 +363,8 @@ def cropImage(img, lowerBound, upperBound):
 
 
 def makedir(dirpath):
+    if os.path.isdir(dirpath):
+        shutil.rmtree(dirpath)
     try:
         os.makedirs(dirpath)
     except OSError:

@@ -9,38 +9,31 @@ from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
 from lib.segmentation.utils import get_complete_array, get_array, save_array
 from zonal_utils.AugmentationGenerator import *
 
-# 294 Training 58 have gt
+# CHANGE BEFORE YOU RUN
 learning_rate = 5e-5
 FOLD_NUM = 1
-
 TB_LOG_DIR = '/data/suhita/temporal/tb/variance_mcdropout/pseudo_5per_A_F' + str(FOLD_NUM) + '_' + str(
     learning_rate) + '/'
 MODEL_NAME = '/data/suhita/temporal/pseudo_5per_A_F' + str(FOLD_NUM)
 
-TRAIN_IMGS_PATH = '/cache/suhita/data/fold1/train/imgs/'
-TRAIN_GT_PATH = '/cache/suhita/data/fold1/train/gt/'
-
-# VAL_IMGS_PATH = '/cache/suhita/data/fold1/val/imgs/'
-# VAL_GT_PATH = '/cache/suhita/data/fold1/val/gt/'
-VAL_IMGS_PATH = '/cache/suhita/data/test_anneke/imgs/'
-VAL_GT_PATH = '/cache/suhita/data/test_anneke/gt/'
-
-TRAINED_MODEL_PATH = '/data/suhita/temporal/supervised_F3.h5'
-
+TRAIN_IMGS_PATH = '/cache/suhita/data/fold/' + str(FOLD_NUM) + '/train/imgs/'
+TRAIN_GT_PATH = '/cache/suhita/data/fold' + str(FOLD_NUM) + '/train/gt/'
+VAL_IMGS_PATH = '/cache/suhita/data/fold/' + str(FOLD_NUM) + '/val/imgs/'
+VAL_GT_PATH = '/cache/suhita/data/fold/' + str(FOLD_NUM) + '/val/imgs/'
+TRAINED_MODEL_PATH = '/data/suhita/temporal/supervised_F' + str(FOLD_NUM) + '.h5'
 ENS_GT_PATH = '/data/suhita/temporal/sadv2/ens_gt/'
 FLAG_PATH = '/data/suhita/temporal/sadv2/flag/'
-
 CSV = '/data/suhita/temporal/CSV/pseudo_5per_A_F' + str(FOLD_NUM) + '.csv'
 PERCENTAGE_OF_PIXELS = 5
 
 NUM_CLASS = 5
-num_epoch = 351
+num_labeled_train = 58
+num_epoch = 1000
 batch_size = 2
-IMGS_PER_ENS_BATCH = 59  # 236/4 = 59
+IMGS_PER_ENS_BATCH = 59
 
 
 def train(gpu_id, nb_gpus):
-    num_labeled_train = 58
     num_train_data = len(os.listdir(TRAIN_IMGS_PATH))
     num_un_labeled_train = num_train_data - num_labeled_train
     num_val_data = len(os.listdir(VAL_IMGS_PATH))
@@ -69,13 +62,6 @@ def train(gpu_id, nb_gpus):
 
         def __init__(self, imgs_path, gt_path, ensemble_path, supervised_flag_path, train_idx_list):
 
-            self.val_afs_dice_coef = 0.
-            self.val_bg_dice_coef = 0.
-            self.val_cz_dice_coef = 0.
-            self.val_pz_dice_coef = 0.
-            self.val_us_dice_coef = 0.
-            self.count = 58 * 168 * 168 * 32
-
             self.imgs_path = imgs_path
             self.gt_path = gt_path
             self.ensemble_path = ensemble_path
@@ -95,9 +81,6 @@ def train(gpu_id, nb_gpus):
                             np.zeros((32, 168, 168)).astype('int8'))
             del unsupervised_target
 
-        def on_batch_begin(self, batch, logs=None):
-            pass
-
         def shall_save(self, cur_val, prev_val):
             flag_save = False
             val_save = prev_val
@@ -112,11 +95,6 @@ def train(gpu_id, nb_gpus):
             pass
 
         def on_epoch_end(self, epoch, logs={}):
-            # pz_save, self.val_pz_dice_coef = self.shall_save(logs['val_pz_dice_coef'], self.val_pz_dice_coef)
-            # cz_save, self.val_cz_dice_coef = self.shall_save(logs['val_cz_dice_coef'], self.val_cz_dice_coef)
-            # us_save, self.val_us_dice_coef = self.shall_save(logs['val_us_dice_coef'], self.val_us_dice_coef)
-            # afs_save, self.val_afs_dice_coef = self.shall_save(logs['val_afs_dice_coef'], self.val_afs_dice_coef)
-            # bg_save, self.val_bg_dice_coef = self.shall_save(logs['val_bg_dice_coef'], self.val_bg_dice_coef)
 
             if epoch >= 0:
 

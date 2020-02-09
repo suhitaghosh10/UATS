@@ -36,8 +36,8 @@ MODEL_NAME = '/data/suhita/temporal/' + NAME + '.h5'
 
 CSV_NAME = '/data/suhita/temporal/CSV/' + NAME + '.csv'
 
-TRAINED_MODEL_PATH = '/data/suhita/temporal/kits/models/' + str(FOLD_NUM) + '_supervised_Perc_' + str(
-    PERCENTAGE_OF_LABELLED) + '.h5'
+# TRAINED_MODEL_PATH = '/data/suhita/temporal/kits/models/' + str(FOLD_NUM) + '_supervised_Perc_' + str( PERCENTAGE_OF_LABELLED) + '.h5'
+TRAINED_MODEL_PATH = MODEL_NAME
 
 ENS_GT_PATH = '/data/suhita/temporal/kits/output/sadv4/'
 
@@ -74,8 +74,7 @@ def train(gpu_id, nb_gpus):
     # Build Model
     wm = weighted_model()
 
-    model = wm.build_model(img_shape=(DIM[0], DIM[1], DIM[2]), num_class=NUM_CLASS, use_dice_cl=False,
-                           learning_rate=learning_rate, gpu_id=gpu_id,
+    model = wm.build_model(img_shape=(DIM[0], DIM[1], DIM[2]), learning_rate=learning_rate, gpu_id=gpu_id,
                            nb_gpus=nb_gpus, trained_model=TRAINED_MODEL_PATH, temp=TEMP)
 
     print("Images Size:", num_train_data)
@@ -315,7 +314,7 @@ def predict(model_name):
 
     print('load_weights')
     wm = weighted_model()
-    model = wm.build_model(img_shape=(DIM[0], DIM[1], DIM[2]), num_class=1, use_dice_cl=False,
+    model = wm.build_model(img_shape=(DIM[0], DIM[1], DIM[2]),
                            learning_rate=learning_rate, gpu_id=None,
                            nb_gpus=None, trained_model=model_name, temp=1)
     model.load_weights(model_name)
