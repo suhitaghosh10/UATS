@@ -230,25 +230,22 @@ def predict_unlabeled(model_name, pred_dir = '/home/anneke/projects/uats/code/ki
 
 
 def predict(model_name, onlyEval=False):
+    pred_dir = '/data/suhita/skin/predictions/'
 
+    val_fold = np.load('/cache/suhita/skin/Folds/val_fold' + str(FOLD_NUM) + '.npy')
 
-    pred_dir = '/home/anneke/projects/uats/code/kits/output/predictions/'
+    img_arr = np.zeros((val_fold.shape[0], DIM[0], DIM[1], N_CHANNELS), dtype=float)
+    GT_arr = np.zeros((val_fold.shape[0], DIM[0], DIM[1], 1), dtype=float)
 
-    val_fold = np.load('Folds/val_fold' + str(FOLD_NUM) + '.npy')
-
-    img_arr = np.zeros((val_fold.shape[0]*2, DIM[0],DIM[1],DIM[2],1), dtype = float)
-    GT_arr = np.zeros((val_fold.shape[0] * 2, DIM[0], DIM[1], DIM[2], 1), dtype=float)
-
-    for i in range(val_fold.shape[0]):
-        img_arr[i*2,:,:,:,0] = np.load(os.path.join(data_path, val_fold[i], 'img_left.npy'))
-        img_arr[i * 2 +1,:,:,:,0] = np.load(os.path.join(data_path, val_fold[i], 'img_right.npy'))
-        GT_arr[i * 2, :, :, :, 0] = np.load(os.path.join(data_path, val_fold[i], 'segm_left.npy'))
-        GT_arr[i * 2 + 1, :, :, :, 0] = np.load(os.path.join(data_path, val_fold[i], 'segm_right.npy'))
+    for i in np.arange(len(val_fold)):
+        img_arr[i] = np.load('/cache/suhita/skin/preprocessed/labelled/train/imgs/' + val_fold[i]) / 255
+        temp = '/cache/suhita/skin/preprocessed/labelled/train/GT/' + val_fold[i]
+        GT_arr[i] = np.load(temp.replace('.npy', '') + '_segmentation.npy') / 255
 
 
     print('load_weights')
     wm = weighted_model()
-    model = wm.build_model(img_shape=(DIM[0],DIM[1],DIM[2]), learning_rate=learning_rate)
+    model = wm.build_model(img_shape=(DIM[0], DIM[1], N_CHANNELS), learning_rate=learning_rate)
     model.load_weights(model_name)
 
     if onlyEval:
@@ -315,15 +312,15 @@ if __name__ == '__main__':
 
 
     perc = 0.25
-    train(None, None, perc=perc, augmentation=True)
+    # train(None, None, perc=perc, augmentation=True)
     perc = 0.1
-    train(None, None, perc = perc, augmentation = True)
+    #train(None, None, perc = perc, augmentation = True)
     perc = 0.5
-    train(None, None, perc=perc, augmentation=True)
+    #train(None, None, perc=perc, augmentation=True)
 
     # perc = 1.0
     # train(None, None, perc=perc, augmentation=False)
 
-    # predict(out_dir+'/supervised_F_centered_BB_1_50_0.0005_Perc_0.5_augm.h5', onlyEval=True)
+    predict('/cache/suhita/skin/models/supervised_sfs32_F_1_1000_5e-05_Perc_1.0_augm.h5', onlyEval=True)
     #
     # predict_unlabeled('/home/anneke/projects/uats/code/kits/output/models/supervised_F_centered_BB_1_50_5e-05_Perc_1.0_augm.h5')
