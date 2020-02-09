@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" autoUpload="Always" serverName="suhita@devcube1.isg.intern:22" createEmptyFolders="true" autoUploadExternalChanges="true">
+    <serverData>
+      <paths name="suhita@devcube1.isg.intern:22">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/cache/suhita/code/uats" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="suhita@devcube3.isg.intern:22">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/cache/suhita/code/uats" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+    </serverData>
+    <option name="myAutoUpload" value="ALWAYS" />
+  </component>
+</project>
