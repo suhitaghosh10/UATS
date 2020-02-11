@@ -5,7 +5,7 @@ from shutil import copyfile
 from kits import utils
 
 root_path = '/cache/suhita/skin/'
-perc = 1.0
+perc = 0.05
 # training
 
 

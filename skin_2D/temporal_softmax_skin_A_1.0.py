@@ -15,7 +15,7 @@ from zonal_utils.AugmentationGenerator import *
 from shutil import copyfile
 from kits.utils import makedir
 
-learning_rate = 1e-8
+learning_rate = 1e-6
 AUGMENTATION_NO = 5
 TEMP = 1
 augmentation = True
@@ -26,7 +26,7 @@ PERCENTAGE_OF_PIXELS = 50
 PERCENTAGE_OF_LABELLED = 1.0
 DATA_PATH = '/cache/suhita/data/skin/fold_' + str(FOLD_NUM) + '_P' + str(PERCENTAGE_OF_LABELLED) + '/'
 TRAIN_NUM = len(np.load('/cache/suhita/skin/Folds/train_fold' + str(FOLD_NUM) + '.npy'))
-NAME = 'skin_softmax_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(PERCENTAGE_OF_LABELLED) + '_UL_' + str(
+NAME = '2_skin_softmax_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(PERCENTAGE_OF_LABELLED) + '_UL_' + str(
     PERCENTAGE_OF_PIXELS)
 
 TB_LOG_DIR = '/data/suhita/temporal/tb/skin/' + NAME + '_' + str(learning_rate) + '/'
@@ -38,7 +38,7 @@ CSV_NAME = '/data/suhita/temporal/CSV/' + NAME + '.csv'
 TRAINED_MODEL_PATH = '/cache/suhita/skin/models/supervised_sfs32_F_1_1000_5e-05_Perc_' + str(
     PERCENTAGE_OF_LABELLED) + '_augm.h5'
 
-ENS_GT_PATH = '/data/suhita/temporal/skin/output/sadv7/'
+ENS_GT_PATH = '/data/suhita/temporal/skin/output/sadv8/'
 
 NUM_CLASS = 1
 num_epoch = 1000
@@ -50,7 +50,7 @@ IMGS_PER_ENS_BATCH = None
 # hyper-params
 SAVE_WTS_AFTR_EPOCH = 0
 ramp_up_period = 50
-ramp_down_period = 50
+ramp_down_period = 20
 # weight_max = 40
 # weight_max = 30
 
@@ -64,7 +64,7 @@ def train(gpu_id, nb_gpus):
     IMGS_PER_ENS_BATCH = num_un_labeled_train // 2
     # num_val_data = len(os.listdir(VAL_IMGS_PATH))
 
-    # gen_lr_weight = ramp_down_weight(ramp_down_period)
+    gen_lr_weight = ramp_down_weight(ramp_down_period)
 
     # prepare dataset
     print('-' * 30)
@@ -128,15 +128,13 @@ def train(gpu_id, nb_gpus):
             return flag_save, val_save
 
         def on_epoch_begin(self, epoch, logs=None):
-            '''
+
             if epoch > num_epoch - ramp_down_period:
                 weight_down = next(gen_lr_weight)
                 K.set_value(model.optimizer.lr, weight_down * learning_rate)
                 K.set_value(model.optimizer.beta_1, 0.4 * weight_down + 0.5)
                 print('LR: alpha-', K.eval(model.optimizer.lr), K.eval(model.optimizer.beta_1))
             # print(K.eval(model.layers[43].trainable_weights[0]))
-'''
-            pass
 
         def on_epoch_end(self, epoch, logs={}):
             # print(time() - self.starttime)
@@ -226,7 +224,7 @@ def train(gpu_id, nb_gpus):
                                            mode='max')
 
     tensorboard = TensorBoard(log_dir=TB_LOG_DIR, write_graph=False, write_grads=True, histogram_freq=0,
-                              batch_size=2, write_images=False)
+                              batch_size=1, write_images=False)
 
     train_id_list = np.arange(num_train_data)
 
@@ -235,7 +233,7 @@ def train(gpu_id, nb_gpus):
     np.random.shuffle(train_id_list)
     tcb = TemporalCallback(DATA_PATH, ENS_GT_PATH, train_id_list)
     lcb = wm.LossCallback()
-    es = EarlyStopping(monitor='val_dice_coef', mode='max', verbose=1, patience=100)
+    es = EarlyStopping(monitor='val_dice_coef', mode='max', verbose=1, patience=50)
     # del unsupervised_target, unsupervised_weight, supervised_flag, imgs
     # del supervised_flag
     cb = [model_checkpoint, tcb, tensorboard, lcb, csv_logger, es]
@@ -320,7 +318,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = batch_size
-    gpu_id = '3'
+    gpu_id = '1'
 
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)

@@ -15,7 +15,7 @@ from zonal_utils.AugmentationGenerator import *
 from shutil import copyfile
 from kits.utils import makedir
 
-learning_rate = 1e-7
+learning_rate = 1e-6
 AUGMENTATION_NO = 5
 TEMP = 1
 augmentation = True
@@ -37,7 +37,7 @@ CSV_NAME = '/data/suhita/temporal/CSV/' + NAME + '.csv'
 TRAINED_MODEL_PATH = '/cache/suhita/skin/models/supervised_sfs32_F_1_1000_5e-05_Perc_' + str(
     PERCENTAGE_OF_LABELLED) + '_augm.h5'
 # TRAINED_MODEL_PATH = MODEL_NAME
-ENS_GT_PATH = '/data/suhita/temporal/skin/output/mc/sadv2/'
+ENS_GT_PATH = '/data/suhita/temporal/skin/output/mc/sadv4/'
 
 NUM_CLASS = 1
 num_epoch = 1000
@@ -63,7 +63,7 @@ def train(gpu_id, nb_gpus):
     IMGS_PER_ENS_BATCH = num_un_labeled_train // 3
     # num_val_data = len(os.listdir(VAL_IMGS_PATH))
 
-    # gen_lr_weight = ramp_down_weight(ramp_down_period)
+    gen_lr_weight = ramp_down_weight(ramp_down_period)
 
     # prepare dataset
     print('-' * 30)
@@ -127,14 +127,14 @@ def train(gpu_id, nb_gpus):
             return flag_save, val_save
 
         def on_epoch_begin(self, epoch, logs=None):
-            '''
+
             if epoch > num_epoch - ramp_down_period:
                 weight_down = next(gen_lr_weight)
                 K.set_value(model.optimizer.lr, weight_down * learning_rate)
                 K.set_value(model.optimizer.beta_1, 0.4 * weight_down + 0.5)
                 print('LR: alpha-', K.eval(model.optimizer.lr), K.eval(model.optimizer.beta_1))
             # print(K.eval(model.layers[43].trainable_weights[0]))
-'''
+
             pass
 
         def on_epoch_end(self, epoch, logs={}):

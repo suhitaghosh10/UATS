@@ -84,7 +84,8 @@ def get_dice_from_array(arr1, arr2):
     return (2. * intersection) / (np.sum(y_true_f) + np.sum(y_pred_f))
 
 
-def evaluateFiles_arr(imgs, prediction, GT_array, csvName, connected_component=False, eval=True, out_dir=None):
+def evaluateFiles_arr(img_path, imgs, prediction, GT_array, csvName, connected_component=False, eval=True,
+                      out_dir=None):
     with open(csvName, 'w') as csvfile:
         csvwriter = csv.writer(csvfile, delimiter=';', lineterminator='\n',
                                quotechar='|', quoting=csv.QUOTE_MINIMAL)
@@ -96,7 +97,12 @@ def evaluateFiles_arr(imgs, prediction, GT_array, csvName, connected_component=F
         # print(dices.shape)
 
         for imgNumber in range(0, nrImgs):
-            print('Case' + str(int(imgNumber)))
+            name = str(int(imgNumber))
+            if eval:
+                test_dir = sorted(os.listdir(os.path.join(img_path, 'imgs')))
+                name = name + ' Case ' + test_dir[imgNumber]
+
+            print(name)
             values = ['Case' + str(int(imgNumber))]
             temp_dice = []
 
@@ -509,7 +515,8 @@ def eval_for_uats_softmax(model_dir, model_name, batch_size=1, out_dir=None):
     csvName = os.path.join(model_dir, 'evaluation', model_name + '.csv')
 
     # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
-    evaluateFiles_arr(imgs=img_arr, prediction=prediction, GT_array=GT_arr, csvName=csvName, connected_component=True,
+    evaluateFiles_arr(GT_dir, imgs=img_arr, prediction=prediction, GT_array=GT_arr, csvName=csvName,
+                      connected_component=True,
                       out_dir=out_dir, eval=True)
 
 
@@ -547,7 +554,8 @@ def eval_for_supervised(model_dir, img_path, model_name, eval=True, out_dir=None
     csvName = os.path.join(model_dir, 'evaluation', model_name + '.csv')
 
     # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
-    evaluateFiles_arr(imgs=img_arr, prediction=prediction, GT_array=GT_arr, csvName=csvName, connected_component=True,
+    evaluateFiles_arr(img_path=img_path, imgs=img_arr, prediction=prediction, GT_array=GT_arr, csvName=csvName,
+                      connected_component=True,
                       out_dir=out_dir, eval=eval)
 
 
@@ -572,15 +580,15 @@ if __name__ == '__main__':
     ### for baseline of 0.1 images,
     # NAME = 'supervised_F_centered_BB_' + str(FOLD_NUM) + '_' + str(TRAIN_NUM) + '_' + str(
     #     learning_rate) + '_Perc_' + str(PERC) + '_'+ augm
-    perc = 1.0
+    perc = 0.05
     # model_dir = '/cache/suhita/skin/models/'
     model_dir = '/data/suhita/temporal/skin/'
     data_path = '/cache/suhita/skin/preprocessed/labelled/test/'
-    # data_path = '/cache/suhita/skin/preprocessed/labelled/test/'
+    data_path = '/cache/suhita/skin/preprocessed/unlabelled/'
     NAME = 'supervised_sfs32_F_1_1000_5e-05_Perc_' + str(perc) + '_augm'
 
-    # eval_for_uats_softmax(model_dir, 'skin_softmax_F1_Perct_Labelled_1.0_UL_50', batch_size=1, out_dir='/data/suhita/skin/UL_'+str(perc))
-    # eval_for_uats_mc(model_dir, 'skin_mc_F1_Perct_Labelled_1.0', batch_size=1, out_dir='/data/suhita/skin/UL_'+str(perc))
+    eval_for_uats_softmax(model_dir, '/data/suhita/temporal/skin/skin_softmax_F1_Perct_Labelled_0.05', batch_size=1,
+                          out_dir='/data/suhita/skin/UL_' + str(perc))
+    # eval_for_uats_mc(model_dir, 'skin_mc_F1_Perct_Labelled_0.25', batch_size=1, out_dir='/data/suhita/skin/eval')
 
-    eval_for_supervised('/cache/suhita/skin/models/', data_path, NAME, eval=True,
-                        out_dir='/data/suhita/skin/UL_' + str(perc))
+    # eval_for_supervised('/cache/suhita/skin/models/', data_path, NAME, eval=False, out_dir='/data/suhita/skin/UL_' + str(perc))

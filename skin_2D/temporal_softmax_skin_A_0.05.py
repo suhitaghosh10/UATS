@@ -7,7 +7,7 @@ from keras.callbacks import Callback, ReduceLROnPlateau
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
 
 from skin_2D.data_generation_uats import DataGenerator as train_gen
-from skin_2D.model_mc import weighted_model
+from skin_2D.model_softmax import weighted_model
 from lib.segmentation.ops import ramp_down_weight
 from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
 from lib.segmentation.utils import get_array, save_array
@@ -23,10 +23,10 @@ augmentation = True
 
 FOLD_NUM = 1
 PERCENTAGE_OF_PIXELS = 50
-PERCENTAGE_OF_LABELLED = 0.5
+PERCENTAGE_OF_LABELLED = 0.05
 DATA_PATH = '/cache/suhita/data/skin/fold_' + str(FOLD_NUM) + '_P' + str(PERCENTAGE_OF_LABELLED) + '/'
 TRAIN_NUM = len(np.load('/cache/suhita/skin/Folds/train_fold' + str(FOLD_NUM) + '.npy'))
-NAME = 'skin_mc_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(PERCENTAGE_OF_LABELLED)
+NAME = 'skin_softmax_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(PERCENTAGE_OF_LABELLED)
 
 TB_LOG_DIR = '/data/suhita/temporal/tb/skin/' + NAME + '_' + str(learning_rate) + '/'
 MODEL_NAME = '/data/suhita/temporal/skin/' + NAME + '.h5'
@@ -37,7 +37,7 @@ CSV_NAME = '/data/suhita/temporal/CSV/' + NAME + '.csv'
 TRAINED_MODEL_PATH = '/cache/suhita/skin/models/supervised_sfs32_F_1_1000_5e-05_Perc_' + str(
     PERCENTAGE_OF_LABELLED) + '_augm.h5'
 # TRAINED_MODEL_PATH = MODEL_NAME
-ENS_GT_PATH = '/data/suhita/temporal/skin/output/mc/sadv6/'
+ENS_GT_PATH = '/data/suhita/temporal/skin/output/sadv2/'
 
 NUM_CLASS = 1
 num_epoch = 1000
@@ -63,7 +63,7 @@ def train(gpu_id, nb_gpus):
     IMGS_PER_ENS_BATCH = num_un_labeled_train // 3
     # num_val_data = len(os.listdir(VAL_IMGS_PATH))
 
-    gen_lr_weight = ramp_down_weight(ramp_down_period)
+    # gen_lr_weight = ramp_down_weight(ramp_down_period)
 
     # prepare dataset
     print('-' * 30)
@@ -73,8 +73,8 @@ def train(gpu_id, nb_gpus):
     # Build Model
     wm = weighted_model()
 
-    model, model_MC = wm.build_model(img_shape=(DIM[0], DIM[1], N_CHANNELS), learning_rate=learning_rate, gpu_id=gpu_id,
-                                     nb_gpus=nb_gpus, trained_model=TRAINED_MODEL_PATH)
+    model = wm.build_model(img_shape=(DIM[0], DIM[1], N_CHANNELS), learning_rate=learning_rate, gpu_id=gpu_id,
+                           nb_gpus=nb_gpus, trained_model=TRAINED_MODEL_PATH)
 
     print("Images Size:", num_train_data)
     print("Unlabeled Size:", num_un_labeled_train)
@@ -127,20 +127,21 @@ def train(gpu_id, nb_gpus):
             return flag_save, val_save
 
         def on_epoch_begin(self, epoch, logs=None):
-
+            '''
             if epoch > num_epoch - ramp_down_period:
                 weight_down = next(gen_lr_weight)
                 K.set_value(model.optimizer.lr, weight_down * learning_rate)
                 K.set_value(model.optimizer.beta_1, 0.4 * weight_down + 0.5)
                 print('LR: alpha-', K.eval(model.optimizer.lr), K.eval(model.optimizer.beta_1))
             # print(K.eval(model.layers[43].trainable_weights[0]))
+'''
+            pass
 
         def on_epoch_end(self, epoch, logs={}):
             # print(time() - self.starttime)
             # model_temp = model
 
             save, self.val_dice_coef = self.shall_save(logs['val_dice_coef'], self.val_dice_coef)
-            model_MC.set_weights(model.get_weights())
 
             if epoch > 0:
 
@@ -169,13 +170,13 @@ def train(gpu_id, nb_gpus):
                     del imgs, supervised_flag
 
                     cur_pred = np.zeros((actual_batch_size, DIM[0], DIM[1], 1))
+                    # cur_sigmoid_pred = np.zeros((actual_batch_size, 32, 168, 168, NUM_CLASS))
                     model_out = model.predict(inp, batch_size=batch_size, verbose=1)  # 1
 
                     # model_out = np.add(model_out, model_impl.predict(inp, batch_size=2, verbose=1))  # 2
-                    # del inp
+                    del inp
 
                     cur_pred = model_out if save else ensemble_prediction
-                    mc_pred = np.zeros((actual_batch_size, DIM[0], DIM[1], 1))
 
                     del model_out
 
@@ -184,17 +185,9 @@ def train(gpu_id, nb_gpus):
                     save_array(self.ensemble_path, ensemble_prediction, start, end)
                     del ensemble_prediction
 
-                    # mc dropout chnages
-                    T = 20
-                    for i in np.arange(T):
-                        print(b_no, i)
-                        model_out = model_MC.predict(inp, batch_size=8, verbose=1)
-                        mc_pred = np.add(model_out, mc_pred)
-
-                    # avg_pred = mc_pred / T#
-                    entropy = -((mc_pred / T) * np.log((mc_pred / T) + 1e-5))
-                    del mc_pred, inp, model_out
-
+                    # flag = np.where(np.reshape(np.max(ensemble_prediction, axis=-1),supervised_flag.shape) >= THRESHOLD, np.ones_like(supervised_flag),np.zeros_like(supervised_flag))
+                    # dont consider background
+                    # cur_pred[:, :, :, :, 4] = np.zeros((actual_batch_size, 32, 168, 168))
                     max_pred_ravel = np.ravel(np.max(cur_pred, axis=-1))
                     indices = np.argpartition(max_pred_ravel, -confident_pixels_no)[-confident_pixels_no:]
 
@@ -232,7 +225,7 @@ def train(gpu_id, nb_gpus):
                                            mode='max')
 
     tensorboard = TensorBoard(log_dir=TB_LOG_DIR, write_graph=False, write_grads=True, histogram_freq=0,
-                              batch_size=2, write_images=False)
+                              batch_size=1, write_images=False)
 
     train_id_list = np.arange(num_train_data)
 
@@ -326,7 +319,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = batch_size
-    gpu_id = '3'
+    gpu_id = '2'
 
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
