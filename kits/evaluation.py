@@ -519,16 +519,18 @@ if __name__ == '__main__':
 
     from kits.model import weighted_model
 
+    os.environ["CUDA_VISIBLE_DEVICES"] = '2'
+
     learning_rate = 5e-5
     AUGMENTATION_NO = 5
     TRAIN_NUM = 50
-    PERC = 1.0
+    PERC = 0.1
     FOLD_NUM = 1
     augm = 'augm'
     batch_size = 2
 
 
-    NAME = 'supervised_F_centered_BB_' + str(FOLD_NUM) + '_' + str(TRAIN_NUM) + '_' + str(
+    NAME = '1_supervised_F_centered_BB_' + str(FOLD_NUM) + '_' + str(TRAIN_NUM) + '_' + str(
         learning_rate) + '_Perc_' + str(PERC) + '_'+ augm
     ### for baseline of 0.1 images,
     # NAME = 'supervised_F_centered_BB_' + str(FOLD_NUM) + '_' + str(TRAIN_NUM) + '_' + str(
@@ -550,4 +552,4 @@ if __name__ == '__main__':
 
 
     # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
-    evaluateFiles_arr(prediction=prediction, GT_array=GT_arr, csvName=csvName)
+    evaluateFiles_arr(prediction=prediction, GT_array=GT_arr, csvName=csvName, connected_component= False)
