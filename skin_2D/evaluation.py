@@ -512,6 +512,7 @@ def eval_for_uats_softmax(model_dir, model_name, batch_size=1, out_dir=None, con
     # model.load_weights(os.path.join(model_dir, NAME,'.h5'))
     val_supervised_flag = np.ones((DIM[0], DIM[1], DIM[2], 1), dtype='int8')
     prediction = model.predict([img_arr, GT_arr, val_supervised_flag], batch_size=batch_size)
+
     csvName = os.path.join(model_dir, 'evaluation', model_name + '.csv')
 
     # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
@@ -588,7 +589,7 @@ if __name__ == '__main__':
     NAME = 'supervised_sfs32_F_1_1000_5e-05_Perc_' + str(perc) + '_augm'
 
     eval_for_uats_softmax(model_dir, '/data/suhita/temporal/skin/skin_softmax_F1_Perct_Labelled_0.05', batch_size=1,
-                          out_dir='/data/suhita/skin/ULC_' + str(perc), connected_component=False)
+                          out_dir='/data/suhita/skin/UL_noThr_noCC' + str(perc), connected_component=False)
     # eval_for_uats_mc(model_dir, 'skin_mc_F1_Perct_Labelled_0.25', batch_size=1, out_dir='/data/suhita/skin/eval')
 
     # eval_for_supervised('/cache/suhita/skin/models/', data_path, NAME, eval=False, out_dir='/data/suhita/skin/UL_' + str(perc))
