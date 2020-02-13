@@ -573,7 +573,6 @@ if __name__ == '__main__':
     learning_rate = 5e-5
     AUGMENTATION_NO = 5
     TRAIN_NUM = 50
-    PERC = 1.0
     FOLD_NUM = 1
     augm = 'augm'
     batch_size = 2
@@ -588,8 +587,9 @@ if __name__ == '__main__':
     data_path = '/cache/suhita/skin/preprocessed/unlabelled/'
     NAME = 'supervised_sfs32_F_1_1000_5e-05_Perc_' + str(perc) + '_augm'
 
-    eval_for_uats_softmax(model_dir, '/data/suhita/temporal/skin/skin_softmax_F1_Perct_Labelled_0.05', batch_size=1,
-                          out_dir='/data/suhita/skin/UL_noThr_noCC' + str(perc), connected_component=False)
+    # eval_for_uats_softmax(model_dir, '/data/suhita/temporal/skin/skin_softmax_F1_Perct_Labelled_0.05', batch_size=1,
+    #                      out_dir='/data/suhita/skin/UL_noThr_noCC' + str(perc), connected_component=False)
     # eval_for_uats_mc(model_dir, 'skin_mc_F1_Perct_Labelled_0.25', batch_size=1, out_dir='/data/suhita/skin/eval')
 
-    # eval_for_supervised('/cache/suhita/skin/models/', data_path, NAME, eval=False, out_dir='/data/suhita/skin/UL_' + str(perc))
+    eval_for_supervised('/cache/suhita/skin/models/', data_path, NAME, eval=False,
+                        out_dir='/data/suhita/skin/UL_' + str(perc))
