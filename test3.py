@@ -1,17 +1,22 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import SimpleITK as sitk
 
 img_no = 40
-TRAIN_IMGS_PATH = np.load('D:\\Thesis\\temp\\img\\' + str(img_no) + '.npy')
-TRAIN_GT_PATH = np.load('D:\\Thesis\\temp\\gt\\' + str(img_no) + '.npy')
+trn = 'ROTATE'
+img = sitk.GetArrayFromImage(sitk.ReadImage('D:/thesis/temp/test/changed_imagehippocampus_001_' + trn + '.nrrd'))
+gt0 = sitk.GetArrayFromImage(sitk.ReadImage('D:/thesis/temp/test/ch_gthippocampus_001_0_' + trn + '.nrrd'))
+gt1 = sitk.GetArrayFromImage(sitk.ReadImage('D:/thesis/temp/test/ch_gthippocampus_001_1_' + trn + '.nrrd'))
+gt2 = sitk.GetArrayFromImage(sitk.ReadImage('D:/thesis/temp/test/ch_gthippocampus_001_2_' + trn + '.nrrd'))
 
-slice_no = 16
+slice_no = 24
 zone = 0
+plt.imshow(img[:, :, slice_no], alpha=1, cmap='Greys')
+plt.show()
+plt.imshow(img[:, :, slice_no], alpha=1, cmap='Greys')
+plt.imshow(gt0[:, :, slice_no], alpha=0.4, cmap='Greens')
+plt.imshow(gt1[:, :, slice_no], alpha=0.4, cmap='Reds')
+plt.imshow(gt2[:, :, slice_no], alpha=0.4, cmap='Blues')
 
-plt.imshow(TRAIN_IMGS_PATH[slice_no, :, :, 0], cmap='gray')
-plt.imshow(TRAIN_GT_PATH[slice_no, :, :, 3], alpha=0.4, cmap='viridis')
-plt.imshow(TRAIN_GT_PATH[slice_no, :, :, 1], alpha=0.4, cmap='coolwarm')
-# plt.imshow(TRAIN_GT_PATH[slice_no, :, :, 1], alpha=0.4, cmap='Reds')
-# plt.imshow(TRAIN_GT_PATH[slice_no, :, :, 2], alpha=0.4, cmap='Greens')
 
 plt.show()

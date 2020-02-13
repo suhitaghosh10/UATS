@@ -501,7 +501,7 @@ def create_test_arrays(test_dir, eval=True):
         return img_arr
 
 
-def eval_for_uats_softmax(model_dir, model_name, batch_size=1, out_dir=None):
+def eval_for_uats_softmax(model_dir, model_name, batch_size=1, out_dir=None, connected_component=True):
     GT_dir = '/cache/suhita/skin/preprocessed/labelled/test/'
     img_arr, GT_arr = create_test_arrays(GT_dir)
     DIM = img_arr.shape
@@ -516,7 +516,7 @@ def eval_for_uats_softmax(model_dir, model_name, batch_size=1, out_dir=None):
 
     # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
     evaluateFiles_arr(GT_dir, imgs=img_arr, prediction=prediction, GT_array=GT_arr, csvName=csvName,
-                      connected_component=True,
+                      connected_component=connected_component,
                       out_dir=out_dir, eval=True)
 
 
@@ -588,7 +588,7 @@ if __name__ == '__main__':
     NAME = 'supervised_sfs32_F_1_1000_5e-05_Perc_' + str(perc) + '_augm'
 
     eval_for_uats_softmax(model_dir, '/data/suhita/temporal/skin/skin_softmax_F1_Perct_Labelled_0.05', batch_size=1,
-                          out_dir='/data/suhita/skin/UL_' + str(perc))
+                          out_dir='/data/suhita/skin/ULC_' + str(perc), connected_component=False)
     # eval_for_uats_mc(model_dir, 'skin_mc_F1_Perct_Labelled_0.25', batch_size=1, out_dir='/data/suhita/skin/eval')
 
     # eval_for_supervised('/cache/suhita/skin/models/', data_path, NAME, eval=False, out_dir='/data/suhita/skin/UL_' + str(perc))

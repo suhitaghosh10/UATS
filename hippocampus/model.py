@@ -138,22 +138,4 @@ class weighted_model:
                                                    'z2': self.dice_loss},
                         metrics={'bg': self.dice_coef, 'z1': self.dice_coef, 'z2': self.dice_coef})
 
-        # if (nb_gpus is None):
-        #     p_model = Model(input_img, conv_out)
-        #     if trained_model is not None:
-        #         p_model.load_weights(trained_model)
-        #
-        #     p_model.compile(optimizer=optimizer,
-        #                     loss=self.dice_loss)
-        # else:
-        #     with tf.device(gpu_id):
-        #         model = Model(input_img, conv_out)
-        #         if trained_model is not None:
-        #             model.load_weights(trained_model)
-        #
-        #         p_model = multi_gpu_model(model, gpus=nb_gpus)
-        #
-        #         p_model.compile(optimizer=optimizer,
-        #                         loss=self.dice_loss)
-
         return p_model
