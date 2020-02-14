@@ -11,11 +11,12 @@ from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import ModelCheckpoint, TensorBoard, EarlyStopping, CSVLogger
 
 from skin_2D.data_generation import DataGenerator as train_gen
-from skin_2D.model import weighted_model
+from skin_2D.model_softmax_baseline import weighted_model
 from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
 from lib.segmentation.utils import get_complete_array
 from kits import utils
 import SimpleITK as sitk
+import matplotlib.pyplot as plt
 
 data_path = '/cache/anneke/skin/preprocessed/labelled/train'
 out_dir = '/home/anneke/projects/uats/code/skin_2D/output/models/'
@@ -47,7 +48,7 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
     else:
         augm = ''
 
-    NAME = 'supervised_sfs32_F_' + str(FOLD_NUM) + '_' + str(TRAIN_NUM) + '_' + str(
+    NAME = 'softmax_supervised_sfs32_F_' + str(FOLD_NUM) + '_' + str(TRAIN_NUM) + '_' + str(
         learning_rate) + '_Perc_' + str(perc)+augm
     CSV_NAME = out_dir + NAME + '.csv'
 
@@ -135,15 +136,23 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
 
     val_img_arr = np.zeros((val_fold.shape[0], DIM[0],DIM[1],N_CHANNELS), dtype = float)
 
-    val_GT_arr = np.zeros((val_fold.shape[0], DIM[0],DIM[1],1), dtype=int)
+    val_GT_arr = np.zeros((val_fold.shape[0], DIM[0],DIM[1],2), dtype=int)
 
 
     for i in range(val_fold.shape[0]):
         val_img_arr[i] = np.load(os.path.join(data_path, 'imgs', val_fold[i]))
-        val_GT_arr[i, :, :, 0] = np.load(os.path.join(data_path, 'GT', val_fold[i][:-4]+'_segmentation.npy', ))[:,:,0]
+        GT_temp = np.load(os.path.join(data_path, 'GT', val_fold[i][:-4]+'_segmentation.npy'))
+        GT_temp = GT_temp/255
+        GT = GT_temp[:,:,0]
+        del GT_temp
+        val_GT_arr[i, :, :, 1] = GT
+        GT_bg = np.where(GT == 0, 1, 0)
+        val_GT_arr[i, :, :, 0] = GT_bg
+
+        #plt.imshow(X, cmap="gray")
+
 
     val_img_arr = val_img_arr / 255
-    val_GT_arr = val_GT_arr / 255
 
     if augmentation == False:
         augm_no = 1
@@ -162,7 +171,7 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
 
     history = model.fit_generator(generator=training_generator,
                                   steps_per_epoch=steps,
-                                  validation_data=[val_img_arr, val_GT_arr],
+                                  validation_data=[val_img_arr, [val_GT_arr[:,:,:,0],val_GT_arr[:,:,:,1]]],
                                   epochs=num_epoch,
                                   callbacks=cb
                                   )
@@ -173,60 +182,6 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
     # model_impl.save('temporal_max_ramp_final.h5')
 
 
-
-def predict_unlabeled(model_name, pred_dir = '/home/anneke/projects/uats/code/kits/output/predictions/'):
-
-
-    # DIM = [80,200,200]
-    # SPACING = [4.0, 1.0, 1.0]
-
-
-    img_dir = '/data/anneke/kits_challenge/kits19/data/preprocessed_unlabeled'
-    cases = sorted(os.listdir(img_dir))
-
-    print('load_weights')
-    wm = weighted_model()
-    model = wm.build_model(img_shape=(DIM[0], DIM[1], N_CHANNELS), learning_rate=learning_rate)
-    model.load_weights(model_name)
-
-    for i in range(2):#len(cases)):
-        img_arr = np.zeros([2, DIM[2], DIM[1], DIM[0],1])
-
-
-        img_l = sitk.ReadImage(os.path.join(img_dir, cases[i], 'img_left.nrrd'))
-        img_r = sitk.ReadImage(os.path.join(img_dir, cases[i], 'img_right.nrrd'))
-
-        img_l, img_r = preprocess.normalizeIntensities(img_l, img_r)
-
-
-        img_arr[0,:,:,:,0] = sitk.GetArrayFromImage(img_l)
-        img_arr[1,:,:,:,0] = sitk.GetArrayFromImage(img_r)
-
-        out_arr = model.predict(img_arr, batch_size=2 )
-        pred_l = sitk.GetImageFromArray(out_arr[0,:,:,:,0])
-        pred_r = sitk.GetImageFromArray(out_arr[1, :, :, :, 0])
-
-        pred_l.CopyInformation(img_l)
-        pred_r.CopyInformation(img_r)
-
-        castImageFilter = sitk.CastImageFilter()
-        castImageFilter.SetOutputPixelType(sitk.sitkUInt8)
-
-        pred_l = castImageFilter.Execute(pred_l)
-        del castImageFilter
-        castImageFilter = sitk.CastImageFilter()
-        castImageFilter.SetOutputPixelType(sitk.sitkUInt8)
-        pred_r = castImageFilter.Execute(pred_r)
-
-        pred_l= utils.getLargestConnectedComponents(pred_l)
-        pred_r = utils.getLargestConnectedComponents(pred_r)
-
-
-
-        utils.makeDirectory(pred_dir+'/'+cases[i])
-
-        sitk.WriteImage(pred_r, os.path.join(pred_dir, cases[i], 'segm_right.nrrd'))
-        sitk.WriteImage(pred_l, os.path.join(pred_dir, cases[i], 'segm_left.nrrd'))
 
 
 def predict(model_name, onlyEval=False):
@@ -288,7 +243,7 @@ def predict(model_name, onlyEval=False):
 
 if __name__ == '__main__':
 
-    GPU_ID = '0'
+    GPU_ID = '1'
     # gpu = '/GPU:0'
     gpu = '/GPU:0'
     batch_size = batch_size
@@ -311,16 +266,18 @@ if __name__ == '__main__':
 
 
 
-    perc = 0.25
+    # perc = 0.25
     # train(None, None, perc=perc, augmentation=True)
-    perc = 0.1
-    #train(None, None, perc = perc, augmentation = True)
-    perc = 0.5
-    #train(None, None, perc=perc, augmentation=True)
+    # perc = 0.1
+    # train(None, None, perc = perc, augmentation = True)
+    # perc = 0.05
+    # train(None, None, perc = perc, augmentation = True)
 
-    # perc = 1.0
-    # train(None, None, perc=perc, augmentation=False)
+    # perc = 0.5
+    # train(None, None, perc=perc, augmentation=True)
+    perc = 1.0
+    train(None, None, perc=perc, augmentation=True)
 
-    predict('/cache/suhita/skin/models/supervised_sfs32_F_1_1000_5e-05_Perc_1.0_augm.h5', onlyEval=True)
+    #predict('/cache/suhita/skin/models/supervised_sfs32_F_1_1000_5e-05_Perc_1.0_augm.h5', onlyEval=True)
     #
     # predict_unlabeled('/home/anneke/projects/uats/code/kits/output/models/supervised_F_centered_BB_1_50_5e-05_Perc_1.0_augm.h5')
