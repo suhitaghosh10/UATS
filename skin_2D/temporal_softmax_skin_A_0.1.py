@@ -337,6 +337,13 @@ if __name__ == '__main__':
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
     # train(gpu, nb_gpus)
-    train(None, None)
+    try:
+        train(None, None)
+    finally:
+        import shutil
+
+        if os.path.exists(ENS_GT_PATH):
+            shutil.rmtree(ENS_GT_PATH)
+        print('clean up done!')
 
     # val_x = np.load('/cache/suhita/data/validation/valArray_imgs_fold1.npy')

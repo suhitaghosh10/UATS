@@ -7,7 +7,7 @@ from keras.callbacks import Callback, ReduceLROnPlateau
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
 
 from skin_2D.data_generation_uats import DataGenerator as train_gen
-from skin_2D.model_softmax import weighted_model
+from skin_2D.model_softmax2 import weighted_model
 from lib.segmentation.ops import ramp_down_weight
 from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
 from lib.segmentation.utils import get_array, save_array
@@ -15,7 +15,7 @@ from zonal_utils.AugmentationGenerator import *
 from shutil import copyfile
 from kits.utils import makedir
 
-learning_rate = 1e-6
+learning_rate = 2e-8
 AUGMENTATION_NO = 5
 TEMP = 1
 augmentation = True
@@ -38,7 +38,7 @@ CSV_NAME = '/data/suhita/temporal/CSV/' + NAME + '.csv'
 TRAINED_MODEL_PATH = '/cache/suhita/skin/models/supervised_sfs32_F_1_1000_5e-05_Perc_' + str(
     PERCENTAGE_OF_LABELLED) + '_augm.h5'
 
-ENS_GT_PATH = '/data/suhita/temporal/skin/output/sadv8/'
+ENS_GT_PATH = '/data/suhita/temporal/skin/output/sadv10/'
 
 NUM_CLASS = 1
 num_epoch = 1000
@@ -318,7 +318,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = batch_size
-    gpu_id = '1'
+    gpu_id = '2'
 
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)

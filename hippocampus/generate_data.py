@@ -6,7 +6,7 @@ from kits import utils
 from hippocampus.utils import get_multi_class_arr
 
 root_path = '/cache/suhita/hippocampus/'
-perc = 0.5
+perc = 1.0
 # training
 
 

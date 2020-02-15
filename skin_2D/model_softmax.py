@@ -11,7 +11,7 @@ from lib.segmentation.ops import ramp_up_weight
 # from lib.segmentation.group_norm import GroupNormalization
 
 smooth = 1.
-
+consistency_wt = 1
 
 class weighted_model:
     alpha = 0.6
@@ -85,9 +85,9 @@ class weighted_model:
 
         return conv
 
-    def semi_supervised_loss(self, input, unsup_loss_class_wt=1., alpha=0.6):
+    def semi_supervised_loss(self, input, alpha=0.6):
 
-        def loss_func(y_true, y_pred, unsup_loss_class_wt=unsup_loss_class_wt):
+        def loss_func(y_true, y_pred):
 
             supervised_flag = input[1, :, :, :, :]
             val_flag = False
@@ -113,7 +113,7 @@ class weighted_model:
                 temp = self.unsup_c_dice_loss(unsupervised_gt, y_pred)
                 unsupervised_loss = tf.where(tf.greater(K.abs(temp), K.abs(supervised_loss)), K.zeros_like(temp), temp)
 
-            return supervised_loss + unsup_loss_class_wt * unsupervised_loss
+            return supervised_loss + consistency_wt * unsupervised_loss
 
         return loss_func
 
@@ -134,7 +134,7 @@ class weighted_model:
 
         return - K.mean((2. * intersection + smooth) / ((c * y_pred_sum) + y_true_sum + smooth))
 
-    def unsup_dice_tb(self, input, class_wt=1.):
+    def unsup_dice_tb(self, input):
 
         def unsup_dice_loss(y_true, y_pred, smooth=1., axis=(1, 2, 3), alpha=0.6):
             supervised_flag = input[1, :, :, :, :]
@@ -169,7 +169,7 @@ class weighted_model:
             temp = 1 - avg_dice_coef
             unsupervised_loss = tf.where(tf.greater(K.abs(temp), K.abs(supervised_loss)), K.zeros_like(temp), temp)
 
-            return unsupervised_loss
+            return consistency_wt * unsupervised_loss
 
         return unsup_dice_loss
 
@@ -281,7 +281,7 @@ class weighted_model:
                 p_model.load_weights(trained_model, by_name=True)
             p_model.compile(optimizer=optimizer,
                             loss=self.semi_supervised_loss(skin),
-                            metrics=[self.dice_coef, self.unsup_dice_tb(skin, 1), self.dice_tb(skin, 1)
+                            metrics=[self.dice_coef, self.unsup_dice_tb(skin), self.dice_tb(skin, 1)
                                      ]
                             )
         else:
@@ -295,7 +295,7 @@ class weighted_model:
                 p_model.compile(optimizer=optimizer,
                                 loss=self.semi_supervised_loss(skin)
                                 ,
-                                metrics=[self.dice_coef, self.unsup_dice_tb(skin, 1), self.dice_tb(skin, 1)
+                                metrics=[self.dice_coef, self.unsup_dice_tb(skin), self.dice_tb(skin, 1)
                                          ]
                                 )
 

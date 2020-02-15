@@ -15,7 +15,7 @@ from zonal_utils.AugmentationGenerator import *
 from shutil import copyfile
 from kits.utils import makedir
 
-learning_rate = 1e-7
+learning_rate = 1e-6
 AUGMENTATION_NO = 5
 TEMP = 1
 augmentation = True
@@ -37,7 +37,7 @@ CSV_NAME = '/data/suhita/temporal/CSV/' + NAME + '.csv'
 TRAINED_MODEL_PATH = '/cache/suhita/skin/models/supervised_sfs32_F_1_1000_5e-05_Perc_' + str(
     PERCENTAGE_OF_LABELLED) + '_augm.h5'
 # TRAINED_MODEL_PATH = MODEL_NAME
-ENS_GT_PATH = '/data/suhita/temporal/skin/output/sadv2/'
+ENS_GT_PATH = '/data/suhita/temporal/skin/output/sadv3/'
 
 NUM_CLASS = 1
 num_epoch = 1000
@@ -319,7 +319,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = batch_size
-    gpu_id = '1'
+    gpu_id = '0'
 
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
@@ -337,6 +337,13 @@ if __name__ == '__main__':
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
     # train(gpu, nb_gpus)
-    train(None, None)
+    try:
+        train(None, None)
+    finally:
+        import shutil
+
+        if os.path.exists(ENS_GT_PATH):
+            shutil.rmtree(ENS_GT_PATH)
+        print('clean up done!')
 
     # val_x = np.load('/cache/suhita/data/validation/valArray_imgs_fold1.npy')

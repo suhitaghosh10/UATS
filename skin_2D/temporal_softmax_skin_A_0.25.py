@@ -7,7 +7,7 @@ from keras.callbacks import Callback, ReduceLROnPlateau
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
 
 from skin_2D.data_generation_uats import DataGenerator as train_gen
-from skin_2D.model_softmax import weighted_model
+from skin_2D.model_softmax2 import weighted_model
 from lib.segmentation.ops import ramp_down_weight
 from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
 from lib.segmentation.utils import get_array, save_array
@@ -26,7 +26,7 @@ PERCENTAGE_OF_PIXELS = 50
 PERCENTAGE_OF_LABELLED = 0.25
 DATA_PATH = '/cache/suhita/data/skin/fold_' + str(FOLD_NUM) + '_P' + str(PERCENTAGE_OF_LABELLED) + '/'
 TRAIN_NUM = len(np.load('/cache/suhita/skin/Folds/train_fold' + str(FOLD_NUM) + '.npy'))
-NAME = 'skin_softmax_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(PERCENTAGE_OF_LABELLED)
+NAME = '2_skin_softmax_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(PERCENTAGE_OF_LABELLED)
 
 TB_LOG_DIR = '/data/suhita/temporal/tb/skin/' + NAME + '_' + str(learning_rate) + '/'
 MODEL_NAME = '/data/suhita/temporal/skin/' + NAME + '.h5'

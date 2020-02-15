@@ -1,25 +1,23 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-img_no = 'ISIC_0000311'
-s_no = '57'
-img = np.load("D:\\Thesis\\temp\\test\\imgs\\" + img_no + ".npy")
-gt = np.load('D:\\Thesis\\temp\\test\\GT\\' + img_no + '_segmentation.npy')
+# img_no = 'ISIC_0000094'
+s_no = '900'
+# img = np.load('D:/Thesis/temp/test/supervised_0.5/imgs/' + s_no + '.npy')
 
-plt.imshow(img, alpha=1.0)
-plt.imshow(gt[:, :, 0], alpha=0.5)
+# plt.imshow(img, alpha=1.0)
+# plt.show()
+
+
+# plt.imshow(np.load('D:/Thesis/temp/test/supervised_0.5/imgs/' + s_no + '.npy'), alpha=1.0)
+# plt.imshow(np.load('D:/Thesis/temp/test/supervised_0.5/GT/' + s_no + '.npy')[:, :, 0], alpha=0.5)
+# plt.show()
+
+plt.imshow(np.load('D:\\Thesis\\temp\\test\\ul_0.5\\imgs\\' + s_no + '.npy'), alpha=1.0)
 plt.show()
 
-plt.imshow(img, alpha=1.0)
-
-plt.imshow(np.load('D:/Thesis/temp/test/pred/' + img_no + '.npy.npy')[:, :, 0], alpha=0.5)
-plt.show()
-
-img = np.load('D:\\Thesis\\temp\\test\\UL_0.05\\imgs\\' + s_no + '.npy')
-gt = np.load('D:\\Thesis\\temp\\test\\UL_0.05\\GT\\' + s_no + '.npy'.replace('ISIC_', ''))
-
-plt.imshow(img, alpha=1.0)
-plt.imshow(gt[:, :, 0], alpha=0.5)
+plt.imshow(np.load('D:\\Thesis\\temp\\test\\ul_0.5\\imgs\\' + s_no + '.npy'), alpha=1.0)
+plt.imshow(np.load('D:\\Thesis\\temp\\test\\ul_0.5\\GT\\' + s_no + '.npy')[:, :, 0], alpha=0.5)
 # plt.imshow(gt[8,:,:,1],alpha=0.5,cmap="Greens")
 # plt.imshow(gt[8,:,:,2],alpha=0.5, cmap='Reds')
 # plt.imshow(gt[8,:,:,3],alpha=0.5, cmap='Blues')

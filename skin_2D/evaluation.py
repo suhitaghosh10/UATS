@@ -539,7 +539,7 @@ def eval_for_uats_mc(model_dir, model_name, batch_size=1, out_dir=None):
                       out_dir=out_dir, eval=True)
 
 
-def eval_for_supervised(model_dir, img_path, model_name, eval=True, out_dir=None):
+def eval_for_supervised(model_dir, img_path, model_name, eval=True, out_dir=None, connected_component=True):
     if eval:
         img_arr, GT_arr = create_test_arrays(img_path, eval=eval)
     else:
@@ -556,7 +556,7 @@ def eval_for_supervised(model_dir, img_path, model_name, eval=True, out_dir=None
 
     # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
     evaluateFiles_arr(img_path=img_path, imgs=img_arr, prediction=prediction, GT_array=GT_arr, csvName=csvName,
-                      connected_component=True,
+                      connected_component=connected_component,
                       out_dir=out_dir, eval=eval)
 
 
@@ -566,7 +566,7 @@ if __name__ == '__main__':
 
     gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
-    os.environ["CUDA_VISIBLE_DEVICES"] = '1,3'
+    os.environ["CUDA_VISIBLE_DEVICES"] = '2,3'
     # os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
     # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 
@@ -580,16 +580,16 @@ if __name__ == '__main__':
     ### for baseline of 0.1 images,
     # NAME = 'supervised_F_centered_BB_' + str(FOLD_NUM) + '_' + str(TRAIN_NUM) + '_' + str(
     #     learning_rate) + '_Perc_' + str(PERC) + '_'+ augm
-    perc = 0.05
+    perc = 0.5
     # model_dir = '/cache/suhita/skin/models/'
     model_dir = '/data/suhita/temporal/skin/'
     data_path = '/cache/suhita/skin/preprocessed/labelled/test/'
     data_path = '/cache/suhita/skin/preprocessed/unlabelled/'
     NAME = 'supervised_sfs32_F_1_1000_5e-05_Perc_' + str(perc) + '_augm'
 
-    # eval_for_uats_softmax(model_dir, '/data/suhita/temporal/skin/skin_softmax_F1_Perct_Labelled_0.05', batch_size=1,
-    #                      out_dir='/data/suhita/skin/UL_noThr_noCC' + str(perc), connected_component=False)
+    eval_for_uats_softmax(model_dir, '4_skin_softmax_F1_Perct_Labelled_' + str(perc), batch_size=1,
+                          out_dir='/data/suhita/skin/ul_' + str(perc), connected_component=True)
     # eval_for_uats_mc(model_dir, 'skin_mc_F1_Perct_Labelled_0.25', batch_size=1, out_dir='/data/suhita/skin/eval')
 
-    eval_for_supervised('/cache/suhita/skin/models/', data_path, NAME, eval=False,
-                        out_dir='/data/suhita/skin/UL_' + str(perc))
+    # eval_for_supervised('/cache/suhita/skin/models/', data_path, NAME, eval=False, out_dir='/data/suhita/skin/UL_' + str(perc), connected_component=False)
+# /data/suhita/temporal/skin/2_skin_softmax_F1_Perct_Labelled_1.0.h5

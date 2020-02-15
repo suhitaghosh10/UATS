@@ -155,14 +155,15 @@ def evaluateFiles_arr(prediction, img_arr, GT_arr, csvName, connected_component=
                 csvwriter.writerow(median)
                 csvwriter.writerow(std)
 
-        print('Dices')
-        print(np.average(dices, axis=0))
+        if eval:
+            print('Dices')
+            print(np.average(dices, axis=0))
 
-        print('Mean Dist')
-        print(np.average(mad, axis=0))
+            print('Mean Dist')
+            print(np.average(mad, axis=0))
 
-        print('Hausdorff 95%')
-        print(np.average(hdf, axis=0))
+            print('Hausdorff 95%')
+            print(np.average(hdf, axis=0))
 
 
 def thresholdArray(array, threshold):
@@ -320,8 +321,8 @@ if __name__ == '__main__':
     PERCENTAGE = [0.05, 0.1, 0.25, 0.5, 1.0]
     FOLD_NUM = 2
     augm = 'augm'
-    batch_size = 2
-    PERC = 0.5
+    batch_size = 4
+    PERC = 1.0
 
     # for PERC in PERCENTAGE:
 
@@ -333,7 +334,8 @@ if __name__ == '__main__':
     GT_dir_labels = '/cache/suhita/hippocampus/preprocessed/labelled-GT/test'
     unlabelled_dir = '/cache/suhita/hippocampus/preprocessed/unlabelled/imgs/'
 
-    # evaluate_for_supervised(unlabelled_dir, None, eval=False, connected_component=True, save_dir='/data/suhita/hippocampus/UL_'+str(PERC))
-    eval_for_uats_softmax(GT_dir_imgs, GT_dir_labels, model_dir,
-                          '/data/suhita/temporal/hippocampus/hippocampus_softmax_F2_Perct_Labelled_0.5', batch_size=1,
-                          out_dir='/data/suhita/hippocampus/ULC_' + str(PERC), connected_component=True)
+    evaluate_for_supervised(unlabelled_dir, None, eval=False, connected_component=True,
+                            save_dir='/data/suhita/hippocampus/UL_' + str(PERC))
+    # eval_for_uats_softmax(GT_dir_imgs, GT_dir_labels, model_dir,
+    #                      '/data/suhita/temporal/hippocampus/hippocampus_softmax_F2_Perct_Labelled_1.0', batch_size=4,
+    #                     out_dir='/data/suhita/hippocampus/ULC_' + str(PERC), connected_component=True)
