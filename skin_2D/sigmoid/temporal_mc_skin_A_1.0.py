@@ -1,29 +1,25 @@
-from time import time
-
 import tensorflow as tf
-from keras import backend as K
 from keras.backend.tensorflow_backend import set_session
-from keras.callbacks import Callback, ReduceLROnPlateau
+from keras.callbacks import Callback
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
 
-from skin_2D.data_generation_uats import DataGenerator as train_gen
-from skin_2D.model_mc import weighted_model
-from lib.segmentation.ops import ramp_down_weight
+from skin_2D.sigmoid.data_generation_uats import DataGenerator as train_gen
+from skin_2D.sigmoid.model_mc import weighted_model
 from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
 from lib.segmentation.utils import get_array, save_array
 from zonal_utils.AugmentationGenerator import *
 from shutil import copyfile
 from kits.utils import makedir
 
-learning_rate = 1e-6
+learning_rate = 1e-8
 AUGMENTATION_NO = 5
 TEMP = 1
 augmentation = True
 # TEMP = 2.908655
 
 FOLD_NUM = 1
-PERCENTAGE_OF_PIXELS = 50
-PERCENTAGE_OF_LABELLED = 0.5
+PERCENTAGE_OF_PIXELS = 25
+PERCENTAGE_OF_LABELLED = 1.0
 DATA_PATH = '/cache/suhita/data/skin/fold_' + str(FOLD_NUM) + '_P' + str(PERCENTAGE_OF_LABELLED) + '/'
 TRAIN_NUM = len(np.load('/cache/suhita/skin/Folds/train_fold' + str(FOLD_NUM) + '.npy'))
 NAME = 'skin_mc_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(PERCENTAGE_OF_LABELLED)
@@ -37,7 +33,7 @@ CSV_NAME = '/data/suhita/temporal/CSV/' + NAME + '.csv'
 TRAINED_MODEL_PATH = '/cache/suhita/skin/models/supervised_sfs32_F_1_1000_5e-05_Perc_' + str(
     PERCENTAGE_OF_LABELLED) + '_augm.h5'
 # TRAINED_MODEL_PATH = MODEL_NAME
-ENS_GT_PATH = '/data/suhita/temporal/skin/output/mc/sadv6/'
+ENS_GT_PATH = '/data/suhita/temporal/skin/output/mc/sadv2/'
 
 NUM_CLASS = 1
 num_epoch = 1000
@@ -60,10 +56,10 @@ def train(gpu_id, nb_gpus):
     num_labeled_train = int(PERCENTAGE_OF_LABELLED * TRAIN_NUM)
     num_train_data = len(os.listdir(DATA_PATH + '/imgs/'))
     num_un_labeled_train = num_train_data - num_labeled_train
-    IMGS_PER_ENS_BATCH = num_un_labeled_train // 3
+    IMGS_PER_ENS_BATCH = num_un_labeled_train // 2
     # num_val_data = len(os.listdir(VAL_IMGS_PATH))
 
-    gen_lr_weight = ramp_down_weight(ramp_down_period)
+    # gen_lr_weight = ramp_down_weight(ramp_down_period)
 
     # prepare dataset
     print('-' * 30)
@@ -127,13 +123,15 @@ def train(gpu_id, nb_gpus):
             return flag_save, val_save
 
         def on_epoch_begin(self, epoch, logs=None):
-
+            '''
             if epoch > num_epoch - ramp_down_period:
                 weight_down = next(gen_lr_weight)
                 K.set_value(model.optimizer.lr, weight_down * learning_rate)
                 K.set_value(model.optimizer.beta_1, 0.4 * weight_down + 0.5)
                 print('LR: alpha-', K.eval(model.optimizer.lr), K.eval(model.optimizer.beta_1))
             # print(K.eval(model.layers[43].trainable_weights[0]))
+'''
+            pass
 
         def on_epoch_end(self, epoch, logs={}):
             # print(time() - self.starttime)
@@ -326,7 +324,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = batch_size
-    gpu_id = '3'
+    gpu_id = '1'
 
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)

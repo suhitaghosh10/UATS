@@ -86,67 +86,54 @@ def get_dice_from_array(arr1, arr2):
 
 def evaluateFiles_arr(img_path, imgs, prediction, GT_array, csvName, connected_component=False, eval=True,
                       out_dir=None):
-    with open(csvName, 'w') as csvfile:
-        csvwriter = csv.writer(csvfile, delimiter=';', lineterminator='\n',
-                               quotechar='|', quoting=csv.QUOTE_MINIMAL)
-        csvwriter.writerow(
-            ['Case', 'Dice'])
+    nrImgs = prediction[0].shape[0]
+    dices = np.zeros((2, nrImgs), dtype=np.float32)
+    if GT_array is not None and eval:
+        GT_lesion = GT_array
+        GT_bg = np.where(GT_array == 0, np.ones_like(GT_array), np.zeros_like(GT_array))
+    # print(dices.shape)
 
-        nrImgs = prediction.shape[0]
-        dices = np.zeros((nrImgs), dtype=np.float32)
-        # print(dices.shape)
+    for imgNumber in range(0, nrImgs):
+        name = str(int(imgNumber))
+        if eval:
+            test_dir = sorted(os.listdir(os.path.join(img_path, 'imgs')))
+            name = name + ' Case ' + test_dir[imgNumber]
 
-        for imgNumber in range(0, nrImgs):
-            name = str(int(imgNumber))
-            if eval:
-                test_dir = sorted(os.listdir(os.path.join(img_path, 'imgs')))
-                name = name + ' Case ' + test_dir[imgNumber]
+        print(name)
+        temp_dice_bg = []
+        temp_dice_lesion = []
 
-            print(name)
-            values = ['Case' + str(int(imgNumber))]
-            temp_dice = []
+        pred_bg = sitk.GetImageFromArray(thresholdArray(prediction[0][imgNumber], 0.5))
+        pred_lesion = sitk.GetImageFromArray(thresholdArray(prediction[1][imgNumber], 0.5))
+        pred_bg_img = castImage(pred_bg, sitk.sitkUInt8)
+        pred_lesion_img = castImage(pred_lesion, sitk.sitkUInt8)
 
-            pred_arr = prediction[imgNumber]
-            pred_arr = thresholdArray(pred_arr, 0.5)
-            pred_img = sitk.GetImageFromArray(pred_arr)
-            pred_img = castImage(pred_img, sitk.sitkUInt8)
+        if connected_component:
+            pred_bg_img = getConnectedComponents(pred_bg_img)
+            pred_lesion_img = getConnectedComponents(pred_lesion_img)
 
-            if connected_component:
-                pred_img = getConnectedComponents(pred_img)
-            if not os.path.exists(out_dir + '/imgs'):
-                os.makedirs(out_dir + '/imgs')
-            if not os.path.exists(out_dir + '/GT'):
-                os.makedirs(out_dir + '/GT')
-            pred_img_arr = sitk.GetArrayFromImage(pred_img)
-            np.save(out_dir + '/imgs/' + str(imgNumber) + '.npy', imgs[imgNumber])
-            np.save(out_dir + '/GT/' + str(imgNumber) + '.npy', pred_img_arr)
-            if eval:
-                GT_label = sitk.GetImageFromArray(GT_array[imgNumber])
-                # GT_label = castImage(GT_label, sitk.sitkUInt8)
-                # GT_label.SetSpacing(pred_img.GetSpacing())
+        if not os.path.exists(out_dir + '/imgs'):
+            os.makedirs(out_dir + '/imgs')
+        if not os.path.exists(out_dir + '/GT'):
+            os.makedirs(out_dir + '/GT')
+        pred_img_arr = np.stack((sitk.GetArrayFromImage(pred_bg_img), sitk.GetArrayFromImage(pred_lesion_img)), -1)
+        np.save(out_dir + '/imgs/' + str(imgNumber) + '.npy', imgs[imgNumber])
+        np.save(out_dir + '/GT/' + str(imgNumber) + '.npy', pred_img_arr)
+        if eval:
+            # lesion
+            # GT_label = sitk.GetImageFromArray(GT_array[imgNumber])
+            dice = get_dice_from_array(pred_img_arr[:, :, 1], GT_lesion[imgNumber, :, :, 0])
+            temp_dice_lesion.append(dice)
+            dices[1, imgNumber] = dice
+            print(dice)
+            # bg
+            dice = get_dice_from_array(pred_img_arr[:, :, 0], GT_bg[imgNumber, :, :, 0])
+            temp_dice_bg.append(dice)
+            dices[0, imgNumber] = dice
+            print(dice)
 
-                # dice = getDice(pred_img, GT_label)
-                dice = get_dice_from_array(pred_img_arr, sitk.GetArrayFromImage(GT_label))
-                temp_dice.append(dice)
-                print(dice)
-
-                dices[imgNumber] = dice
-
-                values.append(temp_dice[0])
-
-                csvwriter.writerow(values)
-
-                csvwriter.writerow('')
-                average = ['Average', np.average(dices)]
-                median = ['Median', np.median(dices)]
-                std = ['STD', np.std(dices)]
-
-                csvwriter.writerow(average)
-                csvwriter.writerow(median)
-                csvwriter.writerow(std)
-
-        print('Dices')
-        print(np.average(dices))
+    print('Dices')
+    print(np.average(dices, axis=1))
 
 
 def evaluateFiles(GT_directory, pred_directory, csvName):
@@ -505,7 +492,7 @@ def eval_for_uats_softmax(model_dir, model_name, batch_size=1, out_dir=None, con
     GT_dir = '/cache/suhita/skin/preprocessed/labelled/test/'
     img_arr, GT_arr = create_test_arrays(GT_dir)
     DIM = img_arr.shape
-    from skin_2D.model_softmax import weighted_model
+    from skin_2D.sigmoid.model_softmax import weighted_model
     wm = weighted_model()
     model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=learning_rate, gpu_id=None,
                            nb_gpus=None, trained_model=os.path.join(model_dir, model_name + '.h5'))
@@ -525,7 +512,7 @@ def eval_for_uats_mc(model_dir, model_name, batch_size=1, out_dir=None):
     GT_dir = '/cache/suhita/skin/preprocessed/labelled/test/'
     img_arr, GT_arr = create_test_arrays(GT_dir)
     DIM = img_arr.shape
-    from skin_2D.model_mc import weighted_model
+    from skin_2D.sigmoid.model_mc import weighted_model
     wm = weighted_model()
     model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=learning_rate, gpu_id=None,
                            nb_gpus=None, trained_model=os.path.join(model_dir, model_name + '.h5'))
@@ -546,16 +533,14 @@ def eval_for_supervised(model_dir, img_path, model_name, eval=True, out_dir=None
         img_arr = create_test_arrays(img_path, eval=eval)
         GT_arr = None
     DIM = img_arr.shape
-    from skin_2D.model import weighted_model
+    from skin_2D.softmax.model_softmax_baseline import weighted_model
     wm = weighted_model()
     model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=learning_rate)
     model.load_weights(os.path.join(model_dir, model_name + '.h5'))
-    prediction = model.predict(img_arr, batch_size=1)
-    # os.makedirs(os.path.join(model_dir,'skin','evaluation'))
-    csvName = os.path.join(model_dir, 'evaluation', model_name + '.csv')
+    prediction = model.predict(img_arr, batch_size=1, verbose=1)
 
     # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
-    evaluateFiles_arr(img_path=img_path, imgs=img_arr, prediction=prediction, GT_array=GT_arr, csvName=csvName,
+    evaluateFiles_arr(img_path=img_path, imgs=img_arr, prediction=prediction, GT_array=GT_arr, csvName=None,
                       connected_component=connected_component,
                       out_dir=out_dir, eval=eval)
 
@@ -566,7 +551,7 @@ if __name__ == '__main__':
 
     gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
-    os.environ["CUDA_VISIBLE_DEVICES"] = '2,3'
+    os.environ["CUDA_VISIBLE_DEVICES"] = '2,0'
     # os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
     # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 
@@ -582,14 +567,16 @@ if __name__ == '__main__':
     #     learning_rate) + '_Perc_' + str(PERC) + '_'+ augm
     perc = 0.5
     # model_dir = '/cache/suhita/skin/models/'
-    model_dir = '/data/suhita/temporal/skin/'
+    model_dir = '/cache/suhita/temporal/skin/models/'
     data_path = '/cache/suhita/skin/preprocessed/labelled/test/'
-    data_path = '/cache/suhita/skin/preprocessed/unlabelled/'
+    # data_path = '/cache/suhita/skin/preprocessed/unlabelled/'
     NAME = 'supervised_sfs32_F_1_1000_5e-05_Perc_' + str(perc) + '_augm'
 
-    eval_for_uats_softmax(model_dir, '4_skin_softmax_F1_Perct_Labelled_' + str(perc), batch_size=1,
-                          out_dir='/data/suhita/skin/ul_' + str(perc), connected_component=True)
+    # eval_for_uats_softmax(model_dir, '4_skin_softmax_F1_Perct_Labelled_' + str(perc), batch_size=1,
+    #                     out_dir='/data/suhita/skin/ul_' + str(perc), connected_component=True)
     # eval_for_uats_mc(model_dir, 'skin_mc_F1_Perct_Labelled_0.25', batch_size=1, out_dir='/data/suhita/skin/eval')
 
-    # eval_for_supervised('/cache/suhita/skin/models/', data_path, NAME, eval=False, out_dir='/data/suhita/skin/UL_' + str(perc), connected_component=False)
+    eval_for_supervised('/data/suhita/skin/', data_path,
+                        'softmax_supervised_sfs32_F_1_1000_5e-05_Perc_' + str(perc) + '_augm', eval=True,
+                        out_dir='/data/suhita/skin/ul/UL_' + str(perc), connected_component=True)
 # /data/suhita/temporal/skin/2_skin_softmax_F1_Perct_Labelled_1.0.h5

@@ -62,7 +62,7 @@ class DataGenerator(keras.utils.Sequence):
         # Initialization
         # 32,168,168
         X = np.empty((self.batch_size, *self.dim, self.n_channels), dtype = float)
-        Y = np.empty((self.batch_size, *self.dim,1), dtype=np.uint8)
+        Y = np.empty((self.batch_size, *self.dim, 2), dtype=np.uint8)
 
 
         # Generate data
@@ -83,14 +83,20 @@ class DataGenerator(keras.utils.Sequence):
                 aug_type = np.random.randint(0, 6)
 
                 X[i, :, :, :] = augment_image(x,aug_type, self.datagen_img)
-                Y[i, :, :, 0] = augment_image(y,aug_type, self.datagen_GT)[:,:,0]
+                augm_GT = augment_image(y, aug_type, self.datagen_GT)[:, :, 0]
+                Y[i, :, :, 1] = augm_GT
+                augm_GT_bg = np.where(augm_GT == 0, 1, 0)
+                Y[i, :, :, 0] = augm_GT_bg
+
 
             else:
                 X[i] = x
-                Y[i, :, :, 0] = y[:,:,0]
+                GT = y[:, :, 0]
+                Y[i, :, :, 1] = GT
+                GT_bg = np.where(GT == 0, 1, 0)
+                Y[i, :, :, 0] = GT_bg
 
-
-        return X, Y
+        return X, [Y[:, :, :, 0], Y[:, :, :, 1]]
 
     def __len__(self):
         'Denotes the number of batches per epoch'

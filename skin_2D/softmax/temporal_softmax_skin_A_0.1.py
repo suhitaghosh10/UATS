@@ -1,21 +1,17 @@
-from time import time
-
 import tensorflow as tf
-from keras import backend as K
 from keras.backend.tensorflow_backend import set_session
-from keras.callbacks import Callback, ReduceLROnPlateau
+from keras.callbacks import Callback
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
 
-from skin_2D.data_generation_uats import DataGenerator as train_gen
-from skin_2D.model_softmax import weighted_model
-from lib.segmentation.ops import ramp_down_weight
+from skin_2D.softmax.data_generation_softmax_uats import DataGenerator as train_gen
+from skin_2D.softmax.model_softmax_softmax import weighted_model
 from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
 from lib.segmentation.utils import get_array, save_array
 from zonal_utils.AugmentationGenerator import *
 from shutil import copyfile
 from kits.utils import makedir
 
-learning_rate = 1e-6
+learning_rate = 1e-7
 AUGMENTATION_NO = 5
 TEMP = 1
 augmentation = True
@@ -23,7 +19,7 @@ augmentation = True
 
 FOLD_NUM = 1
 PERCENTAGE_OF_PIXELS = 50
-PERCENTAGE_OF_LABELLED = 0.05
+PERCENTAGE_OF_LABELLED = 0.1
 DATA_PATH = '/cache/suhita/data/skin/fold_' + str(FOLD_NUM) + '_P' + str(PERCENTAGE_OF_LABELLED) + '/'
 TRAIN_NUM = len(np.load('/cache/suhita/skin/Folds/train_fold' + str(FOLD_NUM) + '.npy'))
 NAME = 'skin_softmax_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(PERCENTAGE_OF_LABELLED)
@@ -337,6 +333,13 @@ if __name__ == '__main__':
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
     # train(gpu, nb_gpus)
-    train(None, None)
+    try:
+        train(None, None)
+    finally:
+        import shutil
+
+        if os.path.exists(ENS_GT_PATH):
+            shutil.rmtree(ENS_GT_PATH)
+        print('clean up done!')
 
     # val_x = np.load('/cache/suhita/data/validation/valArray_imgs_fold1.npy')

@@ -1,14 +1,10 @@
-from time import time
-
 import tensorflow as tf
-from keras import backend as K
 from keras.backend.tensorflow_backend import set_session
-from keras.callbacks import Callback, ReduceLROnPlateau
+from keras.callbacks import Callback
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
 
-from skin_2D.data_generation_uats import DataGenerator as train_gen
-from skin_2D.model_softmax import weighted_model
-from lib.segmentation.ops import ramp_down_weight
+from skin_2D.sigmoid.data_generation_uats import DataGenerator as train_gen
+from skin_2D.sigmoid.model_softmax import weighted_model
 from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
 from lib.segmentation.utils import get_array, save_array
 from zonal_utils.AugmentationGenerator import *

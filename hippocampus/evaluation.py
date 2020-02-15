@@ -334,8 +334,8 @@ if __name__ == '__main__':
     GT_dir_labels = '/cache/suhita/hippocampus/preprocessed/labelled-GT/test'
     unlabelled_dir = '/cache/suhita/hippocampus/preprocessed/unlabelled/imgs/'
 
-    evaluate_for_supervised(unlabelled_dir, None, eval=False, connected_component=True,
-                            save_dir='/data/suhita/hippocampus/UL_' + str(PERC))
-    # eval_for_uats_softmax(GT_dir_imgs, GT_dir_labels, model_dir,
-    #                      '/data/suhita/temporal/hippocampus/hippocampus_softmax_F2_Perct_Labelled_1.0', batch_size=4,
-    #                     out_dir='/data/suhita/hippocampus/ULC_' + str(PERC), connected_component=True)
+    # evaluate_for_supervised(unlabelled_dir, None, eval=False, connected_component=True,
+    #                       save_dir='/data/suhita/hippocampus/UL_' + str(PERC))
+    eval_for_uats_softmax(GT_dir_imgs, GT_dir_labels, model_dir,
+                          '/data/suhita/temporal/hippocampus/hippocampus_softmax_F2_Perct_Labelled_1.0', batch_size=1,
+                          out_dir='/data/suhita/hippocampus/ULC_' + str(PERC), connected_component=True)
