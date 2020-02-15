@@ -126,7 +126,7 @@ class weighted_model:
         conv6 = self.upLayer(conv5, conv2_b_m, sfs * 8, 6, bn, do)
         conv7 = self.upLayer(conv6, conv1_b_m, sfs * 4, 7, bn, do)
 
-        conv_out = Conv2D(2, (1, 1), activation='sigmoid', name='conv_final')(conv7)
+        conv_out = Conv2D(2, (1, 1), activation='softmax', name='conv_final')(conv7)
         bg = Lambda(lambda x: x[:, :, :, 0], name='bg')(conv_out)
         skin = Lambda(lambda x: x[:, :, :, 1], name='skin')(conv_out)
 
