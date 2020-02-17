@@ -3,7 +3,7 @@ import random
 root_path = '/cache/suhita/data/'
 
 # training
-train_num = 30
+train_num = 58
 random_flag = False
 labelled_num = 58
 timgs = np.load(root_path + 'trainArray_imgs_fold1.npy')

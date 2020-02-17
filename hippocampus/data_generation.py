@@ -54,9 +54,9 @@ class DataGenerator(keras.utils.Sequence):
 
                 X[i], aug_gt = aug.get_single_image_augmentation(aug_type,
                                                                  np.load(os.path.join(self.data_path, ID)),
-                                                                 orig_gt, img_no=ID)
+                                                                 orig_gt, distance_based_interpol=False)
 
-                aug_gt = get_multi_class_arr(aug_gt[:, :, :, 0], 3)
+                aug_gt = get_multi_class_arr(aug_gt, 3)
                 Y[i] = aug_gt
 
             else:

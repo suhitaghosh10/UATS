@@ -335,7 +335,7 @@ def get_transformed_gt(orig_gt, ref_image, augmentation_type, centered_transform
     return res_gt
 
 
-def get_single_image_augmentation(augmentation_type, orig_image, orig_gt, img_no, nrClasses=1):
+def get_single_image_augmentation(augmentation_type, orig_image, orig_gt, distance_based_interpol=True):
     out_img = np.zeros([reference_size[2], reference_size[1], reference_size[0], 1], dtype=np.float32)
     # out_gt = np.zeros([reference_size[2], reference_size[1], reference_size[0], nrClasses], dtype=np.uint8)
 
@@ -364,7 +364,7 @@ def get_single_image_augmentation(augmentation_type, orig_image, orig_gt, img_no
     #     augmentation_type).name + '.nrrd'), reference_image, is_image=True)
 
     res_gt = get_transformed_gt(orig_gt, reference_image, augmentation_type, centered_transform, aug_transform,
-                                transformation_parameters_list)
+                                transformation_parameters_list, distance_based_interpol=distance_based_interpol)
 
     # write_image(res_gt[:, :, :, 0], os.path.join(OUTPUT_DIR, 'ch_gt' + str(img_no) + '_' + str(0) + '_' + AugmentTypes(
     #     augmentation_type).name + '.nrrd'), gt_ref)

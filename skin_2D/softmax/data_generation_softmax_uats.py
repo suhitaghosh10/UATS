@@ -86,12 +86,12 @@ class DataGenerator(keras.utils.Sequence):
                 aug_type = np.random.randint(0, 6)
 
                 X[i, :, :, :] = augment_image(x, aug_type, self.datagen_img)
-                Y[i, :, :, 0] = augment_image(y, aug_type, self.datagen_GT)[:, :, 0]
+                Y[i] = augment_image(y, aug_type, self.datagen_GT)
                 ENS[i] = augment_image(ens, aug_type, self.datagen_ens)
 
             else:
                 X[i] = x
-                Y[i, :, :, 0] = y[:, :, 0]
+                Y[i] = y
                 ENS[i] = ens
 
         X_ARR = [X, ENS, flag]

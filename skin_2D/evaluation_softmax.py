@@ -84,24 +84,19 @@ def get_dice_from_array(arr1, arr2):
     return (2. * intersection) / (np.sum(y_true_f) + np.sum(y_pred_f))
 
 
-def evaluateFiles_arr(img_path, imgs, prediction, GT_array, csvName, connected_component=False, eval=True,
-                      out_dir=None):
+def evaluateFiles_arr(img_path, prediction, connected_component=False, eval=True, out_dir=None):
     nrImgs = prediction[0].shape[0]
-    dices = np.zeros((2, nrImgs), dtype=np.float32)
-    if GT_array is not None and eval:
-        GT_lesion = GT_array
-        GT_bg = np.where(GT_array == 0, np.ones_like(GT_array), np.zeros_like(GT_array))
+    dices = np.zeros((nrImgs), dtype=np.float32)
+
     # print(dices.shape)
 
     for imgNumber in range(0, nrImgs):
         name = str(int(imgNumber))
-        if eval:
-            test_dir = sorted(os.listdir(os.path.join(img_path, 'imgs')))
-            name = name + ' Case ' + test_dir[imgNumber]
+
+        test_dir = sorted(os.listdir(os.path.join(img_path, 'imgs')))
+        name = name + ' Case ' + test_dir[imgNumber]
 
         print(name)
-        temp_dice_bg = []
-        temp_dice_lesion = []
 
         pred_bg = sitk.GetImageFromArray(thresholdArray(prediction[0][imgNumber], 0.5))
         pred_lesion = sitk.GetImageFromArray(thresholdArray(prediction[1][imgNumber], 0.5))
@@ -117,23 +112,20 @@ def evaluateFiles_arr(img_path, imgs, prediction, GT_array, csvName, connected_c
         if not os.path.exists(out_dir + '/GT'):
             os.makedirs(out_dir + '/GT')
         pred_img_arr = np.stack((sitk.GetArrayFromImage(pred_bg_img), sitk.GetArrayFromImage(pred_lesion_img)), -1)
-        np.save(out_dir + '/imgs/' + str(imgNumber) + '.npy', imgs[imgNumber])
+        np.save(out_dir + '/imgs/' + str(imgNumber) + '.npy',
+                np.load(os.path.join(img_path, 'imgs', test_dir[imgNumber])) / 255)
         np.save(out_dir + '/GT/' + str(imgNumber) + '.npy', pred_img_arr)
         if eval:
             # lesion
-            # GT_label = sitk.GetImageFromArray(GT_array[imgNumber])
-            dice = get_dice_from_array(pred_img_arr[:, :, 1], GT_lesion[imgNumber, :, :, 0])
-            temp_dice_lesion.append(dice)
-            dices[1, imgNumber] = dice
-            print(dice)
-            # bg
-            dice = get_dice_from_array(pred_img_arr[:, :, 0], GT_bg[imgNumber, :, :, 0])
-            temp_dice_bg.append(dice)
-            dices[0, imgNumber] = dice
+            GT_label = np.load(
+                os.path.join(img_path, 'GT', test_dir[imgNumber].replace('.npy', '_segmentation.npy'))) / 255
+            dice = get_dice_from_array(pred_img_arr[:, :, 1], GT_label[:, :, 0])
+            dices[imgNumber] = dice
             print(dice)
 
+
     print('Dices')
-    print(np.average(dices, axis=1))
+    print(np.average(dices))
 
 
 def evaluateFiles(GT_directory, pred_directory, csvName):
@@ -475,11 +467,15 @@ def create_test_arrays(test_dir, eval=True):
 
     if eval:
         num = len(os.listdir(os.path.join(test_dir, 'GT')))
-        GT_arr = np.zeros((num, img.shape[0], img.shape[1], 1), dtype=float)
+        GT_arr = np.zeros((num, img.shape[0], img.shape[1], 2), dtype=float)
 
     for i in range(len(cases)):
         if eval:
-            GT_arr[i] = np.load(os.path.join(test_dir, 'GT', cases[i]).replace('.npy', '_segmentation.npy')) / 255
+            GT_arr[i, :, :, 1] = np.load(os.path.join(test_dir, 'GT', cases[i]).replace('.npy', '_segmentation.npy'))[:,
+                                 :, 0] / 255
+            GT_arr[i, :, :, 0] = np.where(GT_arr[i, :, :, 1] == 0, np.ones_like(GT_arr[i, :, :, 1]),
+                                          np.zeros_like(GT_arr[i, :, :, 1]))
+
         img_arr[i] = np.load(os.path.join(test_dir, 'imgs', cases[i])) / 255
 
     if eval:
@@ -490,39 +486,44 @@ def create_test_arrays(test_dir, eval=True):
 
 def eval_for_uats_softmax(model_dir, model_name, batch_size=1, out_dir=None, connected_component=True):
     GT_dir = '/cache/suhita/skin/preprocessed/labelled/test/'
+    print('create start')
     img_arr, GT_arr = create_test_arrays(GT_dir)
+    print('create end')
     DIM = img_arr.shape
-    from skin_2D.sigmoid.model_softmax import weighted_model
+    from skin_2D.softmax.model_softmax_entropy import weighted_model
     wm = weighted_model()
     model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=learning_rate, gpu_id=None,
                            nb_gpus=None, trained_model=os.path.join(model_dir, model_name + '.h5'))
     # model.load_weights(os.path.join(model_dir, NAME,'.h5'))
     val_supervised_flag = np.ones((DIM[0], DIM[1], DIM[2], 1), dtype='int8')
-    prediction = model.predict([img_arr, GT_arr, val_supervised_flag], batch_size=batch_size)
-
+    prediction = model[0].predict([img_arr, GT_arr, val_supervised_flag], batch_size=batch_size, verbose=1)
     csvName = os.path.join(model_dir, 'evaluation', model_name + '.csv')
 
     # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
-    evaluateFiles_arr(GT_dir, imgs=img_arr, prediction=prediction, GT_array=GT_arr, csvName=csvName,
-                      connected_component=connected_component,
+    evaluateFiles_arr(img_path='/cache/suhita/skin/preprocessed/labelled/test/', prediction=prediction,
+                      connected_component=True,
                       out_dir=out_dir, eval=True)
 
 
 def eval_for_uats_mc(model_dir, model_name, batch_size=1, out_dir=None):
     GT_dir = '/cache/suhita/skin/preprocessed/labelled/test/'
+    print('create start')
     img_arr, GT_arr = create_test_arrays(GT_dir)
+    print('create end')
     DIM = img_arr.shape
-    from skin_2D.sigmoid.model_mc import weighted_model
+    from skin_2D.softmax.model_softmax_entropy import weighted_model
     wm = weighted_model()
     model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=learning_rate, gpu_id=None,
                            nb_gpus=None, trained_model=os.path.join(model_dir, model_name + '.h5'))
     # model.load_weights(os.path.join(model_dir, NAME,'.h5'))
     val_supervised_flag = np.ones((DIM[0], DIM[1], DIM[2], 1), dtype='int8')
-    prediction = model[0].predict([img_arr, GT_arr, val_supervised_flag], batch_size=batch_size)
+    prediction = model[0].predict([img_arr, GT_arr, val_supervised_flag], batch_size=batch_size, verbose=1)
     csvName = os.path.join(model_dir, 'evaluation', model_name + '.csv')
 
     # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
-    evaluateFiles_arr(imgs=img_arr, prediction=prediction, GT_array=GT_arr, csvName=csvName, connected_component=True,
+    evaluateFiles_arr(img_path='/cache/suhita/skin/preprocessed/labelled/test/',
+                      prediction=prediction,
+                      connected_component=True,
                       out_dir=out_dir, eval=True)
 
 
@@ -540,8 +541,7 @@ def eval_for_supervised(model_dir, img_path, model_name, eval=True, out_dir=None
     prediction = model.predict(img_arr, batch_size=1, verbose=1)
 
     # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
-    evaluateFiles_arr(img_path=img_path, imgs=img_arr, prediction=prediction, GT_array=GT_arr, csvName=None,
-                      connected_component=connected_component,
+    evaluateFiles_arr(img_path=img_path, prediction=prediction, connected_component=connected_component,
                       out_dir=out_dir, eval=eval)
 
 
@@ -549,34 +549,34 @@ if __name__ == '__main__':
     # gpu = '/GPU:0'
     batch_size = 1
 
-    gpu_id = '0'
+
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
-    os.environ["CUDA_VISIBLE_DEVICES"] = '2,0'
+    os.environ["CUDA_VISIBLE_DEVICES"] = '1'
     # os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
     # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 
     learning_rate = 5e-5
     AUGMENTATION_NO = 5
     TRAIN_NUM = 50
-    FOLD_NUM = 1
+    FOLD_NUM = 2
     augm = 'augm'
     batch_size = 2
 
     ### for baseline of 0.1 images,
     # NAME = 'supervised_F_centered_BB_' + str(FOLD_NUM) + '_' + str(TRAIN_NUM) + '_' + str(
     #     learning_rate) + '_Perc_' + str(PERC) + '_'+ augm
-    perc = 0.5
+    perc = 1.0
     # model_dir = '/cache/suhita/skin/models/'
-    model_dir = '/cache/suhita/temporal/skin/models/'
+    model_dir = '/data/suhita/temporal/skin/'
     data_path = '/cache/suhita/skin/preprocessed/labelled/test/'
-    # data_path = '/cache/suhita/skin/preprocessed/unlabelled/'
+    data_path = '/cache/suhita/skin/preprocessed/unlabelled/'
     NAME = 'supervised_sfs32_F_1_1000_5e-05_Perc_' + str(perc) + '_augm'
 
-    # eval_for_uats_softmax(model_dir, '4_skin_softmax_F1_Perct_Labelled_' + str(perc), batch_size=1,
-    #                     out_dir='/data/suhita/skin/ul_' + str(perc), connected_component=True)
-    # eval_for_uats_mc(model_dir, 'skin_mc_F1_Perct_Labelled_0.25', batch_size=1, out_dir='/data/suhita/skin/eval')
+    # eval_for_uats_softmax(model_dir, 'sm_skin_mc_F1_Perct_Labelled_' + str(perc), batch_size=1,
+    #                    out_dir='/data/suhita/skin/ul_' + str(perc), connected_component=True)
+    # eval_for_uats_mc('/data/suhita/temporal/skin/', 'sm_skin_mc_F1_Perct_Labelled_'+str(perc), batch_size=1, out_dir='/data/suhita/skin/eval')
 
-    eval_for_supervised('/data/suhita/skin/', data_path,
-                        'softmax_supervised_sfs32_F_1_1000_5e-05_Perc_' + str(perc) + '_augm', eval=True,
+    eval_for_supervised('/data/suhita/skin/models/', data_path,
+                        'softmax_supervised_sfs32_F_2_1000_5e-05_Perc_' + str(perc) + '_augm', eval=False,
                         out_dir='/data/suhita/skin/ul/UL_' + str(perc), connected_component=True)
 # /data/suhita/temporal/skin/2_skin_softmax_F1_Perct_Labelled_1.0.h5

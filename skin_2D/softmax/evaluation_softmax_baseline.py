@@ -590,19 +590,10 @@ if __name__ == '__main__':
     TRAIN_NUM = 50
     FOLD_NUM = 1
     augm = 'augm'
-    ### for baseline of 0.1 images,
-    # NAME = 'supervised_F_centered_BB_' + str(FOLD_NUM) + '_' + str(TRAIN_NUM) + '_' + str(
-    #     learning_rate) + '_Perc_' + str(PERC) + '_'+ augm
-    perc = 0.1
-    # model_dir = '/cache/suhita/skin/models/'
+    perc = 1.0
     model_dir = '/data/suhita/temporal/skin/'
     data_path = '/cache/suhita/skin/preprocessed/labelled/test/'
-    # data_path = '/cache/suhita/skin/preprocessed/unlabelled/'
     NAME = 'softmax_supervised_sfs32_F_1_1000_5e-05_Perc_' + str(perc) + '_augm'
-
-    # eval_for_uats_softmax(model_dir, '/data/suhita/temporal/skin/skin_softmax_F1_Perct_Labelled_0.05', batch_size=1,
-    #                      out_dir='/data/suhita/skin/UL_noThr_noCC' + str(perc), connected_component=False)
-    # eval_for_uats_mc(model_dir, 'skin_mc_F1_Perct_Labelled_0.25', batch_size=1, out_dir='/data/suhita/skin/eval')
 
     eval_for_supervised('/home/anneke/projects/uats/code/skin_2D/output/models', data_path, NAME, eval=True,
                         out_dir='/data/anneke/skin/softmax_' + str(perc))

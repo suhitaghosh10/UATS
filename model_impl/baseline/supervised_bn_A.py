@@ -11,29 +11,29 @@ from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
 from lib.segmentation.utils import get_complete_array
 
 learning_rate = 5e-5
-AUGMENTATION_NO = 1
+AUGMENTATION_NO = 5
 TRAIN_NUM = 58
-FOLD_NUM = 1
-NAME = 'supervised_F' + str(FOLD_NUM) + '_' + str(TRAIN_NUM)
-CSV_NAME = '/data/suhita/temporal/CSV/' + NAME + '.csv'
+FOLD_NUM = 2
 
-TB_LOG_DIR = '/data/suhita/temporal/tb/' + NAME + str(learning_rate) + '/'
-MODEL_NAME = '/data/suhita/temporal/' + NAME + '.h5'
+root = '/cache/suhita/prostate/fold_' + str(FOLD_NUM) + '_supervised/'
+TRAIN_IMGS_PATH = root + 'train/imgs/'
+TRAIN_GT_PATH = root + 'train/gt/'
 
-TRAIN_IMGS_PATH = '/cache/suhita/data/fold1/SUPERVISED/train/imgs/'
-TRAIN_GT_PATH = '/cache/suhita/data/fold1/SUPERVISED/train/gt/'
-
-VAL_IMGS_PATH = '/cache/suhita/data/fold1/SUPERVISED/val/imgs/'
-VAL_GT_PATH = '/cache/suhita/data/fold1/SUPERVISED/val/gt/'
-
-TRAINED_MODEL_PATH = MODEL_NAME
+VAL_IMGS_PATH = root + 'val/imgs/'
+VAL_GT_PATH = root + 'val/gt/'
 
 NUM_CLASS = 5
 num_epoch = 1000
 batch_size = 2
 
 
-def train(gpu_id, nb_gpus, trained_model=None):
+def train(gpu_id, nb_gpus, trained_model=None, perc=None):
+    num_labeled_train = int(perc * TRAIN_NUM)
+    NAME = 'supervised_F' + str(FOLD_NUM) + '_P' + str(perc)
+    CSV_NAME = '/data/suhita/temporal/CSV/' + NAME + '.csv'
+    TB_LOG_DIR = '/data/suhita/temporal/tb/prostate/' + NAME + str(learning_rate) + '/'
+    MODEL_NAME = '/data/suhita/prostate/' + NAME + '.h5'
+
     wm = weighted_model()
     model = wm.build_model(learning_rate=learning_rate, gpu_id=gpu_id,
                            nb_gpus=nb_gpus, trained_model=trained_model)
@@ -67,8 +67,8 @@ def train(gpu_id, nb_gpus, trained_model=None):
     es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=50)
 
     # datagen listmake_dataset
-    train_id_list = [str(i) for i in np.arange(0, TRAIN_NUM)]
-
+    train_id_list = [str(i) for i in np.arange(num_labeled_train)]
+    np.random.shuffle(train_id_list)
     # del unsupervised_target, unsupervised_weight, supervised_flag, imgs
     # del supervised_flag
 
@@ -88,7 +88,7 @@ def train(gpu_id, nb_gpus, trained_model=None):
                                    train_id_list,
                                    **params)
 
-    steps = (TRAIN_NUM * AUGMENTATION_NO) / batch_size
+    steps = (num_labeled_train * AUGMENTATION_NO) / batch_size
     # steps=2
 
     val_x_arr = get_complete_array(VAL_IMGS_PATH)
@@ -141,7 +141,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = 2
-    gpu_id = '0'
+    gpu_id = '2'
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
     # os.environ["CUDA_VISIBLE_DEVICES"] = '2'
@@ -157,7 +157,10 @@ if __name__ == '__main__':
         'batch_size should be a multiple of the nr. of gpus. ' + \
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
-    train(None, None, trained_model=None)
+    train(None, None, trained_model=None, perc=0.1)
+    train(None, None, trained_model=None, perc=0.25)
+    train(None, None, trained_model=None, perc=0.5)
+    train(None, None, trained_model=None, perc=1.0)
     # train(gpu, nb_gpus, trained_model=None)
     # val_x = np.load('/cache/suhita/data/validation/valArray_imgs_fold1.npy')
     # val_y = np.load('/cache/suhita/data/validation/valArray_GT_fold1.npy').astype('int8')

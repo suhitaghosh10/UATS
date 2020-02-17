@@ -5,11 +5,11 @@ from shutil import copyfile
 from kits import utils
 
 root_path = '/cache/suhita/skin/'
-perc = 0.5
+perc = 1.0
 # training
 
 
-fold_num = 1
+fold_num = 2
 labelled_path = root_path + 'preprocessed/labelled/train'
 labelled_files_lst = np.load(root_path + 'Folds/train_fold' + str(fold_num) + '.npy')
 labelled_train_num = len(labelled_files_lst)

@@ -268,7 +268,7 @@ def create_test_arrays(test_dir_img, test_dir_labels, n_classes=3, eval=True):
         return img_arr
 
 
-def evaluate_for_supervised(imgs_path, gt_path, eval=True, connected_component=True, save_dir=None):
+def evaluate_for_supervised(imgs_path, gt_path, model_name, eval=True, connected_component=True, save_dir=None):
     GT_arr = None
     if eval:
         img_arr, GT_arr = create_test_arrays(imgs_path, gt_path, n_classes=3)
@@ -278,11 +278,11 @@ def evaluate_for_supervised(imgs_path, gt_path, eval=True, connected_component=T
     wm = weighted_model()
 
     model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=5e-5)
-    model.load_weights(os.path.join(model_dir, NAME + '.h5'))
+    model.load_weights(os.path.join(model_name))
     prediction = model.predict(img_arr, batch_size=batch_size)
     # print(prediction)
 
-    csvName = os.path.join('/data/suhita/hippocampus/output/models', NAME + '.csv')
+    csvName = os.path.join('/data/suhita/hippocampus/output/models', model_name + '.csv')
 
     # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
     evaluateFiles_arr(prediction=prediction, img_arr=img_arr, GT_arr=GT_arr, csvName=csvName,
@@ -298,10 +298,13 @@ def eval_for_uats_softmax(imgs_path, gt_path, model_dir, model_name, batch_size=
     from hippocampus.model_softmax import weighted_model
     wm = weighted_model()
     model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=5e-5, gpu_id=None,
-                           nb_gpus=None, trained_model=os.path.join(model_dir, model_name + '.h5'))
-    # model.load_weights(os.path.join(model_dir, NAME,'.h5'))
+                           nb_gpus=None)
+    model.load_weights(os.path.join(model_dir, model_name + '.h5'))
     val_supervised_flag = np.ones((DIM[0], DIM[1], DIM[2], DIM[3]), dtype='int8')
     prediction = model.predict([img_arr, GT_arr, val_supervised_flag], batch_size=batch_size)
+    print(model.evaluate([img_arr, GT_arr, val_supervised_flag],
+                         [GT_arr[:, :, :, :, 0], GT_arr[:, :, :, :, 1], GT_arr[:, :, :, :, 2]],
+                         batch_size=batch_size))
     csvName = os.path.join(model_dir, 'evaluation', model_name + '.csv')
 
     # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
@@ -318,24 +321,33 @@ if __name__ == '__main__':
     learning_rate = 4e-5
     AUGMENTATION_NO = 5
     TRAIN_NUM = 150
-    PERCENTAGE = [0.05, 0.1, 0.25, 0.5, 1.0]
-    FOLD_NUM = 2
+    PERCENTAGE = [0.1, 0.25, 0.5, 1.0]
+    FOLD_NUM = 1
     augm = 'augm'
     batch_size = 4
-    PERC = 1.0
 
     # for PERC in PERCENTAGE:
 
-    NAME = 'supervised_F_' + str(FOLD_NUM) + '_150_4e-05_Perc_' + str(PERC) + '_augm'
-
-    model_dir = '/cache/suhita/hippocampus/models'
+    model_dir = '/data/suhita/temporal/hippocampus/'
 
     GT_dir_imgs = '/cache/suhita/hippocampus/preprocessed/labelled/test'
     GT_dir_labels = '/cache/suhita/hippocampus/preprocessed/labelled-GT/test'
-    unlabelled_dir = '/cache/suhita/hippocampus/preprocessed/unlabelled/imgs/'
+    # unlabelled_dir = '/cache/suhita/hippocampus/preprocessed/unlabelled/imgs/'
 
-    # evaluate_for_supervised(unlabelled_dir, None, eval=False, connected_component=True,
-    #                       save_dir='/data/suhita/hippocampus/UL_' + str(PERC))
-    eval_for_uats_softmax(GT_dir_imgs, GT_dir_labels, model_dir,
-                          '/data/suhita/temporal/hippocampus/hippocampus_softmax_F2_Perct_Labelled_1.0', batch_size=1,
-                          out_dir='/data/suhita/hippocampus/ULC_' + str(PERC), connected_component=True)
+    perc = 0.25
+    # eval_for_uats_softmax(GT_dir_imgs, GT_dir_labels, model_dir,
+    #                   'hippocampus_softmax_F1_Perct_Labelled_'+str(perc), batch_size=1,
+    #                   out_dir='/data/suhita/hippocampus/ULC_' + str(perc), connected_component=True)
+
+    evaluate_for_supervised(GT_dir_imgs, GT_dir_labels,
+                            model_name='/data/suhita/hippocampus/output/models/supervised_F_1_150_4e-05_Perc_' + str(
+                                perc) + '_augm.h5',
+                            eval=True,
+                            connected_component=True,
+                            save_dir='/data/suhita/hippocampus/Fold_' + str(FOLD_NUM) + '/UL_' + str(perc))
+    '''
+        for p in PERCENTAGE:
+            NAME = 'supervised_F_' + str(FOLD_NUM) + '_150_4e-05_Perc_'+str(p)+'_augm.h5'
+            evaluate_for_supervised(GT_dir_imgs, GT_dir_labels, model_name=model_dir+NAME, eval=True, connected_component=True,
+                              save_dir='/data/suhita/hippocampus/Fold_'+str(FOLD_NUM)+'/UL_' + str(p))
+    '''
