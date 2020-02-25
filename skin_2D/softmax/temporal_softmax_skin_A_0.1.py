@@ -230,7 +230,7 @@ def train(gpu_id, nb_gpus):
     np.random.shuffle(train_id_list)
     tcb = TemporalCallback(DATA_PATH, ENS_GT_PATH, train_id_list)
     lcb = wm.LossCallback()
-    es = EarlyStopping(monitor='val_dice_coef', mode='max', verbose=1, patience=100)
+    es = EarlyStopping(monitor='val_dice_coef', mode='max', verbose=1, patience=100, min_delta=0.0005)
     # del unsupervised_target, unsupervised_weight, supervised_flag, imgs
     # del supervised_flag
     cb = [model_checkpoint, tcb, tensorboard, lcb, csv_logger, es]

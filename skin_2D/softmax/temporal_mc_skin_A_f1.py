@@ -16,9 +16,9 @@ import shutil
 AUGMENTATION_NO = 5
 TEMP = 1
 augmentation = True
-FOLD_NUM = 2
+FOLD_NUM = 1
 PERCENTAGE_OF_PIXELS = 50
-ENS_GT_PATH = '/data/suhita/temporal/skin/output/sm_mc/sadv1/'
+ENS_GT_PATH = '/data/suhita/temporal/skin/output/sm_mc/sadv222/'
 num_epoch = 1000
 batch_size = 8
 DIM = [192, 256]
@@ -34,7 +34,7 @@ ramp_down_period = 50
 def train(gpu_id, nb_gpus, perc, batch_nos, learning_rate=None):
     DATA_PATH = '/cache/suhita/data/skin/softmax/fold_' + str(FOLD_NUM) + '_P' + str(perc) + '/'
     TRAIN_NUM = len(np.load('/cache/suhita/skin/Folds/train_fold' + str(FOLD_NUM) + '.npy'))
-    NAME = 'sm_skin_mc_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(perc)
+    NAME = 'sm_skin_entropy_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(perc)
 
     TB_LOG_DIR = '/data/suhita/temporal/tb/skin/' + NAME + '_' + str(learning_rate) + '/'
     MODEL_NAME = '/data/suhita/temporal/skin/' + NAME + '.h5'
@@ -132,7 +132,7 @@ def train(gpu_id, nb_gpus, perc, batch_nos, learning_rate=None):
 
             bg_save, self.val_bg_dice_coef = self.shall_save(logs['val_bg_dice_coef'], self.val_bg_dice_coef)
             lesion_save, self.val_skin_dice_coef = self.shall_save(logs['val_skin_dice_coef'], self.val_skin_dice_coef)
-
+            model_MC.set_weights(model.get_weights())
 
             if epoch > 0:
 
@@ -178,13 +178,33 @@ def train(gpu_id, nb_gpus, perc, batch_nos, learning_rate=None):
                     del ensemble_prediction
 
                     # mc dropout chnages
-                    argmax_pred_ravel = np.ravel(np.argmax(cur_pred, axis=-1))
+                    T = 10
+                    for i in np.arange(T):
+                        model_out = model_MC.predict(inp, batch_size=batch_size, verbose=1)
+
+                        mc_pred[:, :, :, 0] = np.add(model_out[0], mc_pred[:, :, :, 0])
+                        mc_pred[:, :, :, 1] = np.add(model_out[1], mc_pred[:, :, :, 1])
+
+                    # avg_pred = mc_pred / T#
+                    entropy = None
+                    for z in np.arange(2):
+                        if z == 0:
+                            entropy = (mc_pred[:, :, :, z] / T) * np.log((mc_pred[:, :, :, z] / T) + 1e-5)
+                        else:
+                            entropy = entropy + (mc_pred[:, :, :, z] / T) * np.log(
+                                (mc_pred[:, :, :, z] / T) + 1e-5)
+                    entropy = -entropy
+                    del mc_pred, inp, model_out
+
+                    argmax_pred_ravel = np.ravel(np.argmin(cur_pred, axis=-1))
                     max_pred_ravel = np.ravel(np.max(cur_pred, axis=-1))
+
                     indices = None
                     del cur_pred
                     for zone in np.arange(2):
-                        final_max_ravel = np.where(argmax_pred_ravel == zone, np.zeros_like(max_pred_ravel),
-                                                   max_pred_ravel)
+                        entropy_zone = np.ravel(entropy[:, :, :])
+                        final_max_ravel = np.where(argmax_pred_ravel == zone, np.zeros_like(entropy_zone),
+                                                   entropy_zone)
                         zone_indices = np.argpartition(final_max_ravel, -confident_pixels_no)[
                                        -confident_pixels_no:]
                         if zone == 0:
@@ -192,19 +212,16 @@ def train(gpu_id, nb_gpus, perc, batch_nos, learning_rate=None):
                         else:
                             indices = np.unique(np.concatenate((zone_indices, indices)))
 
-                    mask = np.ones(max_pred_ravel.shape, dtype=bool)
+                    mask = np.ones(entropy_zone.shape, dtype=bool)
                     mask[indices] = False
 
-                    max_pred_ravel[mask] = 0
-                    max_pred_ravel = np.where(max_pred_ravel > 0, np.ones_like(max_pred_ravel) * 2,
-                                              np.zeros_like(max_pred_ravel))
-                    flag = np.reshape(max_pred_ravel, (actual_batch_size, DIM[0], DIM[1]))
-                    # flag = np.reshape(max_pred_ravel, (IMGS_PER_ENS_BATCH, 32, 168, 168))
-                    del max_pred_ravel, indices
+                    entropy_zone[mask] = 0
+                    entropy_zone = np.where(entropy_zone > 0, np.ones_like(entropy_zone) * 2,
+                                            np.zeros_like(entropy_zone))
+                    flag = np.reshape(max_pred_ravel, (actual_batch_size, DIM[0], DIM[1], 1))
+                    del entropy_zone, indices
 
-                    save_array(os.path.join(self.ensemble_path, 'flag'), flag, start, end)
-
-                    ##sup_count = sup_count + np.count_nonzero(flag)
+                    save_array(self.ensemble_path + '/flag/', flag, start, end)
                     del flag
 
                 if 'cur_pred' in locals(): del cur_pred
@@ -293,10 +310,10 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = batch_size
-    gpu_id = '1'
+    gpu_id = '3'
 
     # gpu_id = '0'
-    # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
+    gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
     # os.environ["CUDA_VISIBLE_DEVICES"] = '2'
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -311,8 +328,8 @@ if __name__ == '__main__':
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
     try:
-        # train(None, None, perc=0.05, batch_nos=5, learning_rate=1e-6)
-        # shutil.rmtree(ENS_GT_PATH)
+        train(None, None, perc=0.05, batch_nos=5, learning_rate=1e-6)
+        shutil.rmtree(ENS_GT_PATH)
         train(None, None, perc=0.1, batch_nos=5, learning_rate=1e-6)
         shutil.rmtree(ENS_GT_PATH)
         train(None, None, perc=0.25, batch_nos=5, learning_rate=1e-6)

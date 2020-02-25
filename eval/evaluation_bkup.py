@@ -518,7 +518,7 @@ def postprocesAndEvaluateFiles(outDir, prediction, GT_array, csvName, eval=True,
         evaluateFiles_zones(GT_array, pred_directory=outDir, prediction_arr=outDir + model_name, csvName=csvName)
 
 
-def predict_for_uats(val_x_arr, val_y_arr, model, mc=False):
+def predict_for_uats_mc(val_x_arr, val_y_arr, model, mc=False):
     val_supervised_flag = np.ones((val_x_arr.shape[0], 32, 168, 168), dtype='int8')
 
     x_val = [val_x_arr, val_y_arr, val_supervised_flag]
@@ -543,7 +543,7 @@ def predict_for_uats(val_x_arr, val_y_arr, model, mc=False):
     return output_arr
 
 
-def predict_for_supervised(val_x_arr, val_y_arr, model):
+def predict_for_supervised(val_x_arr, model):
     print('predict')
     out = model.predict(val_x_arr, batch_size=1, verbose=1)
     output_arr = np.zeros((out[0].shape[0], 32, 168, 168, 5))
@@ -560,21 +560,28 @@ def predict_for_supervised(val_x_arr, val_y_arr, model):
 
 
 if __name__ == '__main__':
-    model_dir = '/data/suhita/temporal/'
-    model_name = 'Entropy21_40'
-
+    model_dir = '/data/suhita/temporal/prostate/'
+    # model_name = 'supervised_F2_P_0.5'
+    model_name = 'prostate_mc_F2_Perct_Labelled_0.1'
+    # model_name = 'prostate_softmax_F1_Perct_Labelled_0.1'
+    os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     csvName = model_dir + model_name + '.csv'
-    val_x = np.load('/cache/suhita/data/final_test_array_imgs.npy')
-    val_y = np.load('/cache/suhita/data/final_test_array_GT.npy').astype('int8')
+    val_x = np.load('/cache/suhita/data/prostate/final_test_array_imgs.npy')
+    # val_x = np.load('/cache/suhita/data/prostate/npy_img_unlabeled.npy')
+    val_y = np.load('/cache/suhita/data/prostate/final_test_array_GT.npy').astype('int8')
 
     # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
-    # from lib.segmentation.model.temporal_scaled_orig import weighted_model
+    #from lib.segmentation.model.temporal_scaled_orig import weighted_model
     from lib.segmentation.model.temporalEns_MC_2model import weighted_model
 
+    #from lib.segmentation.model.model_baseline import weighted_model
     wm = weighted_model()
 
-    # model = wm.build_model(trained_model=model_dir+model_name+'.h5', temp=1.0)
+    #model = wm.build_model(trained_model=model_dir+model_name+'.h5', temp=1.0)
     model = wm.build_model(trained_model=model_dir + model_name + '.h5')[0]
-    prediction_arr = predict_for_uats(val_x, val_y, model, mc=True)
-    # prediction_arr = predict_for_supervised(val_x, val_y, model)
+    model.load_weights(model_dir + model_name + '.h5')
+    prediction_arr = predict_for_uats_mc(val_x, val_y, model, mc=True)
+    #prediction_arr = predict_for_supervised(val_x, model)
     postprocesAndEvaluateFiles(model_dir, prediction_arr, val_y, eval=True, csvName=csvName, prediction_arr_exists=False)
+    #postprocesAndEvaluateFiles(model_dir, prediction_arr, None, eval=False, csvName=csvName, prediction_arr_exists=False)

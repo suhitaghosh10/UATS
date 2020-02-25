@@ -3,10 +3,10 @@ import random
 from kits.utils import makedir
 
 root_path = '/cache/suhita/data/prostate/'
-fold_num = 2
+fold_num = 3
 
 # training
-perc = 0.1
+perc = 1.0
 labelled_num = 58
 timgs = np.load(root_path + 'trainArray_imgs_fold1.npy')
 print(timgs.shape)
@@ -21,11 +21,8 @@ ul_imgs = np.load(root_path + 'good_prediction_arr.npy')
 ul_gt = np.load(root_path + 'good_prediction_arr_gt.npy')
 ul_gt = ul_gt.astype('int8')
 
-temp1 = set(np.arange(20))
-temp2 = set(np.arange(40, 58))
-labelled_num_considrd = temp1.union(temp2)
+labelled_num_considrd = np.arange(0, 40)
 
-val = np.arange(20, 40)
 counter = 0
 # training
 makedir(root_path + 'fold_' + str(fold_num) + '_P' + str(perc) + '/train/imgs/')
@@ -39,7 +36,7 @@ for i in labelled_num_considrd:
     counter = counter + 1
     print(i, counter)
 
-for i in np.arange(vimgs.shape[0]):
+for i in np.arange(2, 20):
     np.save(root_path + 'fold_' + str(fold_num) + '_P' + str(perc) + '/train/imgs/' + str(counter),
             vimgs[i, :, :, :, :])
     np.save(root_path + 'fold_' + str(fold_num) + '_P' + str(perc) + '/train/gt/' + str(counter), vgt[i, :, :, :, :])
@@ -55,9 +52,15 @@ for i in np.arange(ul_imgs.shape[0]):
 
 # val
 counter = 0
-for i in val:
+for i in np.arange(40, 58):
     np.save(root_path + 'fold_' + str(fold_num) + '_P' + str(perc) + '/val/imgs/' + str(counter), timgs[i])
     np.save(root_path + 'fold_' + str(fold_num) + '_P' + str(perc) + '/val/gt/' + str(counter), tgt[i])
+    counter = counter + 1
+    print(i)
+
+for i in np.arange(0, 2):
+    np.save(root_path + 'fold_' + str(fold_num) + '_P' + str(perc) + '/val/imgs/' + str(counter), vimgs[i])
+    np.save(root_path + 'fold_' + str(fold_num) + '_P' + str(perc) + '/val/gt/' + str(counter), vgt[i])
     counter = counter + 1
     print(i)
 

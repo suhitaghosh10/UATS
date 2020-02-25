@@ -6,8 +6,7 @@ root_path = '/cache/suhita/data/prostate/'
 fold_num = 2
 
 # training
-perc = 0.1
-labelled_num = 58
+perc = 0.5
 timgs = np.load(root_path + 'trainArray_imgs_fold1.npy')
 print(timgs.shape)
 tgt = np.load(root_path + 'trainArray_GT_fold1.npy')
@@ -21,9 +20,7 @@ ul_imgs = np.load(root_path + 'good_prediction_arr.npy')
 ul_gt = np.load(root_path + 'good_prediction_arr_gt.npy')
 ul_gt = ul_gt.astype('int8')
 
-temp1 = set(np.arange(20))
-temp2 = set(np.arange(40, 58))
-labelled_num_considrd = temp1.union(temp2)
+labelled_num_considrd = set(np.arange(30))
 
 val = np.arange(20, 40)
 counter = 0
@@ -38,13 +35,6 @@ for i in labelled_num_considrd:
     np.save(root_path + 'fold_' + str(fold_num) + '_P' + str(perc) + '/train/gt/' + str(counter), tgt[i])
     counter = counter + 1
     print(i, counter)
-
-for i in np.arange(vimgs.shape[0]):
-    np.save(root_path + 'fold_' + str(fold_num) + '_P' + str(perc) + '/train/imgs/' + str(counter),
-            vimgs[i, :, :, :, :])
-    np.save(root_path + 'fold_' + str(fold_num) + '_P' + str(perc) + '/train/gt/' + str(counter), vgt[i, :, :, :, :])
-    counter = counter + 1
-    print(i)
 
 for i in np.arange(ul_imgs.shape[0]):
     np.save(root_path + 'fold_' + str(fold_num) + '_P' + str(perc) + '/train/imgs/' + str(counter),

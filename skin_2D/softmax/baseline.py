@@ -20,7 +20,7 @@ learning_rate = 5e-5
 AUGMENTATION_NO = 5
 TRAIN_NUM = 1000
 # PERC = 0.25
-FOLD_NUM = 2
+FOLD_NUM = 3
 
 NUM_CLASS = 1
 num_epoch = 1000

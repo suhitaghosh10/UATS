@@ -1,37 +1,20 @@
 import sys
 sys.path.append('../')
 
-from kits import preprocess
-
 import os
 
 import numpy as np
-import tensorflow as tf
-from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import ModelCheckpoint, TensorBoard, EarlyStopping, CSVLogger
 
 from hippocampus.data_generation import DataGenerator as train_gen
 from hippocampus.model import weighted_model
 from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
-from lib.segmentation.utils import get_complete_array
-from kits import utils
-import SimpleITK as sitk
-import getpass
 
-user = getpass.getuser()
-
-if user == 'suhita':
-
-    data_path = '/cache/suhita/hippocampus/preprocessed/labelled/train'
-    data_path_GT = '/cache/suhita/hippocampus/preprocessed/labelled-GT/train'
-    out_dir = '/data/suhita/hippocampus/output/models/'
-    fold_dir = '/cache/suhita/hippocampus/Folds'
-
-elif user == 'anneke':
-    data_path = '/home/anneke/data/hippocampus/preprocessed/labelled/train'
-    data_path_GT = '/home/anneke/data/hippocampus/preprocessed/labelled-GT/train'
-    out_dir = '/home/anneke/projects/zones_UATS/Temporal_Thesis/hippocampus/output/models/'
-    fold_dir = '/home/anneke/projects/zones_UATS/Temporal_Thesis/hippocampus/Folds'
+#
+data_path = '/cache/suhita/hippocampus/preprocessed/labelled/train'
+data_path_GT = '/cache/suhita/hippocampus/preprocessed/labelled-GT/train'
+out_dir = '/data/suhita/hippocampus/output/models/'
+#
 
 
 
@@ -40,7 +23,7 @@ learning_rate = 4e-5
 AUGMENTATION_NO = 5
 TRAIN_NUM = 150
 # PERC = 0.25
-FOLD_NUM = 4
+FOLD_NUM = 1
 
 #NUM_CLASS = 1
 num_epoch = 1000
@@ -63,7 +46,6 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation=False):
 
     if augmentation:
         augm = '_augm'
-
     else:
         augm = ''
 
@@ -104,9 +86,7 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation=False):
     es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=50)
 
     # datagen listmake_dataset
-
-    train_fold = np.load(os.path.join(fold_dir, 'train_fold' + str(FOLD_NUM) + '.npy'))
-
+    train_fold = np.load('/cache/suhita/hippocampus/Folds/train_fold' + str(FOLD_NUM) + '.npy')
     nr_samples = train_fold.shape[0]
 
     # np.random.seed(5)
@@ -143,7 +123,15 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation=False):
                                    augmentation=augmentation,
                                    **params)
 
-    val_fold = np.load(os.path.join(fold_dir, 'val_fold' + str(FOLD_NUM) + '.npy'))
+    val_fold = np.load('/cache/suhita/hippocampus/Folds/val_fold' + str(FOLD_NUM) + '.npy')
+    # val_id_list = []
+    # for i in range(val_fold.shape[0]):
+    #     val_id_list.append(os.path.join(val_fold[i], 'img_left.npy'))
+    #     val_id_list.append(os.path.join(val_fold[i], 'img_right.npy'))
+    #
+    # val_generator = train_gen(data_path,
+    #                                val_id_list,
+    #                                **params)
 
     val_img_arr = np.zeros((val_fold.shape[0], DIM[0], DIM[1], DIM[2], 1), dtype=float)
     val_GT_arr = np.zeros((val_fold.shape[0], DIM[0], DIM[1], DIM[2], 3), dtype=np.uint8)
@@ -181,7 +169,7 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation=False):
     # model_impl.save('temporal_max_ramp_final.h5')
 
 if __name__ == '__main__':
-    GPU_ID = '0'
+    GPU_ID = '2'
     # gpu = '/GPU:0'
     gpu = '/GPU:0'
     batch_size = batch_size
@@ -202,8 +190,8 @@ if __name__ == '__main__':
         'batch_size should be a multiple of the nr. of gpus. ' + \
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
-    # perc = 0.05
-    # train(None, None, perc=perc, augmentation=True)
+    perc = 0.05
+    train(None, None, perc=perc, augmentation=True)
     #
     perc = 0.1
     train(None, None, perc=perc, augmentation=True)

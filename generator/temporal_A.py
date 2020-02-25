@@ -6,14 +6,12 @@ NPY = '.npy'
 
 
 class DataGenerator(keras.utils.Sequence):
-    def __init__(self, imgs_path, gt_path, ensemble_path, supervised_flag_path, id_list, batch_size=2,
+    def __init__(self, data_path, ensemble_path, id_list, batch_size=2,
                  dim=(32, 168, 168), labelled_num=58):
         'Initialization'
         self.dim = dim
-        self.imgs_path = imgs_path
-        self.gt_path = gt_path
+        self.data_path = data_path
         self.ensemble_path = ensemble_path
-        self.supervised_flag_path = supervised_flag_path
         self.batch_size = batch_size
         self.id_list = id_list
         self.indexes = np.arange(len(self.id_list))
@@ -39,15 +37,15 @@ class DataGenerator(keras.utils.Sequence):
             aug_type = np.random.randint(0, 4)
             img[i, :, :, :, :], gt, ensemble_pred[i] = get_single_image_augmentation_with_ensemble2(
                 aug_type,
-                np.load(self.imgs_path + ID + '.npy'),
-                np.load(self.gt_path + ID + '.npy'),
-                np.load(self.ensemble_path + ID + '.npy'),
+                np.load(self.data_path + '/imgs/' + str(ID) + '.npy'),
+                np.load(self.data_path + '/GT/' + str(ID) + '.npy'),
+                np.load(self.ensemble_path + '/ens_gt/' + str(ID) + '.npy'),
                 img_no=ID, labelled_num=self.labelled_num)
 
             # img[i] = np.load(self.imgs_path + ID + NPY)
             # ensemble_pred[i] = np.load(self.ensemble_path + ID + NPY)
             # gt = np.load(self.gt_path + ID + NPY).astype('int8')
-            flag[i] = np.load(self.supervised_flag_path + ID + NPY).astype('float16')
+            flag[i] = np.load(self.ensemble_path + '/flag/' + str(ID) + NPY).astype('float16')
 
             pz_gt[i] = gt[:, :, :, 0]
             cz_gt[i] = gt[:, :, :, 1]

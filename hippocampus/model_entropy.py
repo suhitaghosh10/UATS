@@ -30,11 +30,10 @@ class weighted_model:
         return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
 
     def dice_tb(self, input, class_wt=1.):
-        def dice_loss(y_true, y_pred, smooth=1., axis=(1, 2, 3)):
-            supervised_flag = input[1, :, :, :, :]
-            unsupervised_gt = input[0, :, :, :, :]
-            alpha = 0.6
-            # unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
+        def dice_loss(y_true, y_pred, smooth=1., axis=(1, 2)):
+            supervised_flag = input[1, :, :, :]
+            unsupervised_gt = input[0, :, :, :]
+
             y_true_final = tf.where(tf.equal(supervised_flag, 2), unsupervised_gt, y_true)
             supervised_flag = tf.where(tf.equal(supervised_flag, 2), K.ones_like(supervised_flag), supervised_flag)
             y_true = y_true_final * supervised_flag
@@ -74,7 +73,7 @@ class weighted_model:
 
         return dice_loss
 
-    def c_dice_loss(self, y_true, y_pred, weight, smooth=1., axis=(1, 2, 3)):
+    def c_dice_loss(self, y_true, y_pred, weight, smooth=1., axis=(1, 2)):
 
         y_true = y_true * weight
         y_pred = y_pred * weight
@@ -92,11 +91,11 @@ class weighted_model:
         return - K.mean((2. * intersection + smooth) / ((c * y_pred_sum) + y_true_sum + smooth))
 
     def unsup_dice_tb(self, input, class_wt=1.):
-        unsupervised_gt = input[0, :, :, :, :]
+        unsupervised_gt = input[0, :, :, :]
 
-        #unsupervised_gt = unsupervised_gt / (1 -  (0.6** (self.epoch_ctr + 1)))
+        # unsupervised_gt = unsupervised_gt / (1 -  (0.6** (self.epoch_ctr + 1)))
 
-        def unsup_dice_loss(y_true, y_pred, smooth=1., axis=(1, 2, 3)):
+        def unsup_dice_loss(y_true, y_pred, smooth=1., axis=(1, 2)):
             y_true = unsupervised_gt
             y_pred = y_pred
 
@@ -113,6 +112,7 @@ class weighted_model:
             avg_dice_coef = K.mean((2. * intersection + smooth) / ((c * y_pred_sum) + y_true_sum + smooth))
 
             return 1 - avg_dice_coef
+
         return unsup_dice_loss
 
     def dice_loss(self, y_true, y_pred, weight, smooth=1., axis=(1, 2, 3)):
@@ -141,7 +141,7 @@ class weighted_model:
 
         return 1 - avg_dice_coef
 
-    def unsup_c_dice_loss(self, y_true, y_pred, smooth=1., axis=(1, 2, 3)):
+    def unsup_c_dice_loss(self, y_true, y_pred, smooth=1., axis=(1, 2)):
 
         intersection = K.sum(y_true * y_pred, axis=axis)
         y_true_sum = K.sum(y_true, axis=axis)
@@ -159,20 +159,32 @@ class weighted_model:
 
     def semi_supervised_loss(self, input, unsup_loss_class_wt=1., alpha=0.6):
 
-        def loss_func(y_true, y_pred):
-            print(K.eval(self.epoch_ctr))
+        def loss_func(y_true, y_pred, unsup_loss_class_wt=unsup_loss_class_wt):
+            # print(K.eval(self.epoch_ctr))
 
-            unsupervised_gt = input[0, :, :, :, :]
+            supervised_flag = input[1, :, :, :]
+            val_flag = False
+            if supervised_flag[0, 0, 0] == 3:
+                print('validation')
+                val_flag = True
+
+            unsupervised_gt = input[0, :, :, :]
             unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
-            # unsupervised_gt = tf.where(K.greater(unsupervised_gt, K.constant(0.9)), K.ones_like(unsupervised_gt),K.zeros_like(unsupervised_gt))
-            supervised_flag = input[1, :, :, :, :]
-            # weight = input[:, :, :, :, 2]  # last elem are weights
-
+            # for confident voxels (denoted by 2) change from 0 to 1 (unlabelled to labelled), but keep the background(0) as 0
             y_true_final = tf.where(tf.equal(supervised_flag, 2), unsupervised_gt, y_true)
+            # reset flag
             supervised_flag = tf.where(tf.equal(supervised_flag, 2), K.ones_like(supervised_flag), supervised_flag)
+            # check its validation data, then no consistency loss
+            # validation data (denoted by 3)
+            supervised_flag = tf.where(tf.equal(supervised_flag, 3), K.ones_like(supervised_flag), supervised_flag)
             supervised_loss = self.c_dice_loss(y_true_final, y_pred, supervised_flag)
-            # unsupervised_loss = self.focal_loss(unsupervised_gt, y_pred, weight)
-            unsupervised_loss = self.unsup_c_dice_loss(unsupervised_gt, y_pred)
+
+            # for validation loss, make unsup_loss_class_wt zero
+            if val_flag:
+                unsupervised_loss = 0
+            else:
+                temp = self.unsup_c_dice_loss(unsupervised_gt, y_pred)
+                unsupervised_loss = tf.where(tf.greater(K.abs(temp), K.abs(supervised_loss)), K.zeros_like(temp), temp)
 
             return supervised_loss + unsup_loss_class_wt * unsupervised_loss
 
@@ -185,7 +197,7 @@ class weighted_model:
         conv = Conv3D(filterSize * 2, (3, 3, 3), activation='relu', padding='same', name='conv' + str(i) + '_2')(conv)
         if bn:
             conv = BatchNormalization()(conv)
-        pool = MaxPooling3D(pool_size=(1, 2, 2))(conv)
+        pool = MaxPooling3D(pool_size=(2, 2, 2))(conv)
 
         return pool, conv
 
@@ -198,12 +210,12 @@ class weighted_model:
             conv)
         if bn:
             conv = BatchNormalization()(conv)
-        pool = MaxPooling3D(pool_size=(1, 2, 2))(conv)
+        pool = MaxPooling3D(pool_size=(2, 2, 2))(conv)
 
         return pool, conv
 
     def upLayer(self, inputLayer, concatLayer, filterSize, i, bn=False, do=False):
-        up = Conv3DTranspose(filterSize, (2, 2, 2), strides=(1, 2, 2), activation='relu', padding='same',
+        up = Conv3DTranspose(filterSize, (2, 2, 2), strides=(2, 2, 2), activation='relu', padding='same',
                              name='up' + str(i))(inputLayer)
         # print( concatLayer.shape)
         up = concatenate([up, concatLayer])
@@ -221,7 +233,7 @@ class weighted_model:
         return conv
 
     def upLayer_MC(self, inputLayer, concatLayer, filterSize, i, bn=False, do=False):
-        up = Conv3DTranspose(filterSize, (2, 2, 2), strides=(1, 2, 2), activation='relu', padding='same',
+        up = Conv3DTranspose(filterSize, (2, 2, 2), strides=(2, 2, 2), activation='relu', padding='same',
                              name='up_mc' + str(i))(inputLayer)
         # print( concatLayer.shape)
         up = concatenate([up, concatLayer])
@@ -244,11 +256,11 @@ class weighted_model:
                     nb_gpus=None,
                     trained_model=None):
         input_img = Input((*img_shape, 1), name='img_inp')
-        unsupervised_label = Input((*img_shape, 5), name='unsup_label_inp')
+        unsupervised_label = Input((*img_shape, 3), name='unsup_label_inp')
         supervised_flag = Input(shape=img_shape, name='flag_inp')
 
         kernel_init = 'he_normal'
-        sfs = 16  # start filter size
+        sfs = 8  # start filter size
         bn = True
         do = True
 
@@ -267,7 +279,6 @@ class weighted_model:
         if bn:
             conv3 = BatchNormalization()(conv3)
         pool3 = MaxPooling3D(pool_size=(2, 2, 2))(conv3)
-        # conv3, conv3_b_m = downLayer(conv2, sfs*4, 3, bn)
 
         conv4 = Conv3D(sfs * 16, (3, 3, 3), activation='relu', padding='same', kernel_initializer=kernel_init,
                        name='conv4_1')(pool3)
@@ -298,38 +309,64 @@ class weighted_model:
         conv6 = self.upLayer(conv5, conv2_b_m, sfs * 8, 6, bn, do)
         conv7 = self.upLayer(conv6, conv1_b_m, sfs * 4, 7, bn, do)
 
-        conv_out_sm = Conv3D(5, (1, 1, 1), activation='softmax', name='conv_final_softmax')(conv7)
+        conv_out = Conv3D(3, (1, 1, 1), name='conv_final_softmax', activation='softmax')(conv7)
 
-        pz_sm_out = Lambda(lambda x: x[:, :, :, :, 0], name='pz')(conv_out_sm)
-        cz_sm_out = Lambda(lambda x: x[:, :, :, :, 1], name='cz')(conv_out_sm)
-        us_sm_out = Lambda(lambda x: x[:, :, :, :, 2], name='us')(conv_out_sm)
-        afs_sm_out = Lambda(lambda x: x[:, :, :, :, 3], name='afs')(conv_out_sm)
-        bg_sm_out = Lambda(lambda x: x[:, :, :, :, 4], name='bg')(conv_out_sm)
+        bg_sm_out = Lambda(lambda x: x[:, :, :, :, 0], name='bg')(conv_out)
+        z1_sm_out = Lambda(lambda x: x[:, :, :, :, 1], name='z1')(conv_out)
+        z2_sm_out = Lambda(lambda x: x[:, :, :, :, 2], name='z2')(conv_out)
 
-        pz_ensemble_pred = Lambda(lambda x: x[:, :, :, :, 0], name='pzu')(
+        bg_ensemble_pred = Lambda(lambda x: x[:, :, :, :, 0], name='bgu')(
             unsupervised_label)
-        cz_ensemble_pred = Lambda(lambda x: x[:, :, :, :, 1], name='czu')(
+        z1_ensemble_pred = Lambda(lambda x: x[:, :, :, :, 1], name='z1u')(
             unsupervised_label)
-        us_ensemble_pred = Lambda(lambda x: x[:, :, :, :, 2], name='usu')(
-            unsupervised_label)
-        afs_ensemble_pred = Lambda(lambda x: x[:, :, :, :, 3], name='afsu')(
-            unsupervised_label)
-        bg_ensemble_pred = Lambda(lambda x: x[:, :, :, :, 4], name='bgu')(
+        z2_ensemble_pred = Lambda(lambda x: x[:, :, :, :, 2], name='z2u')(
             unsupervised_label)
 
-        pz = K.stack([pz_ensemble_pred, supervised_flag])
-        cz = K.stack([cz_ensemble_pred, supervised_flag])
-        us = K.stack([us_ensemble_pred, supervised_flag])
-        afs = K.stack([afs_ensemble_pred, supervised_flag])
         bg = K.stack([bg_ensemble_pred, supervised_flag])
+        z1 = K.stack([z1_ensemble_pred, supervised_flag])
+        z2 = K.stack([z2_ensemble_pred, supervised_flag])
 
-        if trained_model is not None:
-            p_model_normal = Model([input_img, unsupervised_label, supervised_flag],
-                                   [pz_sm_out, cz_sm_out, us_sm_out, afs_sm_out, bg_sm_out])
+        optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999)
 
-            p_model_normal.load_weights(trained_model, by_name=True)
-            # load weights
-            weights_list = p_model_normal.get_weights()
+        if (nb_gpus is None):
+            p_model = Model([input_img, unsupervised_label, supervised_flag],
+                            [bg_sm_out, z1_sm_out, z2_sm_out])
+            if trained_model is not None:
+                p_model.load_weights(trained_model, by_name=True)
+                weights_list = p_model.get_weights()
+            p_model.compile(optimizer=optimizer,
+                            loss={'bg': self.semi_supervised_loss(bg, unsup_loss_class_wt=1),
+                                  'z1': self.semi_supervised_loss(z1, 1),
+                                  'z2': self.semi_supervised_loss(z2, 1),
+                                  }
+                            ,
+                            metrics={'bg': [self.dice_coef, self.unsup_dice_tb(bg, 1), self.dice_tb(bg, 1)],
+                                     'z1': [self.dice_coef, self.unsup_dice_tb(z1, 1), self.dice_tb(z1, 1)],
+                                     'z2': [self.dice_coef, self.unsup_dice_tb(z2, 1), self.dice_tb(z2, 1)],
+                                     },
+                            loss_weights={'bg': 1, 'z1': 1, 'z2': 1}
+                            )
+        else:
+            with tf.device(gpu_id):
+                model = Model([input_img, unsupervised_label, supervised_flag],
+                              [conv_out])
+                if trained_model is not None:
+                    model.load_weights(trained_model, by_name=True)
+                    weights_list = model.get_weights()
+
+                p_model = multi_gpu_model(model, gpus=nb_gpus)
+                p_model.compile(optimizer=optimizer,
+                                loss={'bg': self.semi_supervised_loss(bg, unsup_loss_class_wt=1),
+                                      'z1': self.semi_supervised_loss(z1, 1),
+                                      'z2': self.semi_supervised_loss(z2, 1),
+                                      }
+                                ,
+                                metrics={'bg': [self.dice_coef, self.unsup_dice_tb(bg, 1), self.dice_tb(bg, 1)],
+                                         'z1': [self.dice_coef, self.unsup_dice_tb(z1, 1), self.dice_tb(z1, 1)],
+                                         'z2': [self.dice_coef, self.unsup_dice_tb(z2, 1), self.dice_tb(z2, 1)],
+                                         },
+                                loss_weights={'bg': 1, 'z1': 1, 'z2': 1}
+                                )
 
         #################################end###########################
 
@@ -378,68 +415,20 @@ class weighted_model:
         conv6 = self.upLayer_MC(conv5, conv2_b_m, sfs * 8, 6, bn, do)
         conv7 = self.upLayer_MC(conv6, conv1_b_m, sfs * 4, 7, bn, do)
 
-        conv_out_sm = Conv3D(5, (1, 1, 1), activation='softmax', name='conv_final_softmax_mc')(conv7)
+        conv_out_mc = Conv3D(3, (1, 1, 1), activation='softmax', name='conv_final_softmax_mc')(conv7)
+        bg_sm_mc_out = Lambda(lambda x: x[:, :, :, :, 0], name='bg')(conv_out_mc)
+        z1_sm_mc_out = Lambda(lambda x: x[:, :, :, :, 1], name='z1')(conv_out_mc)
+        z2_sm_mc_out = Lambda(lambda x: x[:, :, :, :, 2], name='z2')(conv_out_mc)
 
-        pz_sm_out_mc = Lambda(lambda x: x[:, :, :, :, 0], name='pz_mc')(conv_out_sm)
-        cz_sm_out_mc = Lambda(lambda x: x[:, :, :, :, 1], name='cz_mc')(conv_out_sm)
-        us_sm_out_mc = Lambda(lambda x: x[:, :, :, :, 2], name='us_mc')(conv_out_sm)
-        afs_sm_out_mc = Lambda(lambda x: x[:, :, :, :, 3], name='afs_mc')(conv_out_sm)
-        bg_sm_out_mc = Lambda(lambda x: x[:, :, :, :, 4], name='bg_mc')(conv_out_sm)
+        model_MC = Model([input_img, unsupervised_label, supervised_flag],
+                         [bg_sm_mc_out, z1_sm_mc_out, z2_sm_mc_out])
 
-        p_model_MC = Model([input_img, unsupervised_label, supervised_flag],
-                           [pz_sm_out_mc, cz_sm_out_mc, us_sm_out_mc, afs_sm_out_mc, bg_sm_out_mc])
-
-        p_model_MC.set_weights(weights_list)
-        for layer in p_model_MC.layers:
+        model_MC.set_weights(weights_list)
+        for layer in model_MC.layers:
             layer.trainable = False
 
         ########################################################
-        merged_model = Model([input_img, unsupervised_label, supervised_flag],
-                             [pz_sm_out, cz_sm_out, us_sm_out, afs_sm_out, bg_sm_out, pz_sm_out_mc, cz_sm_out_mc,
-                              us_sm_out_mc, afs_sm_out_mc, bg_sm_out_mc])
 
-        optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999)
-
-        if (nb_gpus is None):
-            merged_model.compile(optimizer=optimizer,
-                                 loss={'pz': self.semi_supervised_loss(pz, unsup_loss_class_wt=1),
-                                       'cz': self.semi_supervised_loss(cz, 1),
-                                       'us': self.semi_supervised_loss(us, 1),
-                                       'afs': self.semi_supervised_loss(afs, 1),
-                                       'bg': self.semi_supervised_loss(bg, 1)
-                                       }
-                                 ,
-                                 metrics={'pz': [self.dice_coef, self.unsup_dice_tb(pz, 1), self.dice_tb(pz, 1)],
-                                          'cz': [self.dice_coef, self.unsup_dice_tb(cz, 1), self.dice_tb(cz, 1)],
-                                          'us': [self.dice_coef, self.unsup_dice_tb(us, 1), self.dice_tb(us, 1)],
-                                          'afs': [self.dice_coef, self.unsup_dice_tb(afs, 1), self.dice_tb(afs, 1)],
-                                          'bg': [self.dice_coef, self.unsup_dice_tb(bg, 1), self.dice_tb(bg, 1)]
-                                          },
-                                 loss_weights={'pz': 1, 'cz': 1, 'us': 1, 'afs': 1, 'bg': 1}
-                                 )
-        else:
-            with tf.device(gpu_id):
-                merged_model = multi_gpu_model(merged_model, gpus=nb_gpus)
-
-                merged_model.compile(optimizer=optimizer,
-                                     loss={'pz': self.semi_supervised_loss(pz, unsup_loss_class_wt=1),
-                                           'cz': self.semi_supervised_loss(cz, 1),
-                                           'us': self.semi_supervised_loss(us, 1),
-                                           'afs': self.semi_supervised_loss(afs, 1),
-                                           'bg': self.semi_supervised_loss(bg, 1)
-                                           }
-                                     ,
-                                     metrics={'pz': [self.dice_coef, self.unsup_dice_tb(pz, 1), self.dice_tb(pz, 1)],
-                                              'cz': [self.dice_coef, self.unsup_dice_tb(cz, 1), self.dice_tb(cz, 1)],
-                                              'us': [self.dice_coef, self.unsup_dice_tb(us, 1),
-                                                     self.dice_tb(us, 1)],
-                                              'afs': [self.dice_coef, self.unsup_dice_tb(afs, 1),
-                                                      self.dice_tb(afs, 1)],
-                                              'bg': [self.dice_coef, self.unsup_dice_tb(bg, 1), self.dice_tb(bg, 1)]
-                                              },
-                                     loss_weights={'pz': 1, 'cz': 1, 'us': 1, 'afs': 1, 'bg': 1}
-                                     )
-
-        return merged_model, p_model_MC, p_model_normal
+        return p_model, model_MC
     # return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg])
     # return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg, input_idx])

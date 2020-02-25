@@ -1,7 +1,7 @@
 import numpy as np
 
-unlabeled_imgs = np.load('/cache/suhita/data/npy_img_unlabeled.npy')
-unlabeled_imgs_gt = np.load('/data/suhita/temporal/p/predicted_final_30.npy')
+unlabeled_imgs = np.load('/cache/suhita/data/prostate/npy_img_unlabeled.npy')
+unlabeled_imgs_gt = np.load('/data/suhita/prostate/supervised_F2_P_0.5.npy')
 
 good_count = unlabeled_imgs.shape[0] - 8
 
@@ -34,5 +34,5 @@ for i in good_imgs_list:
     counter += 1
     print(i)
 
-np.save('/cache/suhita/data/good_prediction_arr', good_prediction_arr)
-np.save('/cache/suhita/data/good_prediction_arr_gt', good_prediction_arr_gt.astype('int8'))
+np.save('/cache/suhita/data/prostate/good_prediction_arr', good_prediction_arr)
+np.save('/cache/suhita/data/prostate/good_prediction_arr_gt', good_prediction_arr_gt.astype('int8'))
