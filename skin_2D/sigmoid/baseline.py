@@ -1,5 +1,5 @@
 import sys
-sys.path.append('../')
+sys.path.append('../../')
 
 import os
 
@@ -11,16 +11,18 @@ from skin_2D.softmax.model_softmax_baseline import weighted_model
 from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
 from kits import utils
 import SimpleITK as sitk
+import tensorflow as tf
 
-data_path = '/cache/anneke/skin/preprocessed/labelled/train'
-out_dir = '/home/anneke/projects/uats/code/skin_2D/output/models/'
+data_path = '/home/anneke/data/skin/preprocessed/labelled/train/'
+out_dir = '/home/anneke/projects/zones_UATS/Temporal_Thesis/skin_2D/output/models/'
+fold_dir = '/home/anneke/projects/zones_UATS/Temporal_Thesis/skin_2D/Folds'
 
 
 learning_rate = 5e-5
 AUGMENTATION_NO = 5
 TRAIN_NUM = 1000
 #PERC = 0.25
-FOLD_NUM = 1
+
 
 
 NUM_CLASS = 1
@@ -76,10 +78,10 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
                                            mode='min')
 
     tensorboard = TensorBoard(log_dir=TB_LOG_DIR, write_graph=False, write_grads=False, histogram_freq=0, write_images=False)
-    es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=50)
+    es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=50, min_delta=0.0005)
 
     # datagen listmake_dataset
-    train_fold = np.load('Folds/train_fold'+str(FOLD_NUM)+'.npy')
+    train_fold = np.load(os.path.join(fold_dir, 'train_fold'+str(FOLD_NUM)+'.npy'))
     print(train_fold[0:10])
     nr_samples = train_fold.shape[0]
 
@@ -118,7 +120,7 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
                                    **params)
 
 
-    val_fold = np.load('Folds/val_fold'+str(FOLD_NUM)+'.npy')
+    val_fold = np.load(os.path.join(fold_dir, 'val_fold'+str(FOLD_NUM)+'.npy'))
     # val_id_list = []
     # for i in range(val_fold.shape[0]):
     #     val_id_list.append(os.path.join(val_fold[i], 'img_left.npy'))
@@ -181,7 +183,7 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
 def predict(model_name, onlyEval=False):
     pred_dir = '/data/suhita/skin/predictions/'
 
-    val_fold = np.load('/cache/suhita/skin/Folds/val_fold' + str(FOLD_NUM) + '.npy')
+    val_fold = np.load(os.path.join(fold_dir,'val_fold' + str(FOLD_NUM) + '.npy'))
 
     img_arr = np.zeros((val_fold.shape[0], DIM[0], DIM[1], N_CHANNELS), dtype=float)
     GT_arr = np.zeros((val_fold.shape[0], DIM[0], DIM[1], 1), dtype=float)
@@ -236,7 +238,7 @@ def predict(model_name, onlyEval=False):
 
 
 if __name__ == '__main__':
-    GPU_ID = '1'
+    GPU_ID = '0'
     # gpu = '/GPU:0'
     gpu = '/GPU:0'
     batch_size = batch_size
@@ -250,24 +252,61 @@ if __name__ == '__main__':
     #
     # config.gpu_options.allow_growth = True
     # config.allow_soft_placement = True
-    # set_session(tf.Session(config=config))
+    # tf.set_session(tf.Session(config=config))
 
-    nb_gpus = len(GPU_ID.split(','))
-    assert np.mod(batch_size, nb_gpus) == 0, \
-        'batch_size should be a multiple of the nr. of gpus. ' + \
-        'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
+    gpu_devices = tf.config.experimental.list_physical_devices('GPU')
+    tf.config.experimental.set_memory_growth(gpu_devices[0], True)
+    #tf.config.gpu.set_per_process_memory_growth(True)
 
+    # nb_gpus = len(GPU_ID.split(','))
+    # assert np.mod(batch_size, nb_gpus) == 0, \
+    #     'batch_size should be a multiple of the nr. of gpus. ' + \
+    #     'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
+
+    # FOLD_NUM = 2
+    # perc = 1.0
+    # train(None, None, perc=perc, augmentation=True)
+
+
+    FOLD_NUM = 3
+
+    perc = 0.05
+    train(None, None, perc=perc, augmentation=True)
+
+    perc = 0.1
+    train(None, None, perc=perc, augmentation=True)
+
+    perc = 0.25
+    train(None, None, perc=perc, augmentation=True)
+
+    perc = 0.5
+    train(None, None, perc=perc, augmentation=True)
+
+    perc = 1.0
+    train(None, None, perc=perc, augmentation=True)
+
+
+
+
+
+
+    # FOLD_NUM = 2
+    #
+    # perc = 0.05
+    # train(None, None, perc=perc, augmentation=True)
+    #
+    # perc = 0.1
+    # train(None, None, perc=perc, augmentation=True)
+    #
+    # perc = 0.5
+    # train(None, None, perc=perc, augmentation=True)
+    #
     # perc = 0.25
     # train(None, None, perc=perc, augmentation=True)
-    # perc = 0.1
-    # train(None, None, perc = perc, augmentation = True)
-    # perc = 0.05
-    # train(None, None, perc = perc, augmentation = True)
 
     # perc = 0.5
     # train(None, None, perc=perc, augmentation=True)
-    perc = 1.0
-    train(None, None, perc=perc, augmentation=True)
+
 
     # predict('/cache/suhita/skin/models/supervised_sfs32_F_1_1000_5e-05_Perc_1.0_augm.h5', onlyEval=True)
     #
