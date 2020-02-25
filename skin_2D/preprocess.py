@@ -12,7 +12,8 @@ IMG_HEIGHT = 192
 def generateFolds(directory, foldDir, nrSplits=5):
 
     from sklearn.model_selection import KFold
-
+    if not os.path.isdir(foldDir):
+        os.makedirs(foldDir)
     X = os.listdir(directory)
     kf = KFold(n_splits=nrSplits, shuffle=True, random_state=5)
     i = 1
@@ -70,6 +71,58 @@ def preprocess_dir(in_dir, out_dir, filetype ='jpg'):
             img_proc = cv2.resize(img, (IMG_WIDTH, IMG_HEIGHT), interpolation=cv2.INTER_LINEAR)
             np.save(os.path.join(out_dir, filename[:-3] + 'npy'), img_proc)
 
+def hair_removal(in_dir, out_dir):
+    import cv2
+    import scipy.misc
+    from PIL import Image
+    import numpy as np
+    from matplotlib.pyplot import imshow, show
+
+    imgs = os.listdir(in_dir)
+
+    # rgb = Image.fromarray(np.load("/cache/anneke/skin/preprocessed/labelled/train/imgs/ISIC_0010487.npy"), mode='RGB')
+
+    for img in imgs:
+
+        #src = cv2.imread(os.path.join(in_dir, img))
+        src = np.load(os.path.join(in_dir, img))
+
+        print(src.shape)
+
+        # imshow(src)
+        # show()
+        # Convert the original image to grayscale
+        grayScale = cv2.cvtColor(src, cv2.COLOR_RGB2GRAY)
+        # imshow(grayScale)
+        # show()
+        #cv2.imwrite('/data/suhita/skin/grayScale_' + name + '.jpg', grayScale, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+
+        # Kernel for the morphological filtering
+        kernel = cv2.getStructuringElement(1, (17, 17))
+
+        # Perform the blackHat filtering on the grayscale image to find the
+        # hair countours
+        blackhat = cv2.morphologyEx(grayScale, cv2.MORPH_BLACKHAT, kernel)
+        # imshow(blackhat)
+        # show()
+        # cv2.imwrite('/data/suhita/skin/blackhat_' + name + '.jpg', blackhat, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+
+        # intensify the hair countours in preparation for the inpainting
+        # algorithm
+        ret, thresh2 = cv2.threshold(blackhat, 10, 255, cv2.THRESH_BINARY)
+        print(thresh2.shape)
+        # imshow(thresh2)
+        # show()
+        #cv2.imwrite('/data/suhita/skin/thresholded' + name + '.jpg', thresh2, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+
+        # inpaint the original image depending on the mask
+        dst = cv2.inpaint(src, thresh2, 1, cv2.INPAINT_TELEA)
+        print('jj')
+        # imshow(dst)
+        # show()
+        print('jj')
+        np.save(os.path.join(out_dir, img), dst, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+
 
 if __name__ == '__main__':
 
@@ -77,12 +130,17 @@ if __name__ == '__main__':
    # create_and_move_test_images('/data/anneke/skin/labelled_GT', out_dir='/data/anneke/skin/labelled_GT/test', filetype='png')
 
    #preprocess_dir('/data/anneke/skin/unlabelled/','/data/anneke/skin/preprocessed/unlabelled', filetype = 'jpg')
-   preprocess_dir('/data/anneke/skin/labelled_GT/test', '/cache/anneke/skin/preprocessed/labelled/test/GT', filetype='png')
+   #preprocess_dir('/data/anneke/skin/labelled_GT/test', '/cache/anneke/skin/preprocessed/labelled/test/GT', filetype='png')
 
     # if not os.path.exists('Folds'):
     #     os.makedirs('Folds')
 
-    #generateFolds('/cache/anneke/skin/preprocessed/labelled/train/imgs', 'Folds', nrSplits=4)
+    #generateFolds('/home/anneke/data/skin/preprocessed/labelled/train/imgs', 'Folds_new', nrSplits=10)
+
+    hair_removal('/home/anneke/data/skin/preprocessed/labelled/test/imgs', '/home/anneke/data/skin_less_hair/preprocessed/labelled/test/imgs')
+    hair_removal('/home/anneke/data/skin/preprocessed/labelled/train/imgs', '/home/anneke/data/skin_less_hair/preprocessed/labelled/train/imgs')
+    hair_removal('/home/anneke/data/skin/preprocessed/unlabelled', '/home/anneke/data/skin_less_hair/preprocessed/unlabelled')
+
    #
     #     #
     #     # cv2.imshow('image', img)

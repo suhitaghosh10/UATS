@@ -107,14 +107,15 @@ def evaluateFiles_arr(img_path, prediction, connected_component=False, eval=True
             pred_bg_img = getConnectedComponents(pred_bg_img)
             pred_lesion_img = getConnectedComponents(pred_lesion_img)
 
-        if not os.path.exists(out_dir + '/imgs'):
-            os.makedirs(out_dir + '/imgs')
-        if not os.path.exists(out_dir + '/GT'):
-            os.makedirs(out_dir + '/GT')
+        # if not os.path.exists(out_dir + '/imgs'):
+        #     os.makedirs(out_dir + '/imgs')
+        # if not os.path.exists(out_dir + '/GT'):
+        #     os.makedirs(out_dir + '/GT')
+
         pred_img_arr = np.stack((sitk.GetArrayFromImage(pred_bg_img), sitk.GetArrayFromImage(pred_lesion_img)), -1)
-        np.save(out_dir + '/imgs/' + str(imgNumber) + '.npy',
-                np.load(os.path.join(img_path, 'imgs', test_dir[imgNumber])) / 255)
-        np.save(out_dir + '/GT/' + str(imgNumber) + '.npy', pred_img_arr)
+        # np.save(out_dir + '/imgs/' + str(imgNumber) + '.npy',
+        #         np.load(os.path.join(img_path, 'imgs', test_dir[imgNumber])) / 255)
+        # np.save(out_dir + '/GT/' + str(imgNumber) + '.npy', pred_img_arr)
         if eval:
             # lesion
             GT_label = np.load(
@@ -551,32 +552,39 @@ if __name__ == '__main__':
 
 
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
-    os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+    os.environ["CUDA_VISIBLE_DEVICES"] = '0'
     # os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
     # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 
     learning_rate = 5e-5
     AUGMENTATION_NO = 5
     TRAIN_NUM = 50
-    FOLD_NUM = 2
+    FOLD_NUM = 3
     augm = 'augm'
     batch_size = 2
 
     ### for baseline of 0.1 images,
     # NAME = 'supervised_F_centered_BB_' + str(FOLD_NUM) + '_' + str(TRAIN_NUM) + '_' + str(
     #     learning_rate) + '_Perc_' + str(PERC) + '_'+ augm
-    perc = 1.0
+    perc = 0.5
     # model_dir = '/cache/suhita/skin/models/'
-    model_dir = '/data/suhita/temporal/skin/'
-    data_path = '/cache/suhita/skin/preprocessed/labelled/test/'
-    data_path = '/cache/suhita/skin/preprocessed/unlabelled/'
-    NAME = 'supervised_sfs32_F_1_1000_5e-05_Perc_' + str(perc) + '_augm'
+    # model_dir = '/data/suhita/temporal/skin/'
+    # data_path = '/cache/suhita/skin/preprocessed/labelled/test/'
+    # data_path = '/cache/suhita/skin/preprocessed/unlabelled/'
+    # NAME = 'supervised_sfs32_F_1_1000_5e-05_Perc_' + str(perc) + '_augm'
 
     # eval_for_uats_softmax(model_dir, 'sm_skin_mc_F1_Perct_Labelled_' + str(perc), batch_size=1,
     #                    out_dir='/data/suhita/skin/ul_' + str(perc), connected_component=True)
     # eval_for_uats_mc('/data/suhita/temporal/skin/', 'sm_skin_mc_F1_Perct_Labelled_'+str(perc), batch_size=1, out_dir='/data/suhita/skin/eval')
 
-    eval_for_supervised('/data/suhita/skin/models/', data_path,
-                        'softmax_supervised_sfs32_F_2_1000_5e-05_Perc_' + str(perc) + '_augm', eval=False,
-                        out_dir='/data/suhita/skin/ul/UL_' + str(perc), connected_component=True)
+    # eval_for_supervised('/data/suhita/skin/models/', data_path,
+    #                     'softmax_supervised_sfs32_F_2_1000_5e-05_Perc_' + str(perc) + '_augm', eval=False,
+    #                     out_dir='/data/suhita/skin/ul/UL_' + str(perc), connected_component=True)
 # /data/suhita/temporal/skin/2_skin_softmax_F1_Perct_Labelled_1.0.h5
+
+    data_path = '/home/anneke/data/skin_less_hair/preprocessed/labelled/test/'
+    NAME = 'softmax_supervised_sfs32_F_'+str(FOLD_NUM)+'_1000_5e-05_Perc_' + str(perc) + '_augm'
+
+    eval_for_supervised('output/models/', data_path,
+                        NAME,  eval=True,
+                        out_dir='/data/anneke', connected_component=True)
