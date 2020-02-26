@@ -37,7 +37,7 @@ def train(gpu_id, nb_gpus, perc):
     PERCENTAGE_OF_LABELLED = perc
     DATA_PATH = '/cache/suhita/data/hippocampus/fold_' + str(FOLD_NUM) + '_P' + str(PERCENTAGE_OF_LABELLED) + '/'
     TRAIN_NUM = len(np.load('/cache/suhita/hippocampus/Folds/train_fold' + str(FOLD_NUM) + '.npy'))
-    NAME = 'hippocampus_T_20_mc_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(PERCENTAGE_OF_LABELLED)
+    NAME = '2_hippocampus_T_20_mc_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(PERCENTAGE_OF_LABELLED)
     TB_LOG_DIR = '/data/suhita/temporal/tb/hippocampus/' + NAME + '_' + str(learning_rate) + '/'
     MODEL_NAME = '/data/suhita/temporal/hippocampus/' + NAME + '.h5'
 
@@ -250,7 +250,7 @@ def train(gpu_id, nb_gpus, perc):
 
     print(train_id_list[0:10])
 
-    np.random.shuffle(train_id_list)
+    # np.random.shuffle(train_id_list)
     tcb = TemporalCallback(DATA_PATH, ENS_GT_PATH, train_id_list)
     lcb = wm.LossCallback()
     es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=50, min_delta=0.0005)
@@ -358,10 +358,10 @@ if __name__ == '__main__':
 
     # train(gpu, nb_gpus)
     try:
-        train(None, None, 0.1)
-        shutil.rmtree(ENS_GT_PATH)
-        train(None, None, 0.25)
-        shutil.rmtree(ENS_GT_PATH)
+        # train(None, None, 0.1)
+        # shutil.rmtree(ENS_GT_PATH)
+        # train(None, None, 0.25)
+        #shutil.rmtree(ENS_GT_PATH)
         train(None, None, 0.5)
         shutil.rmtree(ENS_GT_PATH)
         train(None, None, 1.0)

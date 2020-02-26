@@ -49,7 +49,7 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation=False):
     else:
         augm = ''
 
-    NAME = 'supervised_F_' + str(FOLD_NUM) + '_' + str(TRAIN_NUM) + '_' + str(
+    NAME = '2_supervised_F_' + str(FOLD_NUM) + '_' + str(TRAIN_NUM) + '_' + str(
         learning_rate) + '_Perc_' + str(perc) + augm
     CSV_NAME = out_dir + NAME + '.csv'
 
@@ -62,6 +62,7 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation=False):
     print('-' * 30)
     print('Creating and compiling model_impl...')
     print('-' * 30)
+    print(model.summary())
 
     # callbacks
     print('-' * 30)
@@ -83,14 +84,14 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation=False):
 
     tensorboard = TensorBoard(log_dir=TB_LOG_DIR, write_graph=False, write_grads=False, histogram_freq=0,
                               write_images=False)
-    es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=50)
+    es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=50, min_delta=0.0005)
 
     # datagen listmake_dataset
     train_fold = np.load('/cache/suhita/hippocampus/Folds/train_fold' + str(FOLD_NUM) + '.npy')
     nr_samples = train_fold.shape[0]
 
     # np.random.seed(5)
-    np.random.seed(5)
+    np.random.seed(1234)
     np.random.shuffle(train_fold)
     print(train_fold[0:10])
 
@@ -190,17 +191,17 @@ if __name__ == '__main__':
         'batch_size should be a multiple of the nr. of gpus. ' + \
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
-    perc = 0.05
-    train(None, None, perc=perc, augmentation=True)
+    # perc = 0.05
+    # train(None, None, perc=perc, augmentation=True)
     #
-    perc = 0.1
-    train(None, None, perc=perc, augmentation=True)
+    # perc = 0.1
+    #train(None, None, perc=perc, augmentation=True)
 
     perc = 0.25
     train(None, None, perc=perc, augmentation=True)
 
-    perc = 1.0
-    train(None, None, perc=perc, augmentation=True)
+    # perc = 1.0
+    #train(None, None, perc=perc, augmentation=True)
 
     # predict(out_dir+'/supervised_F_centered_BB_1_50_0.0005_Perc_0.5_augm.h5', onlyEval=True)
 

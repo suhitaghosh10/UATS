@@ -6,7 +6,7 @@ from keras.callbacks import Callback, ReduceLROnPlateau
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
 
 from hippocampus.data_generation_uats import DataGenerator as train_gen
-from hippocampus.model_softmax import weighted_model
+from hippocampus.model_entropy import weighted_model
 from lib.segmentation.ops import ramp_down_weight
 from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
 from lib.segmentation.utils import get_array, save_array
@@ -20,7 +20,7 @@ learning_rate = 4e-5
 AUGMENTATION_NO = 5
 augmentation = True
 PERCENTAGE_OF_PIXELS = 50
-FOLD_NUM = 3
+FOLD_NUM = 1
 
 num_epoch = 1000
 batch_size = 4
@@ -30,25 +30,26 @@ ramp_up_period = 50
 ramp_down_period = 50
 alpha = 0.6
 
-ENS_GT_PATH = '/data/suhita/temporal/hippocampus/output/sadv3hgj/'
+ENS_GT_PATH = '/data/suhita/temporal/hippocampus/output/sads66766777/'
 
 
 def train(gpu_id, nb_gpus, perc):
     PERCENTAGE_OF_LABELLED = perc
     DATA_PATH = '/cache/suhita/data/hippocampus/fold_' + str(FOLD_NUM) + '_P' + str(PERCENTAGE_OF_LABELLED) + '/'
     TRAIN_NUM = len(np.load('/cache/suhita/hippocampus/Folds/train_fold' + str(FOLD_NUM) + '.npy'))
-    NAME = 'hippocampus_softmax_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(PERCENTAGE_OF_LABELLED)
+    NAME = '2_hippocampus_T_20_mc_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(PERCENTAGE_OF_LABELLED)
     TB_LOG_DIR = '/data/suhita/temporal/tb/hippocampus/' + NAME + '_' + str(learning_rate) + '/'
     MODEL_NAME = '/data/suhita/temporal/hippocampus/' + NAME + '.h5'
 
     CSV_NAME = '/data/suhita/temporal/CSV/' + NAME + '.csv'
-    TRAINED_MODEL_PATH = '/data/suhita/hippocampus/models/supervised_F_' + str(FOLD_NUM) + '_150_4e-05_Perc_' + str(
+    TRAINED_MODEL_PATH = '/data/suhita/hippocampus/output/models/2_supervised_F_' + str(
+        FOLD_NUM) + '_150_4e-05_Perc_' + str(
         PERCENTAGE_OF_LABELLED) + '_augm.h5'
     # TRAINED_MODEL_PATH = MODEL_NAME
     num_labeled_train = int(PERCENTAGE_OF_LABELLED * TRAIN_NUM)
     num_train_data = len(os.listdir(DATA_PATH + '/imgs/'))
     num_un_labeled_train = num_train_data - num_labeled_train
-    IMGS_PER_ENS_BATCH = num_un_labeled_train // 3
+    IMGS_PER_ENS_BATCH = num_un_labeled_train // 2
 
     print('-' * 30)
     print('Loading train data...')
@@ -57,8 +58,8 @@ def train(gpu_id, nb_gpus, perc):
     # Build Model
     wm = weighted_model()
 
-    model = wm.build_model(img_shape=(DIM[0], DIM[1], DIM[2]), learning_rate=learning_rate, gpu_id=gpu_id,
-                           nb_gpus=nb_gpus, trained_model=TRAINED_MODEL_PATH)
+    model, model_MC = wm.build_model(img_shape=(DIM[0], DIM[1], DIM[2]), learning_rate=learning_rate, gpu_id=gpu_id,
+                                     nb_gpus=nb_gpus, trained_model=TRAINED_MODEL_PATH)
 
     print("Images Size:", num_train_data)
     print("Unlabeled Size:", num_un_labeled_train)
@@ -124,6 +125,7 @@ def train(gpu_id, nb_gpus, perc):
             pass
 
         def on_epoch_end(self, epoch, logs={}):
+            model_MC.set_weights(model.get_weights())
             # print(time() - self.starttime)
             # model_temp = model
 
@@ -161,8 +163,6 @@ def train(gpu_id, nb_gpus, perc):
                     cur_pred = np.zeros((actual_batch_size, DIM[0], DIM[1], DIM[2], 3))
                     model_out = model.predict(inp, batch_size=batch_size, verbose=1)  # 1
 
-                    del inp
-
                     cur_pred[:, :, :, :, 0] = model_out[0] if bg_save else ensemble_prediction[:, :, :, :, 0]
                     cur_pred[:, :, :, :, 1] = model_out[1] if z1_save else ensemble_prediction[:, :, :, :, 1]
                     cur_pred[:, :, :, :, 2] = model_out[2] if z2_save else ensemble_prediction[:, :, :, :, 2]
@@ -174,13 +174,36 @@ def train(gpu_id, nb_gpus, perc):
                     save_array(os.path.join(self.ensemble_path, 'ens_gt'), ensemble_prediction, start, end)
                     del ensemble_prediction
 
-                    argmax_pred_ravel = np.ravel(np.argmax(cur_pred, axis=-1))
+                    # mc dropout chnages
+                    mc_pred = np.zeros((actual_batch_size, DIM[0], DIM[1], DIM[2], 3))
+                    T = 20
+                    for i in np.arange(T):
+                        model_out = model_MC.predict(inp, batch_size=batch_size, verbose=1)
+
+                        mc_pred[:, :, :, :, 0] = np.add(model_out[0], mc_pred[:, :, :, :, 0])
+                        mc_pred[:, :, :, :, 1] = np.add(model_out[1], mc_pred[:, :, :, :, 1])
+                        mc_pred[:, :, :, :, 2] = np.add(model_out[2], mc_pred[:, :, :, :, 2])
+
+                    # avg_pred = mc_pred / T#
+                    entropy = None
+                    for z in np.arange(3):
+                        if z == 0:
+                            entropy = (mc_pred[:, :, :, :, z] / T) * np.log((mc_pred[:, :, :, :, z] / T) + 1e-5)
+                        else:
+                            entropy = entropy + (mc_pred[:, :, :, :, z] / T) * np.log(
+                                (mc_pred[:, :, :, :, z] / T) + 1e-5)
+                    entropy = -entropy
+                    del mc_pred, inp, model_out
+
+                    argmax_pred_ravel = np.ravel(np.argmin(cur_pred, axis=-1))
                     max_pred_ravel = np.ravel(np.max(cur_pred, axis=-1))
+
                     indices = None
                     del cur_pred
                     for zone in np.arange(3):
-                        final_max_ravel = np.where(argmax_pred_ravel == zone, np.zeros_like(max_pred_ravel),
-                                                   max_pred_ravel)
+                        entropy_zone = np.ravel(entropy[:, :, :, :])
+                        final_max_ravel = np.where(argmax_pred_ravel == zone, np.zeros_like(entropy_zone),
+                                                   entropy_zone)
                         zone_indices = np.argpartition(final_max_ravel, -confident_pixels_no)[
                                        -confident_pixels_no:]
                         if zone == 0:
@@ -188,19 +211,16 @@ def train(gpu_id, nb_gpus, perc):
                         else:
                             indices = np.unique(np.concatenate((zone_indices, indices)))
 
-                    mask = np.ones(max_pred_ravel.shape, dtype=bool)
+                    mask = np.ones(entropy_zone.shape, dtype=bool)
                     mask[indices] = False
 
-                    max_pred_ravel[mask] = 0
-                    max_pred_ravel = np.where(max_pred_ravel > 0, np.ones_like(max_pred_ravel) * 2,
-                                              np.zeros_like(max_pred_ravel))
+                    entropy_zone[mask] = 0
+                    entropy_zone = np.where(entropy_zone > 0, np.ones_like(entropy_zone) * 2,
+                                            np.zeros_like(entropy_zone))
                     flag = np.reshape(max_pred_ravel, (actual_batch_size, DIM[0], DIM[1], DIM[2]))
-                    # flag = np.reshape(max_pred_ravel, (IMGS_PER_ENS_BATCH, 32, 168, 168))
-                    del max_pred_ravel, indices
+                    del entropy_zone, indices
 
-                    save_array(os.path.join(self.ensemble_path, 'flag'), flag, start, end)
-
-                    ##sup_count = sup_count + np.count_nonzero(flag)
+                    save_array(self.ensemble_path + '/flag/', flag, start, end)
                     del flag
 
                 if 'cur_pred' in locals(): del cur_pred
@@ -320,7 +340,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = batch_size
-    gpu_id = '2'
+    gpu_id = '3'
 
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
@@ -339,11 +359,11 @@ if __name__ == '__main__':
 
     # train(gpu, nb_gpus)
     try:
-        train(None, None, 0.1)
-        shutil.rmtree(ENS_GT_PATH)
-        train(None, None, 0.25)
+        # train(None, None, 0.1)
         # shutil.rmtree(ENS_GT_PATH)
-        # train(None, None, 0.5)
+        # train(None, None, 0.25)
+        # shutil.rmtree(ENS_GT_PATH)
+        train(None, None, 0.25)
         # shutil.rmtree(ENS_GT_PATH)
         # train(None, None, 1.0)
 
