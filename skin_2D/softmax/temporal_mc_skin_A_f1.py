@@ -37,14 +37,14 @@ def train(gpu_id, nb_gpus, perc, batch_nos, learning_rate=None, wts=None):
     NAME = 'sm_skin_entropy_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(perc)
 
     TB_LOG_DIR = '/data/suhita/temporal/tb/skin/' + NAME + '_' + str(learning_rate) + '/'
-    MODEL_NAME = '/data/suhita/temporal/skin/' + NAME + '.h5' if wts is None else wts
+    MODEL_NAME = '/data/suhita/temporal/skin/' + NAME + '.h5'
     # MODEL_NAME = '/data/suhita/temporal/skin/' + NAME + '.h5'
 
     CSV_NAME = '/data/suhita/temporal/CSV/' + NAME + '.csv'
 
     TRAINED_MODEL_PATH = '/data/suhita/skin/models/softmax_supervised_sfs32_F_' + str(
         FOLD_NUM) + '_1000_5e-05_Perc_' + str(
-        perc) + '_augm.h5'
+        perc) + '_augm.h5' if wts is None else wts
 
     num_labeled_train = int(perc * TRAIN_NUM)
     num_train_data = len(os.listdir(DATA_PATH + '/imgs/'))
