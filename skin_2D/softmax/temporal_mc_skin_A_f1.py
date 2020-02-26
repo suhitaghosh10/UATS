@@ -2,6 +2,14 @@ import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import Callback
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
+import getpass
+
+
+USER_NAME = getpass.getuser()
+import sys
+if USER_NAME == 'anneke':
+    module_root = '../../'
+    sys.path.append(module_root)
 
 from skin_2D.softmax.data_generation_softmax_uats import DataGenerator as train_gen
 from skin_2D.softmax.model_softmax_entropy import weighted_model
@@ -12,13 +20,18 @@ from shutil import copyfile
 from kits.utils import makedir
 import shutil
 
+
 # learning_rate = 1e-7
 AUGMENTATION_NO = 5
 TEMP = 1
 augmentation = True
 FOLD_NUM = 1
 PERCENTAGE_OF_PIXELS = 50
-ENS_GT_PATH = '/data/suhita/temporal/skin/output/sm_mc/sadv_f1/'
+if USER_NAME == 'suhita':
+    ENS_GT_PATH = '/data/suhita/temporal/skin/output/sm_mc/sadv222/'
+elif USER_NAME == 'anneke':
+    DATA_ROOT = '/home/anneke/data/skin'
+    ENS_GT_PATH = DATA_ROOT + '/ensembleGT'
 num_epoch = 1000
 batch_size = 8
 DIM = [192, 256]
@@ -32,19 +45,38 @@ ramp_down_period = 50
 
 
 def train(gpu_id, nb_gpus, perc, batch_nos, learning_rate=None, wts=None):
-    DATA_PATH = '/cache/suhita/data/skin/softmax/fold_' + str(FOLD_NUM) + '_P' + str(perc) + '/'
-    TRAIN_NUM = len(np.load('/cache/suhita/skin/Folds/train_fold' + str(FOLD_NUM) + '.npy'))
-    NAME = 'sm_skin_entropy_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(perc)
 
-    TB_LOG_DIR = '/data/suhita/temporal/tb/skin/' + NAME + '_' + str(learning_rate) + '/'
-    MODEL_NAME = '/data/suhita/temporal/skin/' + NAME + '.h5' if wts is None else wts
-    # MODEL_NAME = '/data/suhita/temporal/skin/' + NAME + '.h5'
 
-    CSV_NAME = '/data/suhita/temporal/CSV/' + NAME + '.csv'
+    if USER_NAME == 'suhita':
+        DATA_PATH = '/cache/suhita/data/skin/softmax/fold_' + str(FOLD_NUM) + '_P' + str(perc) + '/'
+        FOLD_DIR = '/cache/suhita/skin/Folds'
+        TRAIN_NUM = len(np.load(FOLD_DIR+'/train_fold' + str(FOLD_NUM) + '.npy'))
+        NAME = 'sm_skin_entropy_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(perc)
 
-    TRAINED_MODEL_PATH = '/data/suhita/skin/models/softmax_supervised_sfs32_F_' + str(
-        FOLD_NUM) + '_1000_5e-05_Perc_' + str(
-        perc) + '_augm.h5'
+        TB_LOG_DIR = '/data/suhita/temporal/tb/skin/' + NAME + '_' + str(learning_rate) + '/'
+        MODEL_NAME = '/data/suhita/temporal/skin/' + NAME + '.h5' if wts is None else wts
+
+        CSV_NAME = '/data/suhita/temporal/CSV/' + NAME + '.csv'
+
+        TRAINED_MODEL_PATH = '/data/suhita/skin/models/softmax_supervised_sfs32_F_' + str(FOLD_NUM) + \
+                             '_1000_5e-05_Perc_' + str(perc) + '_augm.h5' if wts is None else wts
+
+
+
+    elif USER_NAME == 'anneke':
+        DATA_PATH = DATA_ROOT + '/arrays/fold_' + str(FOLD_NUM) + '_P' + str(perc) + '/'
+        FOLD_DIR = '/home/anneke/projects/zones_UATS/Temporal_Thesis/skin_2D/Folds'
+        TRAIN_NUM = len(np.load(FOLD_DIR+'/train_fold' + str(FOLD_NUM) + '.npy'))
+        NAME = 'sm_skin_entropy_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(perc)
+
+        TB_LOG_DIR = DATA_ROOT + '/temporal_models/tb/' + NAME + '_' + str(learning_rate) + '/'
+        MODEL_NAME = DATA_ROOT + '/temporal_models/' + NAME + '.h5' if wts is None else wts
+
+        CSV_NAME = DATA_ROOT + '/temporal_models/' + NAME + '.csv'
+
+        TRAINED_MODEL_PATH = DATA_ROOT + '/supervised_models/softmax_supervised_sfs32_F_' + str(
+            FOLD_NUM) + '_1000_5e-05_Perc_' + str(perc) + '_augm.h5' if wts is None else wts
+
 
     num_labeled_train = int(perc * TRAIN_NUM)
     num_train_data = len(os.listdir(DATA_PATH + '/imgs/'))
@@ -282,12 +314,15 @@ def train(gpu_id, nb_gpus, perc, batch_nos, learning_rate=None, wts=None):
     steps = (num_train_data * augm_no) / batch_size
     # steps = 2
 
-    val_fold = np.load('/cache/suhita/skin/Folds/val_fold' + str(FOLD_NUM) + '.npy')
+    val_fold = np.load(FOLD_DIR+'/val_fold' + str(FOLD_NUM) + '.npy')
     num_val_data = len(val_fold)
     val_supervised_flag = np.ones((num_val_data, DIM[0], DIM[1], 1), dtype='int8')
     val_img_arr = np.zeros((num_val_data, DIM[0], DIM[1], 3), dtype=float)
     val_GT_arr = np.zeros((num_val_data, DIM[0], DIM[1], 2), dtype=float)
-    VAL_DATA = '/cache/suhita/skin/preprocessed/labelled/train'
+    if USER_NAME=='suhita':
+        VAL_DATA = '/cache/suhita/skin/preprocessed/labelled/train'
+    elif USER_NAME == 'anneke':
+        VAL_DATA = '/home/anneke/data/skin/preprocessed/labelled/train'
     for i in np.arange(num_val_data):
         val_img_arr[i] = np.load(os.path.join(VAL_DATA, 'imgs', val_fold[i]))
         val_GT_arr[i, :, :, 1] = np.load(
@@ -330,7 +365,7 @@ if __name__ == '__main__':
 
     try:
         train(None, None, perc=0.05, batch_nos=5, learning_rate=1e-6,
-              wts='/data/suhita/temporal/skin/sm_skin_entropy_F' + str(FOLD_NUM) + '_Perct_Labelled_0.05.h5')
+              wts=DATA_ROOT+'/temporal_models/sm_skin_entropy_F' + str(FOLD_NUM) + '_Perct_Labelled_0.05.h5')
         shutil.rmtree(ENS_GT_PATH)
         train(None, None, perc=0.1, batch_nos=5, learning_rate=1e-6)
         shutil.rmtree(ENS_GT_PATH)
