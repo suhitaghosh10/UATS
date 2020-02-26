@@ -18,7 +18,7 @@ TEMP = 1
 augmentation = True
 FOLD_NUM = 1
 PERCENTAGE_OF_PIXELS = 50
-ENS_GT_PATH = '/data/suhita/temporal/skin/output/sm_mc/sadv222/'
+ENS_GT_PATH = '/data/suhita/temporal/skin/output/sm_mc/sadv_f1/'
 num_epoch = 1000
 batch_size = 8
 DIM = [192, 256]
@@ -31,13 +31,14 @@ ramp_up_period = 50
 ramp_down_period = 50
 
 
-def train(gpu_id, nb_gpus, perc, batch_nos, learning_rate=None):
+def train(gpu_id, nb_gpus, perc, batch_nos, learning_rate=None, wts=None):
     DATA_PATH = '/cache/suhita/data/skin/softmax/fold_' + str(FOLD_NUM) + '_P' + str(perc) + '/'
     TRAIN_NUM = len(np.load('/cache/suhita/skin/Folds/train_fold' + str(FOLD_NUM) + '.npy'))
     NAME = 'sm_skin_entropy_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(perc)
 
     TB_LOG_DIR = '/data/suhita/temporal/tb/skin/' + NAME + '_' + str(learning_rate) + '/'
-    MODEL_NAME = '/data/suhita/temporal/skin/' + NAME + '.h5'
+    MODEL_NAME = '/data/suhita/temporal/skin/' + NAME + '.h5' if wts is None else wts
+    # MODEL_NAME = '/data/suhita/temporal/skin/' + NAME + '.h5'
 
     CSV_NAME = '/data/suhita/temporal/CSV/' + NAME + '.csv'
 
@@ -310,7 +311,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = batch_size
-    gpu_id = '3'
+    gpu_id = '0'
 
     # gpu_id = '0'
     gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
@@ -328,7 +329,8 @@ if __name__ == '__main__':
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
     try:
-        train(None, None, perc=0.05, batch_nos=5, learning_rate=1e-6)
+        train(None, None, perc=0.05, batch_nos=5, learning_rate=1e-6,
+              wts='/data/suhita/temporal/skin/sm_skin_entropy_F' + str(FOLD_NUM) + '_Perct_Labelled_0.05.h5')
         shutil.rmtree(ENS_GT_PATH)
         train(None, None, perc=0.1, batch_nos=5, learning_rate=1e-6)
         shutil.rmtree(ENS_GT_PATH)
