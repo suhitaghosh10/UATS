@@ -68,6 +68,7 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=None):
 
     # datagen listmake_dataset
     train_id_list = [str(i) for i in np.arange(num_labeled_train)]
+    np.random.seed(1234)
     np.random.shuffle(train_id_list)
     # del unsupervised_target, unsupervised_weight, supervised_flag, imgs
     # del supervised_flag
