@@ -562,8 +562,8 @@ def predict_for_supervised(val_x_arr, model):
 if __name__ == '__main__':
     model_dir = '/data/suhita/temporal/prostate/'
     # model_name = 'supervised_F2_P_0.5'
-    model_name = 'prostate_mc_F2_Perct_Labelled_0.1'
-    # model_name = 'prostate_softmax_F1_Perct_Labelled_0.1'
+    # model_name = 'prostate_mc_F2_Perct_Labelled_0.5'
+    model_name = 'prostate_softmax_F2_Perct_Labelled_0.5'
     os.environ["CUDA_VISIBLE_DEVICES"] = '0'
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     csvName = model_dir + model_name + '.csv'
@@ -572,16 +572,17 @@ if __name__ == '__main__':
     val_y = np.load('/cache/suhita/data/prostate/final_test_array_GT.npy').astype('int8')
 
     # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
-    #from lib.segmentation.model.temporal_scaled_orig import weighted_model
-    from lib.segmentation.model.temporalEns_MC_2model import weighted_model
+    from lib.segmentation.model.temporal_scaled_orig import weighted_model
+
+    #from lib.segmentation.model.temporalEns_MC_2model import weighted_model
 
     #from lib.segmentation.model.model_baseline import weighted_model
     wm = weighted_model()
 
-    #model = wm.build_model(trained_model=model_dir+model_name+'.h5', temp=1.0)
-    model = wm.build_model(trained_model=model_dir + model_name + '.h5')[0]
+    model = wm.build_model(trained_model=model_dir + model_name + '.h5', temp=1.0)
+    #model = wm.build_model(trained_model=model_dir + model_name + '.h5')[0]
     model.load_weights(model_dir + model_name + '.h5')
-    prediction_arr = predict_for_uats_mc(val_x, val_y, model, mc=True)
+    prediction_arr = predict_for_uats_mc(val_x, val_y, model, mc=False)
     #prediction_arr = predict_for_supervised(val_x, model)
     postprocesAndEvaluateFiles(model_dir, prediction_arr, val_y, eval=True, csvName=csvName, prediction_arr_exists=False)
     #postprocesAndEvaluateFiles(model_dir, prediction_arr, None, eval=False, csvName=csvName, prediction_arr_exists=False)

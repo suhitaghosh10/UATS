@@ -318,7 +318,7 @@ class weighted_model:
             p_model_normal = Model([input_img, unsupervised_label, supervised_flag],
                                    [conv_out_sm])
 
-            p_model_normal.load_weights(trained_model, by_name=True)
+            p_model_normal.load_weights(trained_model)
             # load weights
             weights_list = p_model_normal.get_weights()
 

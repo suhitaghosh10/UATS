@@ -30,7 +30,7 @@ ramp_up_period = 50
 ramp_down_period = 50
 alpha = 0.6
 
-ENS_GT_PATH = '/data/suhita/temporal/hippocampus/output/sads66766777/'
+ENS_GT_PATH = '/data/suhita/temporal/hippocampus/output/sad00000/'
 
 
 def train(gpu_id, nb_gpus, perc):
@@ -340,7 +340,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = batch_size
-    gpu_id = '3'
+    gpu_id = '2'
 
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
@@ -363,9 +363,9 @@ if __name__ == '__main__':
         # shutil.rmtree(ENS_GT_PATH)
         # train(None, None, 0.25)
         # shutil.rmtree(ENS_GT_PATH)
-        train(None, None, 0.25)
+        # train(None, None, 0.25)
         # shutil.rmtree(ENS_GT_PATH)
-        # train(None, None, 1.0)
+        train(None, None, 1.0)
 
     finally:
 

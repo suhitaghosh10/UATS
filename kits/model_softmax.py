@@ -300,7 +300,7 @@ class weighted_model:
             p_model = Model([input_img, unsupervised_label, supervised_flag],
                             [conv_out_sm])
             if trained_model is not None:
-                p_model.load_weights(trained_model, by_name=True)
+                p_model.load_weights(trained_model)
 
             # model_copy = Model([input_img, unsupervised_label, supervised_flag, unsupervised_weight],[pz_out, cz_out, us_out, afs_out, bg_out])
 
@@ -317,7 +317,7 @@ class weighted_model:
                 model = Model([input_img, unsupervised_label, supervised_flag],
                               [conv_out_sm])
                 if trained_model is not None:
-                    model.load_weights(trained_model, by_name=True)
+                    model.load_weights(trained_model)
 
                 p_model = multi_gpu_model(model, gpus=nb_gpus)
 

@@ -362,8 +362,8 @@ if __name__ == '__main__':
         # shutil.rmtree(ENS_GT_PATH)
         # train(None, None, 0.25)
         #shutil.rmtree(ENS_GT_PATH)
-        train(None, None, 0.5)
-        shutil.rmtree(ENS_GT_PATH)
+        # train(None, None, 0.5)
+        # shutil.rmtree(ENS_GT_PATH)
         train(None, None, 1.0)
 
     finally:

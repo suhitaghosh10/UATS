@@ -197,11 +197,11 @@ if __name__ == '__main__':
     # perc = 0.1
     #train(None, None, perc=perc, augmentation=True)
 
-    perc = 0.25
-    train(None, None, perc=perc, augmentation=True)
-
-    # perc = 1.0
+    # perc = 0.25
     #train(None, None, perc=perc, augmentation=True)
+
+    perc = 1.0
+    train(None, None, perc=perc, augmentation=True)
 
     # predict(out_dir+'/supervised_F_centered_BB_1_50_0.0005_Perc_0.5_augm.h5', onlyEval=True)
 

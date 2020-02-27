@@ -286,7 +286,7 @@ class weighted_model:
             p_model = Model([input_img, unsupervised_label, supervised_flag],
                             [bg_out, skin_out])
             if trained_model is not None:
-                p_model.load_weights(trained_model, by_name=True)
+                p_model.load_weights(trained_model)
             p_model.compile(optimizer=optimizer,
                             loss={'bg': self.semi_supervised_loss(bg, unsup_loss_class_wt=1),
                                   'skin': self.semi_supervised_loss(skin, 1)},
@@ -301,7 +301,7 @@ class weighted_model:
                 model = Model([input_img, unsupervised_label, supervised_flag],
                               [conv_out])
                 if trained_model is not None:
-                    model.load_weights(trained_model, by_name=True)
+                    model.load_weights(trained_model)
 
                 p_model = multi_gpu_model(model, gpus=nb_gpus)
                 p_model.compile(optimizer=optimizer,

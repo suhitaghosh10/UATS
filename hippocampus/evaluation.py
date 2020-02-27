@@ -339,7 +339,7 @@ def eval_for_uats_entropy(imgs_path, gt_path, model_dir, model_name, batch_size=
 if __name__ == '__main__':
     from hippocampus.model import weighted_model
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+    os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
     learning_rate = 4e-5
     AUGMENTATION_NO = 5
@@ -354,23 +354,26 @@ if __name__ == '__main__':
     GT_dir_labels = '/cache/suhita/hippocampus/preprocessed/labelled-GT/test'
     unlabelled_dir = '/cache/suhita/hippocampus/preprocessed/unlabelled/imgs/'
 
-    perc = 0.25
+    perc = 1.0
     FOLD_NUM = 1
-    eval_for_uats_softmax(GT_dir_imgs, GT_dir_labels, '/data/suhita/temporal/hippocampus/',
-                          '2_hippocampus_softmax_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(perc), batch_size=1,
-                          out_dir='/data/suhita/hippocampus/UL_' + str(perc), connected_component=True)
+    # eval_for_uats_softmax(GT_dir_imgs, GT_dir_labels, '/data/suhita/temporal/hippocampus/',
+    #                       '2_hippocampus_softmax_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(perc), batch_size=1,
+    #                       out_dir='/data/suhita/hippocampus/UL_' + str(perc), connected_component=True)
 
-    # eval_for_uats_entropy(GT_dir_imgs, GT_dir_labels, '/data/suhita/temporal/hippocampus/',
-    #                      '2_hippocampus_T_20_mc_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(perc), batch_size=1,
-    #                       out_dir='/data/suhita/hippocampus/UL_mc_' + str(perc), connected_component=True)
+    eval_for_uats_entropy(GT_dir_imgs, GT_dir_labels, '/data/suhita/temporal/hippocampus/',
+                          '2_hippocampus_T_20_mc_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(perc), batch_size=1,
+                          out_dir='/data/suhita/hippocampus/UL_mc_' + str(perc), connected_component=True)
 
     # evaluate_for_supervised(unlabelled_dir, None,
-    #                        model_name='/data/suhita/hippocampus/models/supervised_F_'+str(FOLD_NUM)+'_150_4e-05_Perc_'+str(perc)+'_augm.h5',
-    #                       eval=False,
-    #                      connected_component=True,
-    #                  save_dir='/data/suhita/hippocampus/Fold_' + str(FOLD_NUM) + '/UL_' + str(perc))
+    #                           model_name='/data/suhita/hippocampus/models/supervised_F_'+str(FOLD_NUM)+'_150_4e-05_Perc_'+str(perc)+'_augm.h5',
+    #                          eval=False,
+    #                         connected_component=True,
+    #                     save_dir='/data/suhita/hippocampus/Fold_' + str(FOLD_NUM) + '/UL_' + str(perc))
 
     # for p in PERCENTAGE:
-    #   NAME = 'supervised_F_' + str(FOLD_NUM) + '_150_4e-05_Perc_'+str(p)+'_augm.h5'
-    #  evaluate_for_supervised(unlabelled_dir, None, model_name=model_dir+NAME, eval=False, connected_component=True,
-    #                 save_dir='/data/suhita/hippocampus/Fold_'+str(FOLD_NUM)+'/UL_' + str(p))
+    #     NAME = 'supervised_F_' + str(FOLD_NUM) + '_150_4e-05_Perc_'+str(p)+'_augm.h5'
+    #     evaluate_for_supervised(GT_dir_imgs, GT_dir_labels, model_name=model_dir+NAME, eval=True, connected_component=True,
+    #                  save_dir='/data/suhita/hippocampus/Fold_'+str(FOLD_NUM)+'/ULs_' + str(p))
+    #     evaluate_for_supervised(unlabelled_dir, None, model_name=model_dir + NAME, eval=False,
+    #                             connected_component=True,
+    #                             save_dir='/data/suhita/hippocampus/Fold_' + str(FOLD_NUM) + '/UL_' + str(p))

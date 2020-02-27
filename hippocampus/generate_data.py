@@ -6,14 +6,14 @@ from kits import utils
 from hippocampus.utils import get_multi_class_arr
 
 root_path = '/cache/suhita/hippocampus/'
-fold_num = 1
+fold_num = 2
 labelled_imgs_path = '/cache/suhita/hippocampus/preprocessed/labelled/train/'
 labelled_gt_path = '/cache/suhita/hippocampus/preprocessed/labelled-GT/train/'
 labelled_files_lst = np.load(root_path + 'Folds/train_fold' + str(fold_num) + '.npy')
 labelled_train_num = len(labelled_files_lst)
 
-# perc = [0.1, 0.25, 0.5, 1.0]
-perc = [1.0]
+perc = [0.1, 0.25, 0.5, 1.0]
+# perc = [1.0]
 
 for p in perc:
     un_labelled_path = '/data/suhita/hippocampus/Fold_' + str(fold_num) + '/UL_' + str(p) + '/'

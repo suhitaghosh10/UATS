@@ -22,14 +22,13 @@ PERCENTAGE_OF_PIXELS = 25
 FOLD_NUM = 2
 NR_CLASS = 5
 num_epoch = 1000
-batch_size = 2
 DIM = [32, 168, 168]
 
 ramp_up_period = 50
 ramp_down_period = 50
 alpha = 0.6
 
-ENS_GT_PATH = '/data/suhita/temporal/prostate/output/sadv1323/'
+ENS_GT_PATH = '/data/suhita/temporal/prostate/output/sadknnnklml0.5/'
 
 
 def train(gpu_id, nb_gpus, perc, trained_model=None):
@@ -283,7 +282,7 @@ def train(gpu_id, nb_gpus, perc, trained_model=None):
 
     # steps = num_train_data / batch_size
     steps = (num_train_data * AUGMENTATION_NO) / batch_size
-    # steps = 2
+    steps = 2
 
     val_fold = os.listdir(DATA_PATH[:-7] + '/val/imgs/')
     num_val_data = len(val_fold)
@@ -342,29 +341,14 @@ def predict(model_name):
 if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
-    batch_size = batch_size
-    gpu_id = '3'
-
-    # gpu_id = '0'
-    # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)d
-    # os.environ["CUDA_VISIBLE_DEVICES"] = '2'
-    os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
-    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-    config = tf.compat.v1.ConfigProto()
-    config.gpu_options.allow_growth = True
-    config.allow_soft_placement = True
-    set_session(tf.compat.v1.Session(config=config))
-
-    nb_gpus = len(gpu_id.split(','))
-    assert np.mod(batch_size, nb_gpus) == 0, \
-        'batch_size should be a multiple of the nr. of gpus. ' + \
-        'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
+    batch_size = 2
+    os.environ["CUDA_VISIBLE_DEVICES"] = '2'
 
     # train(gpu, nb_gpus)
     try:
         # train(None, None, 0.1)
         # shutil.rmtree(ENS_GT_PATH)
-        train(None, None, 0.25)
+        train(None, None, 0.5)
 
     finally:
 
