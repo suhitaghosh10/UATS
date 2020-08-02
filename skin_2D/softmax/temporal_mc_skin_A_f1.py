@@ -50,16 +50,16 @@ def train(gpu_id, nb_gpus, perc, batch_nos, learning_rate=None, wts=None):
     if USER_NAME == 'suhita':
         DATA_PATH = '/cache/suhita/data/skin/softmax/fold_' + str(FOLD_NUM) + '_P' + str(perc) + '/'
         FOLD_DIR = '/cache/suhita/skin/Folds'
-        TRAIN_NUM = len(np.load(FOLD_DIR+'/train_fold' + str(FOLD_NUM) + '.npy'))
+        TRAIN_NUM = len(np.load(FOLD_DIR + '/train_fold' + str(FOLD_NUM) + '.npy'))
         NAME = 'sm_skin_entropy_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(perc)
 
-        TB_LOG_DIR = '/data/suhita/temporal/tb/skin/' + NAME + '_' + str(learning_rate) + '/'
-        MODEL_NAME = '/data/suhita/temporal/skin/' + NAME + '.h5' if wts is None else wts
+        TB_LOG_DIR = '/data/suhita/temporal/tb/' + NAME + '_' + str(learning_rate) + '/'
+        MODEL_NAME = '/data/suhita/skin/models/' + NAME + '.h5'
 
         CSV_NAME = '/data/suhita/temporal/CSV/' + NAME + '.csv'
 
         TRAINED_MODEL_PATH = '/data/suhita/skin/models/softmax_supervised_sfs32_F_' + str(FOLD_NUM) + \
-                             '_1000_5e-05_Perc_' + str(perc) + '_augm.h5' if wts is None else wts
+                             '_1000_5e-05_Perc_' + str(perc) + '_augm.h5'
 
 
 
@@ -267,15 +267,15 @@ def train(gpu_id, nb_gpus, perc, batch_nos, learning_rate=None, wts=None):
     # model_checkpoint = ModelCheckpoint(MODEL_NAME, monitor='val_loss', save_best_only=True,verbose=1, mode='min')
     if nb_gpus is not None and nb_gpus > 1:
         model_checkpoint = ModelCheckpointParallel(MODEL_NAME,
-                                                   monitor='val_skin_dice_coef',
+                                                   monitor='val_loss',
                                                    save_best_only=True,
                                                    verbose=1,
-                                                   mode='max')
+                                                   mode='min')
     else:
-        model_checkpoint = ModelCheckpoint(MODEL_NAME, monitor='val_skin_dice_coef',
+        model_checkpoint = ModelCheckpoint(MODEL_NAME, monitor='val_loss',
                                            save_best_only=True,
                                            verbose=1,
-                                           mode='max')
+                                           mode='min')
 
     tensorboard = TensorBoard(log_dir=TB_LOG_DIR, write_graph=False, write_grads=True, histogram_freq=0,
                               batch_size=1, write_images=False)
@@ -287,7 +287,7 @@ def train(gpu_id, nb_gpus, perc, batch_nos, learning_rate=None, wts=None):
     np.random.shuffle(train_id_list)
     tcb = TemporalCallback(DATA_PATH, ENS_GT_PATH, train_id_list)
     lcb = wm.LossCallback()
-    es = EarlyStopping(monitor='val_skin_dice_coef', mode='max', verbose=1, patience=50, min_delta=0.0005)
+    es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=50, min_delta=0.0005)
     # del unsupervised_target, unsupervised_weight, supervised_flag, imgs
     # del supervised_flag
     cb = [model_checkpoint, tcb, tensorboard, lcb, csv_logger, es]
@@ -340,6 +340,8 @@ def train(gpu_id, nb_gpus, perc, batch_nos, learning_rate=None, wts=None):
                                   epochs=num_epoch,
                                   callbacks=cb
                                   )
+    if 'model' in locals(): del model
+    if 'model_MC' in locals(): del model_MC
 
 
 if __name__ == '__main__':
@@ -364,15 +366,15 @@ if __name__ == '__main__':
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
     try:
-        train(None, None, perc=0.05, batch_nos=5, learning_rate=1e-6,
-              wts=DATA_ROOT+'/temporal_models/sm_skin_entropy_F' + str(FOLD_NUM) + '_Perct_Labelled_0.05.h5')
-        shutil.rmtree(ENS_GT_PATH)
-        train(None, None, perc=0.1, batch_nos=5, learning_rate=1e-6)
-        shutil.rmtree(ENS_GT_PATH)
-        train(None, None, perc=0.25, batch_nos=5, learning_rate=1e-6)
-        shutil.rmtree(ENS_GT_PATH)
-        train(None, None, perc=0.5, batch_nos=4, learning_rate=1e-7)
-        shutil.rmtree(ENS_GT_PATH)
+        # train(None, None, perc=0.05, batch_nos=5, learning_rate=1e-6,
+        #      wts=DATA_ROOT+'/temporal_models/sm_skin_entropy_F' + str(FOLD_NUM) + '_Perct_Labelled_0.05.h5')
+        # shutil.rmtree(ENS_GT_PATH)
+        # train(None, None, perc=0.1, batch_nos=5, learning_rate=1e-6)
+        # shutil.rmtree(ENS_GT_PATH)
+        # train(None, None, perc=0.25, batch_nos=5, learning_rate=1e-6)
+        # shutil.rmtree(ENS_GT_PATH)
+        # train(None, None, perc=0.5, batch_nos=4, learning_rate=1e-7)
+        # shutil.rmtree(ENS_GT_PATH)
         train(None, None, perc=1.0, batch_nos=3, learning_rate=1e-7)
 
     finally:

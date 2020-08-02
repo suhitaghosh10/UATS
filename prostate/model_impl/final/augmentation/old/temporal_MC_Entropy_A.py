@@ -72,7 +72,7 @@ def train(gpu_id, nb_gpus):
     # Build Model
 
     wm = weighted_model()
-    model = wm.build_model(num_class=NUM_CLASS, learning_rate=learning_rate, gpu_id=gpu_id,
+    model = wm.build_model(learning_rate=learning_rate, gpu_id=gpu_id,
                            nb_gpus=nb_gpus, trained_model=TRAINED_MODEL_PATH)
 
     print("Images Size:", num_train_data)
@@ -331,7 +331,7 @@ def predict(val_x_arr, val_y_arr):
     y_val = [pz, cz, us, afs, bg]
     x_val = [val_x_arr, val_y_arr, val_supervised_flag]
     wm = weighted_model()
-    model = wm.build_model(num_class=NUM_CLASS, use_dice_cl=True, learning_rate=learning_rate, gpu_id=None,
+    model = wm.build_model(learning_rate=learning_rate, gpu_id=None,
                            nb_gpus=None, trained_model=MODEL_NAME)
     print('load_weights')
     # model_impl.load_weights()

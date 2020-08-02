@@ -1,7 +1,5 @@
 import csv
 
-import matplotlib.pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap
 from hippocampus.baseline import get_multi_class_arr
 from eval.preprocess import *
 from kits.utils import makedir
@@ -96,7 +94,9 @@ def evaluateFiles_arr(prediction, img_arr, GT_arr, csvName, connected_component=
             print(dices.shape)
             mad = np.zeros((nrImgs, 3), dtype=np.float32)
             hdf = np.zeros((nrImgs, 3), dtype=np.float32)
-
+        else:
+            makedir(save_dir + '/imgs')
+            makedir(save_dir + '/GT')
         for imgNumber in range(0, nrImgs):
 
             if connected_component:
@@ -104,6 +104,7 @@ def evaluateFiles_arr(prediction, img_arr, GT_arr, csvName, connected_component=
             else:
                 prediction_temp = np.asarray(prediction)[:, imgNumber, :, :, :]
             if not eval:
+
                 np.save(save_dir + '/imgs/' + str(imgNumber) + '.npy', img_arr[imgNumber])
                 np.save(save_dir + '/GT/' + str(imgNumber) + '.npy', prediction_temp)
 
@@ -155,7 +156,7 @@ def evaluateFiles_arr(prediction, img_arr, GT_arr, csvName, connected_component=
                 csvwriter.writerow(median)
                 csvwriter.writerow(std)
 
-        if eval:
+    if eval:
             print('Dices')
             print(np.average(dices, axis=0))
 
@@ -349,26 +350,24 @@ if __name__ == '__main__':
 
     # for PERC in PERCENTAGE:
 
-    model_dir = '/data/suhita/hippocampus/models/'
+    model_dir = '/data/suhita/hippocampus/output/models/'
     GT_dir_imgs = '/cache/suhita/hippocampus/preprocessed/labelled/test'
     GT_dir_labels = '/cache/suhita/hippocampus/preprocessed/labelled-GT/test'
     unlabelled_dir = '/cache/suhita/hippocampus/preprocessed/unlabelled/imgs/'
 
-    perc = 1.0
-    FOLD_NUM = 1
-    # eval_for_uats_softmax(GT_dir_imgs, GT_dir_labels, '/data/suhita/temporal/hippocampus/',
-    #                       '2_hippocampus_softmax_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(perc), batch_size=1,
-    #                       out_dir='/data/suhita/hippocampus/UL_' + str(perc), connected_component=True)
+    eval_for_uats_softmax(GT_dir_imgs, GT_dir_labels, '/data/suhita/temporal/hippocampus/',
+                          'hippocampus_softmax_F1_Perct_Labelled_1.0', batch_size=1,
+                          out_dir='/data/suhita/hippocampus/models/uats', connected_component=True)
 
-    eval_for_uats_entropy(GT_dir_imgs, GT_dir_labels, '/data/suhita/temporal/hippocampus/',
-                          '2_hippocampus_T_20_mc_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(perc), batch_size=1,
-                          out_dir='/data/suhita/hippocampus/UL_mc_' + str(perc), connected_component=True)
+    # eval_for_uats_entropy(GT_dir_imgs, GT_dir_labels, '/data/suhita/temporal/hippocampus/',
+    #                       'hippocampus_T_20_mc_F1_Perct_Labelled_0.1', batch_size=1,
+    #                       out_dir='/data/suhita/hippocampus/eval/uats/', connected_component=True)
 
     # evaluate_for_supervised(unlabelled_dir, None,
-    #                           model_name='/data/suhita/hippocampus/models/supervised_F_'+str(FOLD_NUM)+'_150_4e-05_Perc_'+str(perc)+'_augm.h5',
-    #                          eval=False,
-    #                         connected_component=True,
-    #                     save_dir='/data/suhita/hippocampus/Fold_' + str(FOLD_NUM) + '/UL_' + str(perc))
+    #                            model_name='/data/suhita/hippocampus/supervised_F_1_150_4e-05_Perc_0.1_augm.h5',
+    #                           eval=False,
+    #                          connected_component=True,
+    #                      save_dir='/cache/suhita/data/hippocampus/fold_1_P0.1')
 
     # for p in PERCENTAGE:
     #     NAME = 'supervised_F_' + str(FOLD_NUM) + '_150_4e-05_Perc_'+str(p)+'_augm.h5'

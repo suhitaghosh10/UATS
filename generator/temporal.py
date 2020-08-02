@@ -1,23 +1,19 @@
 import keras
-
 from generator.AugmentationGenerator import *
-
 NPY = '.npy'
 
 
 class DataGenerator(keras.utils.Sequence):
-    def __init__(self, imgs_path, gt_path, ensemble_path, supervised_flag_path, id_list, batch_size=2,
-                 dim=(32, 168, 168)):
+    def __init__(self, data_path, ensemble_path, id_list, batch_size=2,
+                 dim=(32, 168, 168), labelled_num=58):
         'Initialization'
         self.dim = dim
-        self.imgs_path = imgs_path
-        self.gt_path = gt_path
+        self.data_path = data_path
         self.ensemble_path = ensemble_path
-        self.supervised_flag_path = supervised_flag_path
         self.batch_size = batch_size
         self.id_list = id_list
-        self.id_list = id_list
         self.indexes = np.arange(len(self.id_list))
+        self.labelled_num = labelled_num
 
     def on_epoch_end(self):
         np.random.shuffle(self.indexes)
@@ -26,20 +22,20 @@ class DataGenerator(keras.utils.Sequence):
         'Generates data containing batch_size samples'
         img = np.empty((self.batch_size, *self.dim, 1))
         ensemble_pred = np.zeros((self.batch_size, *self.dim, 5))
-        flag = np.zeros((self.batch_size, *self.dim), dtype='float16')
+        flag = np.zeros((self.batch_size, *self.dim))
 
-        pz_gt = np.zeros((self.batch_size, *self.dim), dtype='float32')
-        cz_gt = np.zeros((self.batch_size, *self.dim), dtype='float32')
-        us_gt = np.zeros((self.batch_size, *self.dim), dtype='float32')
-        afs_gt = np.zeros((self.batch_size, *self.dim), dtype='float32')
-        bg_gt = np.zeros((self.batch_size, *self.dim), dtype='float32')
+        pz_gt = np.zeros((self.batch_size, *self.dim))
+        cz_gt = np.zeros((self.batch_size, *self.dim))
+        us_gt = np.zeros((self.batch_size, *self.dim))
+        afs_gt = np.zeros((self.batch_size, *self.dim))
+        bg_gt = np.zeros((self.batch_size, *self.dim))
 
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
-            img[i] = np.load(self.imgs_path + ID + NPY)
-            ensemble_pred[i] = np.load(self.ensemble_path + ID + NPY)
-            gt = np.load(self.gt_path + ID + NPY).astype('float32')
-            flag[i] = np.load(self.supervised_flag_path + ID + NPY).astype('float16')
+            img[i, :, :, :, :] = np.load(self.data_path + '/imgs/' + str(ID) + NPY)
+            gt = np.load(self.data_path + '/gt/' + str(ID) + NPY)
+            ensemble_pred[i] = np.load(self.ensemble_path + '/ens_gt/' + str(ID) + NPY)
+            flag[i] = np.load(self.ensemble_path + '/flag/' + str(ID) + NPY).astype('int64')
 
             pz_gt[i] = gt[:, :, :, 0]
             cz_gt[i] = gt[:, :, :, 1]

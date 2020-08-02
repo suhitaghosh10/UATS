@@ -181,7 +181,7 @@ class weighted_model:
 
             supervised_flag = input[1, :, :, :, :]
             val_flag = False
-            if supervised_flag[0, 0, 0, 0] is 3:
+            if supervised_flag[0, 0, 0, 0] == 3:
                 val_flag = True
 
             unsupervised_gt = input[0, :, :, :, :]
@@ -362,18 +362,18 @@ class weighted_model:
             p_model.compile(optimizer=optimizer,
                             loss={'pz': self.semi_supervised_loss(pz, unsup_loss_class_wt=1),
                                   'cz': self.semi_supervised_loss(cz, 1),
-                                  'us': self.semi_supervised_loss(us, 1),
-                                  'afs': self.semi_supervised_loss(afs, 1),
+                                  'us': self.semi_supervised_loss(us, 2),
+                                  'afs': self.semi_supervised_loss(afs, 2),
                                   'bg': self.semi_supervised_loss(bg, 1)
                                   }
                             ,
                             metrics={'pz': [self.dice_coef, self.unsup_dice_tb(pz, 1), self.dice_tb(pz, 1)],
                                      'cz': [self.dice_coef, self.unsup_dice_tb(cz, 1), self.dice_tb(cz, 1)],
-                                     'us': [self.dice_coef, self.unsup_dice_tb(us, 1), self.dice_tb(us, 1)],
-                                     'afs': [self.dice_coef, self.unsup_dice_tb(afs, 1), self.dice_tb(afs, 1)],
+                                     'us': [self.dice_coef, self.unsup_dice_tb(us, 2), self.dice_tb(us, 2)],
+                                     'afs': [self.dice_coef, self.unsup_dice_tb(afs, 2), self.dice_tb(afs, 2)],
                                      'bg': [self.dice_coef, self.unsup_dice_tb(bg, 1), self.dice_tb(bg, 1)]
                                      },
-                            loss_weights={'pz': 1, 'cz': 1, 'us': 1, 'afs': 1, 'bg': 1}
+                            loss_weights={'pz': 1, 'cz': 1, 'us': 2, 'afs': 2, 'bg': 1}
                             )
         else:
             with tf.device(gpu_id):
@@ -392,18 +392,18 @@ class weighted_model:
                 p_model.compile(optimizer=optimizer,
                                 loss={'pz': self.semi_supervised_loss(pz, unsup_loss_class_wt=1),
                                       'cz': self.semi_supervised_loss(cz, 1),
-                                      'us': self.semi_supervised_loss(us, 1),
-                                      'afs': self.semi_supervised_loss(afs, 1),
+                                      'us': self.semi_supervised_loss(us, 2),
+                                      'afs': self.semi_supervised_loss(afs, 2),
                                       'bg': self.semi_supervised_loss(bg, 1)
                                       }
                                 ,
                                 metrics={'pz': [self.dice_coef, self.unsup_dice_tb(pz, 1), self.dice_tb(pz, 1)],
                                          'cz': [self.dice_coef, self.unsup_dice_tb(cz, 1), self.dice_tb(cz, 1)],
-                                         'us': [self.dice_coef, self.unsup_dice_tb(us, 1), self.dice_tb(us, 1)],
-                                         'afs': [self.dice_coef, self.unsup_dice_tb(afs, 1), self.dice_tb(afs, 1)],
+                                         'us': [self.dice_coef, self.unsup_dice_tb(us, 1), self.dice_tb(us, 2)],
+                                         'afs': [self.dice_coef, self.unsup_dice_tb(afs, 1), self.dice_tb(afs, 2)],
                                          'bg': [self.dice_coef, self.unsup_dice_tb(bg, 1), self.dice_tb(bg, 1)]
                                          },
-                                loss_weights={'pz': 1, 'cz': 1, 'us': 1, 'afs': 1, 'bg': 1}
+                                loss_weights={'pz': 1, 'cz': 1, 'us': 2, 'afs': 2, 'bg': 1}
                                 )
 
         return p_model

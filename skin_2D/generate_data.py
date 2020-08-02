@@ -5,11 +5,11 @@ from shutil import copyfile
 from kits import utils
 
 root_path = '/cache/suhita/skin/'
-perc = 1.0
+perc = 0.1
 # training
 
 
-fold_num = 2
+fold_num = 3
 labelled_path = root_path + 'preprocessed/labelled/train'
 labelled_files_lst = np.load(root_path + 'Folds/train_fold' + str(fold_num) + '.npy')
 labelled_train_num = len(labelled_files_lst)
@@ -60,12 +60,11 @@ for i in remaining_labelled:
 
 print('unlabelled start...')
 
-for i in np.arange(len(un_labelled_files_lst)):
+for i in un_labelled_files_lst:
     print(i, counter)
-    np.save(os.path.join(data_path, 'imgs', str(counter) + '.npy'),
-            np.load(os.path.join(un_labelled_path, 'imgs', str(i) + '.npy'))
-            )
-    copyfile(os.path.join(un_labelled_path, 'GT', str(i) + '.npy'),
+    copyfile(os.path.join(un_labelled_path, 'imgs', str(i)),
+             os.path.join(data_path, 'imgs', str(counter) + '.npy'))
+    copyfile(os.path.join(un_labelled_path, 'GT', str(i)),
              os.path.join(data_path, 'GT', str(counter) + '.npy'))
 
     counter = counter + 1

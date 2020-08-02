@@ -16,7 +16,7 @@ import shutil
 AUGMENTATION_NO = 5
 TEMP = 1
 augmentation = True
-FOLD_NUM = 2
+FOLD_NUM = 3
 PERCENTAGE_OF_PIXELS = 50
 ENS_GT_PATH = '/data/suhita/temporal/skin/output/sm_mc/sadv1/'
 num_epoch = 1000
@@ -34,7 +34,7 @@ ramp_down_period = 50
 def train(gpu_id, nb_gpus, perc, batch_nos, learning_rate=None):
     DATA_PATH = '/cache/suhita/data/skin/softmax/fold_' + str(FOLD_NUM) + '_P' + str(perc) + '/'
     TRAIN_NUM = len(np.load('/cache/suhita/skin/Folds/train_fold' + str(FOLD_NUM) + '.npy'))
-    NAME = 'sm_skin_mc_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(perc)
+    NAME = 'sm_skin_sm_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(perc)
 
     TB_LOG_DIR = '/data/suhita/temporal/tb/skin/' + NAME + '_' + str(learning_rate) + '/'
     MODEL_NAME = '/data/suhita/temporal/skin/' + NAME + '.h5'
@@ -217,15 +217,15 @@ def train(gpu_id, nb_gpus, perc, batch_nos, learning_rate=None):
     # model_checkpoint = ModelCheckpoint(MODEL_NAME, monitor='val_loss', save_best_only=True,verbose=1, mode='min')
     if nb_gpus is not None and nb_gpus > 1:
         model_checkpoint = ModelCheckpointParallel(MODEL_NAME,
-                                                   monitor='val_skin_dice_coef',
+                                                   monitor='val_loss',
                                                    save_best_only=True,
                                                    verbose=1,
-                                                   mode='max')
+                                                   mode='min')
     else:
-        model_checkpoint = ModelCheckpoint(MODEL_NAME, monitor='val_skin_dice_coef',
+        model_checkpoint = ModelCheckpoint(MODEL_NAME, monitor='val_loss',
                                            save_best_only=True,
                                            verbose=1,
-                                           mode='max')
+                                           mode='min')
 
     tensorboard = TensorBoard(log_dir=TB_LOG_DIR, write_graph=False, write_grads=True, histogram_freq=0,
                               batch_size=1, write_images=False)
@@ -287,13 +287,15 @@ def train(gpu_id, nb_gpus, perc, batch_nos, learning_rate=None):
                                   epochs=num_epoch,
                                   callbacks=cb
                                   )
+    if 'model' in locals(): del model
+    if 'model_MC' in locals(): del model_MC
 
 
 if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = batch_size
-    gpu_id = '1'
+    gpu_id = '3'
 
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
@@ -313,12 +315,12 @@ if __name__ == '__main__':
     try:
         # train(None, None, perc=0.05, batch_nos=5, learning_rate=1e-6)
         # shutil.rmtree(ENS_GT_PATH)
-        train(None, None, perc=0.1, batch_nos=5, learning_rate=1e-6)
-        shutil.rmtree(ENS_GT_PATH)
-        train(None, None, perc=0.25, batch_nos=5, learning_rate=1e-6)
-        shutil.rmtree(ENS_GT_PATH)
-        train(None, None, perc=0.5, batch_nos=4, learning_rate=1e-7)
-        shutil.rmtree(ENS_GT_PATH)
+        # train(None, None, perc=0.1, batch_nos=5, learning_rate=1e-6)
+        # shutil.rmtree(ENS_GT_PATH)
+        # train(None, None, perc=0.25, batch_nos=5, learning_rate=1e-6)
+        # shutil.rmtree(ENS_GT_PATH)
+        # train(None, None, perc=0.5, batch_nos=4, learning_rate=1e-7)
+        # shutil.rmtree(ENS_GT_PATH)
         train(None, None, perc=1.0, batch_nos=3, learning_rate=1e-7)
 
     finally:

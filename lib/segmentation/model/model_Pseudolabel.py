@@ -3,10 +3,9 @@ from keras import backend as K
 from keras.callbacks import Callback
 from keras.layers import concatenate, Input, Conv3D, MaxPooling3D, Conv3DTranspose, Lambda, \
     BatchNormalization, Dropout
+from keras.optimizers import Adam
 from keras.models import Model
 from keras.utils import multi_gpu_model
-
-from lib.segmentation.weight_norm import AdamWithWeightnorm
 
 smooth = 1.
 
@@ -153,7 +152,7 @@ class weighted_model:
         bg = Lambda(lambda x: x[:, :, :, :, 4], name='bg')(conv_out)
 
         # optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
-        optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
+        optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999)
 
         if (nb_gpus is None):
             p_model = Model([input_img], [pz, cz, us, afs, bg])

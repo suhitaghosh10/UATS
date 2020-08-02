@@ -183,8 +183,8 @@ class weighted_model:
             if val_flag:
                 unsupervised_loss = 0
             else:
-                temp = self.unsup_c_dice_loss(unsupervised_gt, y_pred)
-                unsupervised_loss = tf.where(tf.greater(K.abs(temp), K.abs(supervised_loss)), K.zeros_like(temp), temp)
+                unsupervised_loss = self.unsup_c_dice_loss(unsupervised_gt, y_pred)
+                # unsupervised_loss = tf.where(tf.greater(K.abs(temp), K.abs(supervised_loss)), K.zeros_like(temp), temp)
 
             return supervised_loss + unsup_loss_class_wt * unsupervised_loss
 

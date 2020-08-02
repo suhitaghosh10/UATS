@@ -238,7 +238,7 @@ def save_array(path, arr, start, end):
     for idx in np.arange(start, end):
 
         arr_idx = idx - start
-        np.save(path + str(idx) + '.npy', arr[arr_idx])
+        np.save(path + '/' + str(idx) + '.npy', arr[arr_idx])
 
 
 def save_array_kits(path, arr, npy_name, start, end):

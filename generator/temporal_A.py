@@ -35,17 +35,14 @@ class DataGenerator(keras.utils.Sequence):
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
             aug_type = np.random.randint(0, 4)
-            img[i, :, :, :, :], gt, ensemble_pred[i] = get_single_image_augmentation_with_ensemble2(
+            img[i, :, :, :, :], gt, ensemble_pred[i], flag[i] = get_single_image_augmentation_with_ensemble(
                 aug_type,
-                np.load(self.data_path + '/imgs/' + str(ID) + '.npy'),
-                np.load(self.data_path + '/GT/' + str(ID) + '.npy'),
-                np.load(self.ensemble_path + '/ens_gt/' + str(ID) + '.npy'),
-                img_no=ID, labelled_num=self.labelled_num)
-
-            # img[i] = np.load(self.imgs_path + ID + NPY)
-            # ensemble_pred[i] = np.load(self.ensemble_path + ID + NPY)
-            # gt = np.load(self.gt_path + ID + NPY).astype('int8')
-            flag[i] = np.load(self.ensemble_path + '/flag/' + str(ID) + NPY).astype('float16')
+                np.load(self.data_path + '/imgs/' + str(ID) + NPY),
+                np.load(self.data_path + '/gt/' + str(ID) + NPY),
+                np.load(self.ensemble_path + '/ens_gt/' + str(ID) + NPY),
+                np.load(self.ensemble_path + '/flag/' + str(ID) + NPY).astype('int64'),
+                img_no=ID,
+                labelled_num=self.labelled_num)
 
             pz_gt[i] = gt[:, :, :, 0]
             cz_gt[i] = gt[:, :, :, 1]

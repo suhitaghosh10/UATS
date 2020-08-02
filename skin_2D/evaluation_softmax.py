@@ -1,18 +1,20 @@
 import csv
 
-import matplotlib.pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap
 
 from eval.preprocess import *
 
 THRESHOLD = 0.5
 
 
+def jaccard(prediction, groundTruth):
+    filter = sitk.LabelOverlapMeasuresImageFilter()
+    filter.Execute(prediction, groundTruth)
+    return filter.GetJaccardCoefficient()
+
 def getDice(prediction, groundTruth):
     filter = sitk.LabelOverlapMeasuresImageFilter()
     filter.Execute(prediction, groundTruth)
-    dice = filter.GetDiceCoefficient()
-    return dice
+    return filter.GetDiceCoefficient()
 
 
 def relativeAbsoluteVolumeDifference(prediction, groundTruth):
@@ -84,9 +86,24 @@ def get_dice_from_array(arr1, arr2):
     return (2. * intersection) / (np.sum(y_true_f) + np.sum(y_pred_f))
 
 
-def evaluateFiles_arr(img_path, prediction, connected_component=False, eval=True, out_dir=None):
+def get_thresholded_jaccard(y_true, y_pred, smooth=1, axis=None):
+    if axis is None:
+        intersection = np.sum(np.abs(y_true * y_pred))
+        union = np.sum(y_true) + np.sum(y_pred) - intersection
+        jaccard = np.mean((intersection + smooth) / (union + smooth))
+    else:
+        intersection = np.sum(np.abs(y_true * y_pred), axis=axis)
+        union = np.sum(y_true, axis) + np.sum(y_pred, axis) - intersection
+        jaccard = np.mean((intersection + smooth) / (union + smooth), axis=0)
+
+    # return jaccard if jaccard>0.64 else 0
+    return jaccard
+
+
+def evaluateFiles_arr(img_path, prediction, connected_component=False, eval=True, out_dir=None, lesion=True):
     nrImgs = prediction[0].shape[0]
     dices = np.zeros((nrImgs), dtype=np.float32)
+    jacs = np.zeros_like(dices)
 
     # print(dices.shape)
 
@@ -107,10 +124,10 @@ def evaluateFiles_arr(img_path, prediction, connected_component=False, eval=True
             pred_bg_img = getConnectedComponents(pred_bg_img)
             pred_lesion_img = getConnectedComponents(pred_lesion_img)
 
-        # if not os.path.exists(out_dir + '/imgs'):
-        #     os.makedirs(out_dir + '/imgs')
-        # if not os.path.exists(out_dir + '/GT'):
-        #     os.makedirs(out_dir + '/GT')
+        if not os.path.exists(out_dir + '/imgs'):
+            os.makedirs(out_dir + '/imgs')
+        if not os.path.exists(out_dir + '/GT'):
+            os.makedirs(out_dir + '/GT')
 
         pred_img_arr = np.stack((sitk.GetArrayFromImage(pred_bg_img), sitk.GetArrayFromImage(pred_lesion_img)), -1)
         # np.save(out_dir + '/imgs/' + str(imgNumber) + '.npy',
@@ -120,16 +137,34 @@ def evaluateFiles_arr(img_path, prediction, connected_component=False, eval=True
             # lesion
             GT_label = np.load(
                 os.path.join(img_path, 'GT', test_dir[imgNumber].replace('.npy', '_segmentation.npy'))) / 255
-            dice = get_dice_from_array(pred_img_arr[:, :, 1], GT_label[:, :, 0])
+            if lesion:
+                dice = get_dice_from_array(pred_img_arr[:, :, 1], GT_label[:, :, 0])
+                jac = get_thresholded_jaccard(pred_img_arr[:, :, 1], GT_label[:, :, 0])
+                # jac = jac if jac > 0.64 else jac
+            else:
+                dice = get_dice_from_array(pred_img_arr[:, :, 0], 1 - GT_label[:, :, 0])
+                jac = get_thresholded_jaccard(pred_img_arr[:, :, 0], 1 - GT_label[:, :, 0])
+                #jac = jac if jac > 0.64 else jac
             dices[imgNumber] = dice
-            print(dice)
+            jacs[imgNumber] = jac
+            print(dice, jac)
+            np.save(out_dir + '/imgs/' + test_dir[imgNumber],
+                    np.load(os.path.join(img_path, 'imgs', test_dir[imgNumber])))
+            np.save(out_dir + '/GT/' + test_dir[imgNumber], pred_img_arr)
+
+        else:
+            np.save(out_dir + '/imgs/' + test_dir[imgNumber],
+                    np.load(os.path.join(img_path, 'imgs', test_dir[imgNumber])))
+            np.save(out_dir + '/GT/' + test_dir[imgNumber], pred_img_arr)
 
 
     print('Dices')
     print(np.average(dices))
+    print('Jaccard')
+    print(np.average(jacs))
 
 
-def evaluateFiles(GT_directory, pred_directory, csvName):
+def evaluateFiles(GT_directory, pred_directory, csvName, lesion=False):
     with open(csvName + '.csv', 'w') as csvfile:
         csvwriter = csv.writer(csvfile, delimiter=';', lineterminator='\n',
                                quotechar='|', quoting=csv.QUOTE_MINIMAL)
@@ -152,213 +187,7 @@ def evaluateFiles(GT_directory, pred_directory, csvName):
             csvwriter.writerow([case, dice, avd, hausdorff, avgDist])
 
 
-def visualizeResults(directory, img_tra, img_cor, img_sag, pred_img, GT_img, i):
-    if not os.path.exists(directory + 'visualResults'):
-        os.makedirs(directory + 'visualResults')
 
-    contour = sitk.BinaryContour(pred_img, True)
-    colors = [(1, 0, 0), (0, 0, 0)]  # R -> G -> B
-    n_bins = 5  # Discretizes the interpolation into bins
-    cmap_name = 'my_list'
-
-    contourGT = sitk.BinaryContour(GT_img, True)
-    colorsGT = [(1, 1, 0), (0, 0, 0)]  # R -> G -> B
-    cmap_nameGT = 'GT'
-
-    contourArray = sitk.GetArrayFromImage(contour)
-    contourArray = np.flip(contourArray, axis=0)
-    contourArrayGT = sitk.GetArrayFromImage(contourGT)
-    contourArrayGT = np.flip(contourArrayGT, axis=0)
-    imgArray_tra = sitk.GetArrayFromImage(img_tra)
-    imgArray_tra = np.flip(imgArray_tra, axis=0)
-    imgArray_cor = sitk.GetArrayFromImage(img_cor)
-    imgArray_cor = np.flip(imgArray_cor, axis=0)
-    imgArray_sag = sitk.GetArrayFromImage(img_sag)
-    imgArray_sag = np.flip(imgArray_sag, axis=0)
-
-    masked_data = np.ma.masked_where(contourArray == 0, contourArray)
-    masked_dataGT = np.ma.masked_where(contourArrayGT == 0, contourArrayGT)
-    z = imgArray_tra.shape[0]
-
-    plt.subplots(3, 3, figsize=(30, 30))
-
-    colormap = LinearSegmentedColormap.from_list(cmap_name, colors, N=n_bins)
-    colormapGT = LinearSegmentedColormap.from_list(cmap_nameGT, colorsGT, N=n_bins)
-    plt.subplot(3, 3, 1)
-    plt.imshow(imgArray_tra[int(z / 3), :, :], 'gray')
-    plt.imshow(masked_data[int(z / 3), :, :], cmap=colormap, interpolation='none')
-    plt.imshow(masked_dataGT[int(z / 3), :, :], cmap=colormapGT, interpolation='none')
-    plt.axis('off')
-
-    plt.subplot(3, 3, 2)
-    plt.imshow(imgArray_tra[int(z / 2), :, :], 'gray')
-    plt.imshow(masked_data[int(z / 2), :, :], cmap=colormap, interpolation='none')
-    plt.imshow(masked_dataGT[int(z / 2), :, :], cmap=colormapGT, interpolation='none')
-    plt.axis('off')
-
-    plt.subplot(3, 3, 3)
-    plt.imshow(imgArray_tra[int(2 * (z / 3)), :, :], 'gray')
-    plt.imshow(masked_data[int(2 * (z / 3)), :, :], cmap=colormap, interpolation='none')
-    plt.imshow(masked_dataGT[int(2 * (z / 3)), :, :], cmap=colormapGT, interpolation='none')
-    plt.axis('off')
-
-    plt.subplot(3, 3, 4)
-    plt.imshow(imgArray_cor[:, int(z / 3), :], 'gray')
-    plt.imshow(masked_data[:, int(z / 3), :], cmap=colormap, interpolation='none')
-    plt.imshow(masked_dataGT[:, int(z / 3), :], cmap=colormapGT, interpolation='none')
-    plt.axis('off')
-
-    plt.subplot(3, 3, 5)
-    plt.imshow(imgArray_cor[:, int(z / 2), :], 'gray')
-    plt.imshow(masked_data[:, int(z / 2), :], cmap=colormap, interpolation='none')
-    plt.imshow(masked_dataGT[:, int(z / 2), :], cmap=colormapGT, interpolation='none')
-    plt.axis('off')
-
-    plt.subplot(3, 3, 6)
-    plt.imshow(imgArray_cor[:, int(2 * (z / 3)), :], 'gray')
-    plt.imshow(masked_data[:, int(2 * (z / 3)), :], cmap=colormap, interpolation='none')
-    plt.imshow(masked_dataGT[:, int(2 * (z / 3)), :], cmap=colormapGT, interpolation='none')
-    plt.axis('off')
-
-    plt.subplot(3, 3, 7)
-    plt.imshow(imgArray_sag[:, :, int(z / 3)], 'gray')
-    plt.imshow(masked_data[:, :, int(z / 3)], cmap=colormap, interpolation='none')
-    plt.imshow(masked_dataGT[:, :, int(z / 3)], cmap=colormapGT, interpolation='none')
-    plt.axis('off')
-
-    plt.subplot(3, 3, 8)
-    plt.imshow(imgArray_sag[:, :, int(z / 2)], 'gray')
-    plt.imshow(masked_data[:, :, int(z / 2)], cmap=colormap, interpolation='none')
-    plt.imshow(masked_dataGT[:, :, int(z / 2)], cmap=colormapGT, interpolation='none')
-    plt.axis('off')
-
-    plt.subplot(3, 3, 9)
-    plt.imshow(imgArray_sag[:, :, int(2 * (z / 3))], 'gray')
-    plt.imshow(masked_data[:, :, int(2 * (z / 3))], cmap=colormap, interpolation='none')
-    plt.imshow(masked_dataGT[:, :, int(z / 3)], cmap=colormapGT, interpolation='none')
-    plt.axis('off')
-
-    plt.savefig(directory + 'visualResults/img_' + str(i) + '.png')
-
-
-def visualizeResultsSmall(directory, img_tra, img_cor, img_sag, pred_img, GT_img, i):
-    if not os.path.exists(directory + 'visualResults'):
-        os.makedirs(directory + 'visualResults')
-
-    contour = sitk.BinaryContour(pred_img, True)
-    colors = [(1, 0, 0), (0, 0, 0)]  # R -> G -> B
-    n_bins = 5  # Discretizes the interpolation into bins
-    cmap_name = 'my_list'
-
-    contourGT = sitk.BinaryContour(GT_img, True)
-    colorsGT = [(1, 1, 0), (0, 0, 0)]  # R -> G -> B
-    cmap_nameGT = 'GT'
-
-    contourArray = sitk.GetArrayFromImage(contour)
-    contourArray = np.flip(contourArray, axis=0)
-    contourArrayGT = sitk.GetArrayFromImage(contourGT)
-    contourArrayGT = np.flip(contourArrayGT, axis=0)
-    imgArray_tra = sitk.GetArrayFromImage(img_tra)
-    imgArray_tra = np.flip(imgArray_tra, axis=0)
-    imgArray_cor = sitk.GetArrayFromImage(img_cor)
-    imgArray_cor = np.flip(imgArray_cor, axis=0)
-    imgArray_sag = sitk.GetArrayFromImage(img_sag)
-    imgArray_sag = np.flip(imgArray_sag, axis=0)
-
-    masked_data = np.ma.masked_where(contourArray == 0, contourArray)
-    masked_dataGT = np.ma.masked_where(contourArrayGT == 0, contourArrayGT)
-    z = imgArray_tra.shape[0]
-
-    plt.subplots(3, 3, figsize=(30, 30))
-
-    colormap = LinearSegmentedColormap.from_list(cmap_name, colors, N=n_bins)
-    colormapGT = LinearSegmentedColormap.from_list(cmap_nameGT, colorsGT, N=n_bins)
-
-    plt.subplot(1, 3, 1)
-    plt.imshow(imgArray_tra[int(z / 2), :, :], 'gray')
-    plt.imshow(masked_data[int(z / 2), :, :], cmap=colormap, interpolation='none')
-    plt.imshow(masked_dataGT[int(z / 2), :, :], cmap=colormapGT, interpolation='none')
-    plt.axis('off')
-
-    plt.subplot(1, 3, 2)
-    plt.imshow(imgArray_sag[:, :, int(z / 2)], 'gray')
-    plt.imshow(masked_data[:, :, int(z / 2)], cmap=colormap, interpolation='none')
-    plt.imshow(masked_dataGT[:, :, int(z / 2)], cmap=colormapGT, interpolation='none')
-    plt.axis('off')
-
-    plt.subplot(1, 3, 3)
-    plt.imshow(imgArray_cor[:, int(2 * (z / 3)), :], 'gray')
-    plt.imshow(masked_data[:, int(2 * (z / 3)), :], cmap=colormap, interpolation='none')
-    plt.imshow(masked_dataGT[:, int(2 * (z / 3)), :], cmap=colormapGT, interpolation='none')
-    plt.axis('off')
-
-    plt.savefig(directory + 'visualResults/img_' + str(i) + '.png')
-
-
-def regionBasedEvaluation(directory, csvName):
-    with open(csvName + '.csv', 'w') as csvfile:
-        csvwriter = csv.writer(csvfile, delimiter=';', lineterminator='\n',
-                               quotechar='|', quoting=csv.QUOTE_MINIMAL)
-        csvwriter.writerow(
-            ['Case', 'Dice Apex', 'Dice Mid', 'Dice Base', 'AVD Apex', 'AVD Mid', 'AVD Base', '95-Hausdorff Apex',
-             '95-Hausdorff Mid', '95-Hausdorff Base', 'Avg Dis Apex', 'Avg Dis Mid', 'Avg Dis Base'])
-
-        for i in range(0, 15):
-            predicted_array = np.load(directory + '/predicted_test_' + str(i) + '.npy')
-            GT_array = np.load(directory + 'imgs_test_GT_' + str(i) + '.npy')
-            GT_array = GT_array.astype(np.uint8)
-            pred_img = sitk.GetImageFromArray(predicted_array[0, :, :, :, 0])
-
-            pred_img = binaryThresholdImage(pred_img, 0.5)
-            GT_label = sitk.GetImageFromArray(GT_array[:, :, :, 0])
-            pred_img = getLargestConnectedComponents(pred_img)
-            pred_img.SetSpacing([0.5, 0.5, 0.5])
-            GT_label.SetSpacing([0.5, 0.5, 0.5])
-
-            # get boundingboxes
-            bb_P = getBoundingBox(pred_img)
-            bb_GT = getBoundingBox(GT_label)
-            startZ = max(0, min(bb_P[2], bb_GT[2]) - 1)
-
-            sizeZ = max(bb_P[2] + bb_P[5], bb_GT[2] + bb_P[5]) - startZ + 1
-
-            apex_P = sitk.RegionOfInterest(pred_img, [168, 168, math.floor(sizeZ / 3)],
-                                           [0, 0, startZ])
-            apex_GT = sitk.RegionOfInterest(GT_label, [168, 168, math.floor(sizeZ / 3)],
-                                            [0, 0, startZ])
-            mid_P = sitk.RegionOfInterest(pred_img, [168, 168, math.floor(sizeZ / 3)],
-                                          [0, 0, startZ + math.floor(sizeZ / 3)])
-            mid_GT = sitk.RegionOfInterest(GT_label, [168, 168, math.floor(sizeZ / 3)],
-                                           [0, 0, startZ + math.floor(sizeZ / 3)])
-            base_P = sitk.RegionOfInterest(pred_img, [168, 168, math.floor(sizeZ / 3)],
-                                           [0, 0, startZ + 2 * math.floor(sizeZ / 3)])
-            base_GT = sitk.RegionOfInterest(GT_label, [168, 168, math.floor(sizeZ / 3)],
-                                            [0, 0, startZ + 2 * math.floor(sizeZ / 3)])
-
-            sitk.WriteImage(apex_P, 'apex_P.nrrd')
-            sitk.WriteImage(apex_GT, 'apex_GT.nrrd')
-            sitk.WriteImage(mid_P, 'mid_P.nrrd')
-            sitk.WriteImage(mid_GT, 'mid_GT.nrrd')
-            sitk.WriteImage(base_P, 'base_P.nrrd')
-            sitk.WriteImage(base_GT, 'base_GT.nrrd')
-
-            dice_apex = getDice(apex_P, apex_GT)
-            avd_apex = relativeAbsoluteVolumeDifference(apex_P, apex_GT)
-            [hausdorff_apex, avgDist_apex] = getBoundaryDistances(apex_P, apex_GT)
-
-            dice_mid = getDice(mid_P, mid_GT)
-            avd_mid = relativeAbsoluteVolumeDifference(mid_P, mid_GT)
-            [hausdorff_mid, avgDist_mid] = getBoundaryDistances(mid_P, mid_GT)
-
-            dice_base = getDice(base_P, base_GT)
-            avd_base = relativeAbsoluteVolumeDifference(base_P, base_GT)
-            [hausdorff_base, avgDist_base] = getBoundaryDistances(base_P, base_GT)
-
-            csvwriter.writerow(
-                ['Case' + str(i), dice_apex, dice_mid, dice_base, avd_apex, avd_mid, avd_base, hausdorff_apex,
-                 hausdorff_mid, hausdorff_base, avgDist_apex, avgDist_mid, avgDist_base])
-
-            print(i)
 
 
 def thresholdArray(array, threshold):
@@ -461,7 +290,7 @@ def removeIslands(predictedArray):
     return finalPrediction
 
 
-def create_test_arrays(test_dir, eval=True):
+def create_test_arrays(test_dir, eval=True, save=False):
     cases = sorted(os.listdir(os.path.join(test_dir, 'imgs')))
     img = np.load(os.path.join(test_dir, 'imgs', cases[0]))
     img_arr = np.zeros((len(cases), img.shape[0], img.shape[1], 3), dtype=float)
@@ -494,10 +323,10 @@ def eval_for_uats_softmax(model_dir, model_name, batch_size=1, out_dir=None, con
     from skin_2D.softmax.model_softmax_entropy import weighted_model
     wm = weighted_model()
     model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=learning_rate, gpu_id=None,
-                           nb_gpus=None, trained_model=os.path.join(model_dir, model_name + '.h5'))
-    # model.load_weights(os.path.join(model_dir, NAME,'.h5'))
+                           nb_gpus=None, trained_model=os.path.join(model_dir, model_name + '.h5'))[0]
+    model.load_weights(os.path.join(model_dir, model_name + '.h5'))
     val_supervised_flag = np.ones((DIM[0], DIM[1], DIM[2], 1), dtype='int8')
-    prediction = model[0].predict([img_arr, GT_arr, val_supervised_flag], batch_size=batch_size, verbose=1)
+    prediction = model.predict([img_arr, GT_arr, val_supervised_flag], batch_size=batch_size, verbose=1)
     csvName = os.path.join(model_dir, 'evaluation', model_name + '.csv')
 
     # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
@@ -506,26 +335,26 @@ def eval_for_uats_softmax(model_dir, model_name, batch_size=1, out_dir=None, con
                       out_dir=out_dir, eval=True)
 
 
-def eval_for_uats_mc(model_dir, model_name, batch_size=1, out_dir=None):
+def eval_for_uats_mc(model_dir, model_name, batch_size=1, out_dir=None, lesion=False, eval=True):
     GT_dir = '/cache/suhita/skin/preprocessed/labelled/test/'
     print('create start')
     img_arr, GT_arr = create_test_arrays(GT_dir)
+
     print('create end')
     DIM = img_arr.shape
     from skin_2D.softmax.model_softmax_entropy import weighted_model
     wm = weighted_model()
     model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=learning_rate, gpu_id=None,
                            nb_gpus=None, trained_model=os.path.join(model_dir, model_name + '.h5'))
-    # model.load_weights(os.path.join(model_dir, NAME,'.h5'))
+    model[0].load_weights(os.path.join(model_dir, model_name + '.h5'))
     val_supervised_flag = np.ones((DIM[0], DIM[1], DIM[2], 1), dtype='int8')
     prediction = model[0].predict([img_arr, GT_arr, val_supervised_flag], batch_size=batch_size, verbose=1)
-    csvName = os.path.join(model_dir, 'evaluation', model_name + '.csv')
 
     # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
     evaluateFiles_arr(img_path='/cache/suhita/skin/preprocessed/labelled/test/',
                       prediction=prediction,
                       connected_component=True,
-                      out_dir=out_dir, eval=True)
+                      out_dir=out_dir, eval=eval, lesion=lesion)
 
 
 def eval_for_supervised(model_dir, img_path, model_name, eval=True, out_dir=None, connected_component=True):
@@ -559,32 +388,47 @@ if __name__ == '__main__':
     learning_rate = 5e-5
     AUGMENTATION_NO = 5
     TRAIN_NUM = 50
-    FOLD_NUM = 3
+
     augm = 'augm'
-    batch_size = 2
+    batch_size = 8
 
     ### for baseline of 0.1 images,
     # NAME = 'supervised_F_centered_BB_' + str(FOLD_NUM) + '_' + str(TRAIN_NUM) + '_' + str(
     #     learning_rate) + '_Perc_' + str(PERC) + '_'+ augm
-    perc = 0.5
+
     # model_dir = '/cache/suhita/skin/models/'
     # model_dir = '/data/suhita/temporal/skin/'
-    # data_path = '/cache/suhita/skin/preprocessed/labelled/test/'
-    # data_path = '/cache/suhita/skin/preprocessed/unlabelled/'
+    data_path = '/cache/suhita/skin/preprocessed/labelled/test/'
+    #data_path = '/cache/suhita/skin/preprocessed/unlabelled/'
     # NAME = 'supervised_sfs32_F_1_1000_5e-05_Perc_' + str(perc) + '_augm'
+    # NAME = 'sm_skin_entropy_F'+str(FOLD_NUM)+'_Perct_Labelled_'+str(perc)
+    perc = 1.0
+    FOLD_NUM = 1
+    eval_for_uats_softmax('/data/suhita/temporal/skin',
+                          'sm_skin_sm_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(perc), batch_size=1,
+                          out_dir='/data/suhita/skin/ul_uats' + str(perc), connected_component=True)
 
-    # eval_for_uats_softmax(model_dir, 'sm_skin_mc_F1_Perct_Labelled_' + str(perc), batch_size=1,
-    #                    out_dir='/data/suhita/skin/ul_' + str(perc), connected_component=True)
-    # eval_for_uats_mc('/data/suhita/temporal/skin/', 'sm_skin_mc_F1_Perct_Labelled_'+str(perc), batch_size=1, out_dir='/data/suhita/skin/eval')
+    # eval_for_uats_mc(
+    #     '/data/suhita/skin/models/',
+    #    # '/data/suhita/temporal/skin/',
+    #                        'sm_skin_sm_F3_Perct_Labelled_0.1',
+    #                       batch_size=1, out_dir='/data/suhita/skin/eval/uats/', lesion=True, eval=True)
 
     # eval_for_supervised('/data/suhita/skin/models/', data_path,
-    #                     'softmax_supervised_sfs32_F_2_1000_5e-05_Perc_' + str(perc) + '_augm', eval=False,
+    #                     'softmax_supervised_sfs32_F_2_1000_5e-05_Perc_' + str(perc) + '_augm', eval=True,
     #                     out_dir='/data/suhita/skin/ul/UL_' + str(perc), connected_component=True)
 # /data/suhita/temporal/skin/2_skin_softmax_F1_Perct_Labelled_1.0.h5
 
-    data_path = '/home/anneke/data/skin_less_hair/preprocessed/labelled/test/'
-    NAME = 'softmax_supervised_sfs32_F_'+str(FOLD_NUM)+'_1000_5e-05_Perc_' + str(perc) + '_augm'
+# data_path = '/home/anneke/data/skin_less_hair/preprocessed/labelled/test/'
+# NAME = 'softmax_supervised_sfs32_F_'+str(FOLD_NUM)+'_1000_5e-05_Perc_' + str(perc) + '_augm'
 
-    eval_for_supervised('output/models/', data_path,
-                        NAME,  eval=True,
-                        out_dir='/data/anneke', connected_component=True)
+# from kits.utils import makedir
+# perc = [0.1]
+# for p in perc:
+#     makedir('/data/suhita/skin/ul/UL_' + str(p))
+#     # eval_for_supervised('/data/suhita/skin/models/', '/cache/suhita/skin/preprocessed/labelled/test/',
+#     #              'softmax_supervised_sfs32_F_'+str(FOLD_NUM)+'_1000_5e-05_Perc_' + str(p) + '_augm', eval=True,
+#     #              out_dir='/data/suhita/skin/ul/UL_' + str(p), connected_component=True)
+#     eval_for_supervised('/data/suhita/skin/models/', '/cache/suhita/skin/preprocessed/unlabelled/',
+#                          'softmax_supervised_sfs32_F_'+str(FOLD_NUM)+'_1000_5e-05_Perc_' + str(p) + '_augm', eval=False,
+#                          out_dir='/data/suhita/skin/ul/UL_' + str(p), connected_component=True)

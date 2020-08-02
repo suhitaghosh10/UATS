@@ -10,22 +10,22 @@ from generator.baseline import DataGenerator as train_gen
 from lib.segmentation.model.model_baseline import weighted_model
 from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
 from lib.segmentation.utils import get_complete_array
-from zonal_utils.utils import get_train_id_list, get_val_id_list
+from zonal_utils.utils import get_val_id_list
 
 learning_rate = 5e-5
 AUGMENTATION_NO = 2
 TRAIN_NUM = 58
 FOLD_NUM = 1
-CSV_NAME = '/data/suhita/temporal/CSV/Supervised_F_NA' + str(FOLD_NUM) + '.csv'
-NAME = 'Supervised_F_NA' + str(FOLD_NUM)
+CSV_NAME = '/data/suhita/temporal/CSV/Supervised_F_A' + str(FOLD_NUM) + '.csv'
+NAME = 'Supervised_F_A' + str(FOLD_NUM)
 TB_LOG_DIR = '/data/suhita/temporal/tb/variance_mcdropout/' + NAME + '_' + str(learning_rate) + '/'
 MODEL_NAME = '/data/suhita/temporal/' + NAME + '.h5'
 
-TRAIN_IMGS_PATH = '/cache/suhita/data/fold1/train/imgs/'
-TRAIN_GT_PATH = '/cache/suhita/data/fold1/train/gt/'
+TRAIN_IMGS_PATH = '/cache/suhita/prostate/fold_2_supervised/train/imgs/'
+TRAIN_GT_PATH = '/cache/suhita/prostate/fold_2_supervised/train/gt/'
 
-VAL_IMGS_PATH = '/cache/suhita/data/test_anneke/imgs/'
-VAL_GT_PATH = '/cache/suhita/data/test_anneke/gt/'
+VAL_IMGS_PATH = '/cache/suhita/prostate/fold_2_supervised/val/imgs/'
+VAL_GT_PATH = '/cache/suhita/prostate/fold_2_supervised/val/gt/'
 
 
 TRAINED_MODEL_PATH = MODEL_NAME

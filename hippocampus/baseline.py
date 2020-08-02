@@ -9,6 +9,7 @@ from keras.callbacks import ModelCheckpoint, TensorBoard, EarlyStopping, CSVLogg
 from hippocampus.data_generation import DataGenerator as train_gen
 from hippocampus.model import weighted_model
 from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
+from keras.backend import clear_session
 
 #
 data_path = '/cache/suhita/hippocampus/preprocessed/labelled/train'
@@ -23,7 +24,7 @@ learning_rate = 4e-5
 AUGMENTATION_NO = 5
 TRAIN_NUM = 150
 # PERC = 0.25
-FOLD_NUM = 1
+# FOLD_NUM = 1
 
 #NUM_CLASS = 1
 num_epoch = 1000
@@ -42,14 +43,14 @@ def get_multi_class_arr(arr, n_classes=3):
     return out_arr
 
 
-def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation=False):
+def train(gpu_id, nb_gpus, fold_num=None, perc=1.0, augmentation=False):
 
     if augmentation:
         augm = '_augm'
     else:
         augm = ''
 
-    NAME = '2_supervised_F_' + str(FOLD_NUM) + '_' + str(TRAIN_NUM) + '_' + str(
+    NAME = '2_supervised_F_' + str(fold_num) + '_' + str(TRAIN_NUM) + '_' + str(
         learning_rate) + '_Perc_' + str(perc) + augm
     CSV_NAME = out_dir + NAME + '.csv'
 
@@ -87,7 +88,7 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation=False):
     es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=50, min_delta=0.0005)
 
     # datagen listmake_dataset
-    train_fold = np.load('/cache/suhita/hippocampus/Folds/train_fold' + str(FOLD_NUM) + '.npy')
+    train_fold = np.load('/cache/suhita/hippocampus/Folds/train_fold' + str(fold_num) + '.npy')
     nr_samples = train_fold.shape[0]
 
     # np.random.seed(5)
@@ -124,7 +125,7 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation=False):
                                    augmentation=augmentation,
                                    **params)
 
-    val_fold = np.load('/cache/suhita/hippocampus/Folds/val_fold' + str(FOLD_NUM) + '.npy')
+    val_fold = np.load('/cache/suhita/hippocampus/Folds/val_fold' + str(fold_num) + '.npy')
     # val_id_list = []
     # for i in range(val_fold.shape[0]):
     #     val_id_list.append(os.path.join(val_fold[i], 'img_left.npy'))
@@ -200,8 +201,11 @@ if __name__ == '__main__':
     # perc = 0.25
     #train(None, None, perc=perc, augmentation=True)
 
-    perc = 1.0
-    train(None, None, perc=perc, augmentation=True)
+    # perc = 1.0
+    train(None, None, fold_num=1, perc=0.05, augmentation=True)
+    clear_session()
+    train(None, None, fold_num=3, perc=0.05, augmentation=True)
+    clear_session()
 
     # predict(out_dir+'/supervised_F_centered_BB_1_50_0.0005_Perc_0.5_augm.h5', onlyEval=True)
 
