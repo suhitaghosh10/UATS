@@ -11,7 +11,7 @@ import csv
 
 OUTPUT_DIR = '/cache/anneke/uats'
 
-# f = open('/cache/anneke/uats/flag_min_max.csv', 'w')
+# f = open('/cache/anneke/uats/flag_afs_nr.csv', 'w')
 # csvwriter = csv.writer(f, delimiter=';', lineterminator='\n',
 #                            quotechar='|', quoting=csv.QUOTE_MINIMAL)
 
@@ -114,10 +114,11 @@ def write_image(image, image_name, ref_image, is_image=False):
         writer.SetFileName(image_name)
         if not is_image:
             temp = sitk.GetImageFromArray(image)
+            temp.SetSpacing(reference_spacing)
         else:
             temp = image
 
-        temp.CopyInformation(ref_image)
+        #temp.CopyInformation(ref_image)
         writer.Execute(temp)
 
 
@@ -387,7 +388,8 @@ def get_single_image_augmentation_with_ensemble(augmentation_type, orig_image, o
         ch_flag.SetSpacing(reference_spacing)
         ch_flag = augment_images_spatial(ch_flag, reference_image, augmentation_type, centered_transform,
                                          aug_transform, transformation_parameters_list,
-                                         interpolator=sitk.sitkNearestNeighbor)
+                                         interpolator=sitk.sitkNearestNeighbor, default_intensity_value=1.0)
+        write_image(img, os.path.join(OUTPUT_DIR, 'ch_flag' + str(img_no) + '.nrrd'), reference_image, is_image=True)
 
         ch_flag = sitk.GetArrayFromImage(ch_flag)
         ch_flag = np.where(ch_flag > 0.5, 1, 0)
@@ -397,31 +399,37 @@ def get_single_image_augmentation_with_ensemble(augmentation_type, orig_image, o
         out_gt = augment_images_spatial(gt_ref, reference_image, augmentation_type, centered_transform,
                                         aug_transform, transformation_parameters_list)
         out_gt = sitk.GetArrayFromImage(out_gt)
-        flag_img = sitk.GetImageFromArray(flag)
-        flag_img.SetSpacing(reference_spacing)
+
+        # flag_img = sitk.GetImageFromArray(flag)
+        # flag_img.SetSpacing(reference_spacing)
         ch_flag = np.where(flag >= 1, 1, 0)
 
 
 
-        ch_flag = get_transformed_flag(ch_flag, augmentation_type, centered_transform, aug_transform,
-                                       transformation_parameters_list)
-
-        flag_img = sitk.GetImageFromArray(ch_flag)
-        flag_img.SetSpacing(reference_spacing)
-        # ch_flag = augment_images_spatial(ch_flag, reference_image, augmentation_type, centered_transform,
+        # flag_img = sitk.GetImageFromArray(ch_flag)
+        # flag_img.SetSpacing(reference_spacing)
+        # ch_flag = augment_images_spatial(flag_img, reference_image, augmentation_type, centered_transform,
         #                                  aug_transform, transformation_parameters_list,
         #                                  interpolator=sitk.sitkNearestNeighbor)
-
         # ch_flag = sitk.GetArrayFromImage(ch_flag)
-        # ch_flag = np.where(ch_flag > 0.5, 2, 0)
+
+        ch_flag = get_transformed_flag(ch_flag, augmentation_type, centered_transform, aug_transform,
+                                       transformation_parameters_list)
+        #flaggi = sitk.GetImageFromArray(ch_flag)
+        #flaggi.SetSpacing(reference_spacing)
+        #sitk.WriteImage(flaggi, os.path.join(OUTPUT_DIR, 'ch_flag' + str(img_no) + '.nrrd'))
+
+
+
+        ch_flag = np.where(ch_flag > 0.5, 2, 0)
 
     write_image(flag.astype('int64'),
                 os.path.join(OUTPUT_DIR, 'orig_flag' + str(img_no) + '_' + str(0) + '_' + AugmentTypes(
                     augmentation_type).name + '.nrrd'), gt_ref,
                 is_image=False)
-    write_image(ch_flag, os.path.join(OUTPUT_DIR, 'ch_flag' + str(img_no) + '_' + str(0) + '_' + AugmentTypes(
-        augmentation_type).name + '.nrrd'), gt_ref,
-                is_image=False)
+    # write_image(ch_flag, os.path.join(OUTPUT_DIR, 'ch_flag' + str(img_no) + '_' + str(0) + '_' + AugmentTypes(
+    #     augmentation_type).name + '.nrrd'), gt_ref,
+    #             is_image=False)
     write_image(out_gt[:, :, :, 0],
                 os.path.join(OUTPUT_DIR, 'ch_gt' + str(img_no) + '_' + str(0) + '_' + AugmentTypes(
                     augmentation_type).name + '.nrrd'), gt_ref)
@@ -442,8 +450,12 @@ def get_single_image_augmentation_with_ensemble(augmentation_type, orig_image, o
     out_ens_gt = sitk.GetImageFromArray(ens_gt)
     out_ens_gt.SetSpacing(reference_spacing)
     out_ens_gt = augment_images_spatial(out_ens_gt, reference_image, augmentation_type, centered_transform,
-                                        aug_transform, transformation_parameters_list)
+                                        aug_transform, transformation_parameters_list, default_intensity_value=-1.0)
     out_ens_gt = sitk.GetArrayFromImage(out_ens_gt)
+    out_ens_gt[:, :, :, 0:4] = np.where(out_ens_gt[:, :, :, 0:4] == -1, np.zeros_like(out_ens_gt[:, :, :, 0:4]),
+                                    out_ens_gt[:, :, :, 0:4])
+    out_ens_gt[:, :, :, 4] = np.where(out_ens_gt[:, :, :, 4] == -1, np.ones_like(out_ens_gt[:, :, :, 4]), out_ens_gt[:, :, :, 4])
+
 
     write_image(out_ens_gt[:, :, :, 0],
                 os.path.join(OUTPUT_DIR, 'ch_ens_gt' + str(img_no) + '_' + str(0) + '_' + AugmentTypes(
