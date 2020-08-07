@@ -7,7 +7,7 @@ from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger
 from old.preprocess_images import get_complete_array
 from old.utils.AugmentationGenerator import *
 from old.utils.ops import ramp_down_weight
-from prostate.generator.temporal_A import DataGenerator
+from prostate.generator.uats_A import DataGenerator
 from prostate.model import weighted_model
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 

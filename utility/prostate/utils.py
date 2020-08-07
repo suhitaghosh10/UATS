@@ -205,3 +205,19 @@ def get_uats_prostate_val_data(data_path):
              val_GT_arr[:, :, :, :, 2], val_GT_arr[:, :, :, :, 3],
              val_GT_arr[:, :, :, :, 4]]
     return x_val, y_val
+
+
+def get_temporal_prostate_val_data(data_path):
+    val_fold = os.listdir(data_path[:-7] + VAL_IMGS_PATH)
+    num_val_data = len(val_fold)
+    val_img_arr = np.zeros((num_val_data, PROSTATE_DIM[0], PROSTATE_DIM[1], PROSTATE_DIM[2], 1), dtype=float)
+    val_GT_arr = np.zeros((num_val_data, PROSTATE_DIM[0], PROSTATE_DIM[1], PROSTATE_DIM[2], PROSTATE_NR_CLASS),
+                          dtype=float)
+    for i in np.arange(num_val_data):
+        val_img_arr[i] = np.load(data_path[:-7] + VAL_IMGS_PATH + str(i) + NPY)
+        val_GT_arr[i] = np.load(data_path[:-7] + VAL_GT_PATH + str(i) + NPY)
+    x_val = [val_img_arr, val_GT_arr, ]
+    y_val = [val_GT_arr[:, :, :, :, 0], val_GT_arr[:, :, :, :, 1],
+             val_GT_arr[:, :, :, :, 2], val_GT_arr[:, :, :, :, 3],
+             val_GT_arr[:, :, :, :, 4]]
+    return x_val, y_val

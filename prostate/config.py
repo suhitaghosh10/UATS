@@ -1,6 +1,6 @@
 PROSTATE_DATA_ROOT = '/cache/suhita/data/prostate/'
 SAVE_PATH = '/data/suhita/temporal/'
-TEMP_PATH = '/data/suhita/temporal/prostate/output/'
+TEMP_ROOT_PATH = '/data/suhita/temporal/prostate/output/'
 TRAINED_MODEL_ROOT_PATH = '/data/suhita/'
 BATCH_SIZE = 2
 LR = 5e-5

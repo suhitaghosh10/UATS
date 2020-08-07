@@ -1,5 +1,5 @@
 import keras
-
+import numpy as np
 NPY = '.npy'
 
 
@@ -40,7 +40,7 @@ class DataGenerator(keras.utils.Sequence):
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
             aug_type = np.random.randint(0, 4)
-            img[i, :, :, :, :], gt, ensemble_pred[i] = get_single_image_augmentation_with_ensemble2(
+            img[i, :, :, :, :], gt, ensemble_pred[i] = get_single_image_augmentation_with_ensemble(
                 aug_type,
                 np.load(self.imgs_path + ID + '.npy'),
                 np.load(self.gt_path + ID + '.npy'),

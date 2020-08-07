@@ -8,7 +8,7 @@ from old.preprocess_images import get_complete_array, get_array, save_array, get
 from old.prostate import weighted_model
 from old.utils.AugmentationGenerator import *
 from old.utils.ops import ramp_down_weight
-from prostate.generator.temporal_no_aug import DataGenerator
+from prostate.generator.uats import DataGenerator
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 from utility.prostate.utils import get_val_id_list
 

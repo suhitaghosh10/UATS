@@ -64,9 +64,9 @@ class TemporalCallback(Callback):
 
                 start = (b_no * self.patients_per_batch) + self.num_labeled_train
                 end = (start + actual_batch_size)
-                imgs = get_array(os.path.join(self.data_path + IMGS), start, end)
-                ensemble_prediction = get_array(os.path.join(self.temp_path + ENS_GT), start, end, dtype='float32')
-                supervised_flag = get_array(os.path.join(self.temp_path + FLAG), start, end, dtype='int64')
+                imgs = get_array(os.path.join(self.data_path, IMGS), start, end)
+                ensemble_prediction = get_array(os.path.join(self.temp_path, ENS_GT), start, end, dtype='float32')
+                supervised_flag = get_array(os.path.join(self.temp_path, FLAG), start, end, dtype='int64')
 
                 inp = [imgs, ensemble_prediction, supervised_flag]
                 del imgs, supervised_flag

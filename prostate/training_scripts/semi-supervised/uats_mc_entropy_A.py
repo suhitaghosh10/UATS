@@ -1,9 +1,11 @@
+import argparse
+
 import tensorflow as tf
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
 
 from old.utils.AugmentationGenerator import *
 from prostate.config import *
-from prostate.generator.temporal_A import DataGenerator as train_gen
+from prostate.generator.uats_A import DataGenerator as train_gen
 from prostate.model.uats_scaled import weighted_model
 from utility.callbacks.uats_softmax import TemporalCallback
 from utility.constants import *
@@ -107,31 +109,28 @@ def train(gpu_id, nb_gpus, ens_path, labelled_percentage, fold_num, name, lr=LR)
 
 if __name__ == '__main__':
 
-    # # Parse arguments
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('-g', '--gpu_num', type=str, default='0', help='GPU Number')
-    # parser.add_argument('-f', '--fold_num', type=int, default=1, help='Fold Number')
-    # parser.add_argument('-p', '--perc', type=int, default=1.0, help='Labelled data percentage')
-    # args = parser.parse_args()
-    #
-    # GPU_NUM = args.gpu_num
-    # FOLD_NUM = args.fold_num
-    # PERCENTAGE_LABELLED = args.perc
+    # Parse arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-g', '--gpu_num', type=str, default='0', help='GPU Number')
+    parser.add_argument('-f', '--fold_num', type=int, default=1, help='Fold Number')
+    parser.add_argument('-p', '--perc', type=int, default=1.0, help='Labelled data percentage')
+    parser.add_argument('-t', '--temp_path', type=str, default='sadv1', help='temp path')
+    args = parser.parse_args()
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = '3'
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_num
     config = tf.compat.v1.ConfigProto()
     config.gpu_options.allow_growth = True
     config.allow_soft_placement = True
 
     try:
-        fold_num = 1
-        perc = 1.
-        ens_path = TEMP_PATH + 'sadv1/'
+        fold_num = args.fold_num
+        perc = args.perc
+        temp_path = args.temp_path
         name = 'test_mc_entropy_F' + str(fold_num) + '_Perct_Labelled_' + str(perc)
-        train(None, None, ens_path=ens_path, labelled_percentage=perc, fold_num=fold_num, name=name, lr=LR)
+        train(None, None, temp_path=args.temp_path, labelled_percentage=perc, fold_num=fold_num, name=name, lr=LR)
 
     finally:
 
-        if os.path.exists(ens_path):
-            cleanup(ens_path)
+        if os.path.exists(TEMP_ROOT_PATH + temp_path):
+            cleanup(TEMP_ROOT_PATH + temp_path)
         print('clean up done!')

@@ -1,10 +1,12 @@
+import argparse
+
 import tensorflow as tf
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
 
 from old.utils.AugmentationGenerator import *
 from prostate.config import *
-from prostate.generator.temporal_A import DataGenerator as train_gen
-from prostate.model.uats_scaled import weighted_model
+from prostate.generator.uats_A import DataGenerator as train_gen
+from prostate.model.pseudo_save_best import weighted_model
 from utility.callbacks.pseudo_save_best import TemporalCallback
 from utility.constants import *
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
@@ -12,13 +14,14 @@ from utility.prostate.utils import get_uats_prostate_val_data
 from utility.utils import cleanup
 
 
-def train(gpu_id, nb_gpus, ens_path, labelled_percentage, fold_num, name, lr=LR):
+def train(gpu_id, nb_gpus, temp_path, labelled_percentage, fold_num, name, lr=LR):
     DATA_PATH = PROSTATE_DATA_ROOT + 'fold_' + str(fold_num) + '_P' + str(labelled_percentage) + '/train/'
     TB_LOG_DIR = SAVE_PATH + '/tb/prostate/' + name + '_' + str(lr) + '/'
     MODEL_NAME = SAVE_PATH + '/model/prostate/' + name + H5
     CSV_NAME = SAVE_PATH + '/csv/prostate/' + name + '.csv'
     TRAINED_MODEL_PATH = TRAINED_MODEL_ROOT_PATH + '/prostate/supervised_F' + str(fold_num) + '_P' + str(
         labelled_percentage) + '.h5'
+    ens_path = os.path.join(TEMP_ROOT_PATH + temp_path)
 
     num_labeled_train = int(labelled_percentage * PROSTATE_LABELLED_TRAIN_NUM)
     num_train_data = len(os.listdir(os.path.join(DATA_PATH, IMGS)))
@@ -74,9 +77,8 @@ def train(gpu_id, nb_gpus, ens_path, labelled_percentage, fold_num, name, lr=LR)
                            PATIENTS_PER_BATCH, PROSTATE_VAL_METRIC_KEY_ARR, nr_class=5, batch_size=BATCH_SIZE,
                            dataset_name=PROSTATE_DATASET)
 
-    lcb = wm.LossCallback()
     es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=PATIENCE_EARLY_STOP, min_delta=DELTA)
-    cb = [model_checkpoint, tcb, tensorboard, lcb, csv_logger, es]
+    cb = [model_checkpoint, tcb, tensorboard, csv_logger, es]
 
     print('BATCH Size = ', BATCH_SIZE)
 
@@ -107,31 +109,28 @@ def train(gpu_id, nb_gpus, ens_path, labelled_percentage, fold_num, name, lr=LR)
 
 if __name__ == '__main__':
 
-    # # Parse arguments
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('-g', '--gpu_num', type=str, default='0', help='GPU Number')
-    # parser.add_argument('-f', '--fold_num', type=int, default=1, help='Fold Number')
-    # parser.add_argument('-p', '--perc', type=int, default=1.0, help='Labelled data percentage')
-    # args = parser.parse_args()
-    #
-    # GPU_NUM = args.gpu_num
-    # FOLD_NUM = args.fold_num
-    # PERCENTAGE_LABELLED = args.perc
+    # Parse arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-g', '--gpu_num', type=str, default='0', help='GPU Number')
+    parser.add_argument('-f', '--fold_num', type=int, default=1, help='Fold Number')
+    parser.add_argument('-p', '--perc', type=int, default=1.0, help='Labelled data percentage')
+    parser.add_argument('-t', '--temp_path', type=str, default='sadv1', help='temp path')
+    args = parser.parse_args()
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = '3'
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_num
     config = tf.compat.v1.ConfigProto()
     config.gpu_options.allow_growth = True
     config.allow_soft_placement = True
 
     try:
-        fold_num = 1
-        perc = 1.
-        ens_path = TEMP_PATH + 'sadv1/'
+        fold_num = args.fold_num
+        perc = args.perc
+        temp_path = args.temp_path
         name = 'test_ps_F' + str(fold_num) + '_Perct_Labelled_' + str(perc)
-        train(None, None, ens_path=ens_path, labelled_percentage=perc, fold_num=fold_num, name=name, lr=LR)
+        train(None, None, temp_path=args.temp_path, labelled_percentage=perc, fold_num=fold_num, name=name, lr=LR)
 
     finally:
 
-        if os.path.exists(ens_path):
-            cleanup(ens_path)
+        if os.path.exists(TEMP_ROOT_PATH + temp_path):
+            cleanup(TEMP_ROOT_PATH + temp_path)
         print('clean up done!')
