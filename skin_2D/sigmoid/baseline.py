@@ -6,9 +6,9 @@ import os
 import numpy as np
 from keras.callbacks import ModelCheckpoint, TensorBoard, EarlyStopping, CSVLogger
 
-from skin_2D.sigmoid.data_generation import DataGenerator as train_gen
-from skin_2D.softmax.model_softmax_baseline import weighted_model
-from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
+from skin_2D import DataGenerator as train_gen
+from skin_2D import weighted_model
+from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 from kits import utils
 import SimpleITK as sitk
 import tensorflow as tf
@@ -56,7 +56,7 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
     model = wm.build_model(img_shape=(DIM[0],DIM[1],N_CHANNELS), learning_rate=learning_rate)
 
     print('-' * 30)
-    print('Creating and compiling model_impl...')
+    print('Creating and compiling training_scripts...')
     print('-' * 30)
 
     # callbacks
@@ -109,7 +109,7 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
               'n_channels': 3}
 
     print('-' * 30)
-    print('Fitting model_impl...')
+    print('Fitting training_scripts...')
     print('-' * 30)
 
 
@@ -175,7 +175,7 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
     del val_GT_arr, val_img_arr
 
     # workers=4)
-    # model_impl.save('temporal_max_ramp_final.h5')
+    # training_scripts.save('temporal_max_ramp_final.h5')
 
 
 
@@ -207,7 +207,7 @@ def predict(model_name, onlyEval=False):
         #np.save(os.path.join(out_dir, 'predicted.npy'), out)
         for i in range(out.shape[0]):
             segm = sitk.GetImageFromArray(out[i,:,:,:,0])
-            utils.makeDirectory(os.path.join(pred_dir, val_fold[int(i/2)]))
+            utils.makeDirectory(os.path.join(pred_dir, val_fold[int(i / 2)]))
             if i%2 ==0:
                 img = sitk.ReadImage(os.path.join(data_path, val_fold[int(i / 2)], 'img_left.nrrd'))
                 segm.CopyInformation(img)
@@ -265,7 +265,7 @@ if __name__ == '__main__':
 
     # FOLD_NUM = 2
     # perc = 1.0
-    # train(None, None, perc=perc, augmentation=True)
+    # train(None, None, perc=perc, augmented=True)
 
 
     FOLD_NUM = 3
@@ -293,19 +293,19 @@ if __name__ == '__main__':
     # FOLD_NUM = 2
     #
     # perc = 0.05
-    # train(None, None, perc=perc, augmentation=True)
+    # train(None, None, perc=perc, augmented=True)
     #
     # perc = 0.1
-    # train(None, None, perc=perc, augmentation=True)
+    # train(None, None, perc=perc, augmented=True)
     #
     # perc = 0.5
-    # train(None, None, perc=perc, augmentation=True)
+    # train(None, None, perc=perc, augmented=True)
     #
     # perc = 0.25
-    # train(None, None, perc=perc, augmentation=True)
+    # train(None, None, perc=perc, augmented=True)
 
     # perc = 0.5
-    # train(None, None, perc=perc, augmentation=True)
+    # train(None, None, perc=perc, augmented=True)
 
 
     # predict('/cache/suhita/skin/models/supervised_sfs32_F_1_1000_5e-05_Perc_1.0_augm.h5', onlyEval=True)

@@ -1,8 +1,7 @@
 import tensorflow as tf
 from keras import backend as K
 from keras.callbacks import Callback
-from keras.layers import concatenate, Input, Conv3D, MaxPooling3D, Conv3DTranspose, Lambda, \
-    BatchNormalization, Dropout
+from keras.layers import concatenate, Input, Conv3D, MaxPooling3D, Conv3DTranspose, BatchNormalization, Dropout
 from keras.models import Model
 from keras.optimizers import Adam
 from keras.utils import multi_gpu_model
@@ -265,7 +264,7 @@ class weighted_model:
         bn = True
         do = True
 
-        # normal model_impl- without MC
+        # normal training_scripts- without MC
 
         #######################################################
         conv1, conv1_b_m = self.downLayer(input_img, sfs, 1, bn)

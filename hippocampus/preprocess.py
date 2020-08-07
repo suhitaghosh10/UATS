@@ -1,9 +1,10 @@
-from kits import utils
-import SimpleITK as sitk
 import os
-import numpy as np
 import shutil
-import glob
+
+import SimpleITK as sitk
+import numpy as np
+
+from kits import utils
 
 
 def normalizeIntensities(*imgs):

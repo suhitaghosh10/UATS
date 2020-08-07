@@ -1,7 +1,8 @@
-import numpy as np
-import random
 import os
 from shutil import copyfile
+
+import numpy as np
+
 from kits import utils
 
 root_path = '/cache/suhita/data/kits/'

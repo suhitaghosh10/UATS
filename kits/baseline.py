@@ -4,14 +4,11 @@ sys.path.append('../')
 import os
 
 import numpy as np
-import tensorflow as tf
-from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import ModelCheckpoint, TensorBoard, EarlyStopping, CSVLogger
 
 from kits.data_generation import DataGenerator as train_gen
-from kits.model import weighted_model
-from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
-from lib.segmentation.utils import get_complete_array
+from kits import weighted_model
+from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 from kits import utils
 import SimpleITK as sitk
 
@@ -61,7 +58,7 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
     model = wm.build_model(img_shape=(DIM[0],DIM[1],DIM[2]), learning_rate=learning_rate)
 
     print('-' * 30)
-    print('Creating and compiling model_impl...')
+    print('Creating and compiling training_scripts...')
     print('-' * 30)
 
     # callbacks
@@ -115,7 +112,7 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
               'batch_size': batch_size }
 
     print('-' * 30)
-    print('Fitting model_impl...')
+    print('Fitting training_scripts...')
     print('-' * 30)
 
 
@@ -170,7 +167,7 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
     del val_GT_arr, val_img_arr
 
     # workers=4)
-    # model_impl.save('temporal_max_ramp_final.h5')
+    # training_scripts.save('temporal_max_ramp_final.h5')
 
 
 def generate_prediction_for_ul(model_name, onlyEval=False, img_path=None, ens_path=None):
@@ -265,7 +262,7 @@ def predict(model_name, onlyEval=False):
         #np.save(os.path.join(out_dir, 'predicted.npy'), out)
         for i in range(out.shape[0]):
             segm = sitk.GetImageFromArray(out[i,:,:,:,0])
-            utils.makeDirectory(os.path.join(pred_dir, val_fold[int(i/2)]))
+            utils.makeDirectory(os.path.join(pred_dir, val_fold[int(i / 2)]))
             if i%2 ==0:
                 img = sitk.ReadImage(os.path.join(data_path, val_fold[int(i / 2)], 'img_left.nrrd'))
                 segm.CopyInformation(img)
@@ -355,8 +352,8 @@ if __name__ == '__main__':
 
 
     # perc = 0.25
-    # train(None, None, perc=perc, augmentation=True)
-    # #train(None, None, perc=perc, augmentation=False)
+    # train(None, None, perc=perc, augmented=True)
+    # #train(None, None, perc=perc, augmented=False)
 
     model_name = '/data/suhita/temporal/kits/models/1_supervised_Perc_1.0.h5'
     img_path = '/cache/suhita/data/kidney_anneke/preprocessed_unlabeled/'

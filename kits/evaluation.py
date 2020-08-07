@@ -3,7 +3,7 @@ import csv
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
-from eval.preprocess import *
+from utility.prostate.preprocess import *
 
 THRESHOLD = 0.5
 
@@ -515,7 +515,7 @@ def eval_for_uats_softmax(model_dir, model_name, batch_size=1):
     GT_dir = '/cache/suhita/data/kidney_anneke/preprocessed_labeled_test'
     img_arr, GT_arr = create_test_arrays(GT_dir)
     DIM = img_arr.shape
-    from kits.model_softmax import weighted_model
+    from kits import weighted_model
     wm = weighted_model()
     model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=learning_rate, gpu_id=None,
                            nb_gpus=None, trained_model=os.path.join(model_dir, model_name + '.h5'), temp=1)
@@ -532,7 +532,7 @@ def eval_for_uats_mc(model_dir, model_name, batch_size=1):
     GT_dir = '/cache/suhita/data/kidney_anneke/preprocessed_labeled_test'
     img_arr, GT_arr = create_test_arrays(GT_dir)
     DIM = img_arr.shape
-    from kits.model_mc import weighted_model
+    from kits import weighted_model
     wm = weighted_model()
     model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=learning_rate, gpu_id=None,
                            nb_gpus=None, trained_model=os.path.join(model_dir, model_name + '.h5'))
@@ -549,7 +549,7 @@ def eval_for_supervised(model_dir, model_name, ):
     GT_dir = '/cache/suhita/data/kidney_anneke/preprocessed_labeled_test'
     img_arr, GT_arr = create_test_arrays(GT_dir)
     DIM = img_arr.shape
-    from kits.model import weighted_model
+    from kits import weighted_model
     wm = weighted_model()
     model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=learning_rate)
     model.load_weights(os.path.join(model_dir, NAME + '.h5'))
@@ -578,7 +578,7 @@ if __name__ == '__main__':
     augm = 'augm'
     batch_size = 2
 
-    ### for baseline of 0.1 images,
+    ### for supervised of 0.1 images,
     # NAME = 'supervised_F_centered_BB_' + str(FOLD_NUM) + '_' + str(TRAIN_NUM) + '_' + str(
     #     learning_rate) + '_Perc_' + str(PERC) + '_'+ augm
 

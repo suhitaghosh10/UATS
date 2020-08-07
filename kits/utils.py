@@ -1,20 +1,20 @@
 # -----------------------------------------------------------------------------
 # This file is created as part of the multi-planar prostate segmentation project
 #
-#  file:           utils.py
+#  file:           preprocess_images.py
 #  author:         Anneke Meyer, Otto-von-Guericke University Magdeburg
 #  year:           2017
 #
 # -----------------------------------------------------------------------------
 
 
-import os
-import numpy as np
-import math
-import SimpleITK as sitk
-import time
 import json
-import shutil
+import math
+import os
+import time
+
+import SimpleITK as sitk
+import numpy as np
 
 
 ############################ utils functions ##############################
@@ -360,16 +360,6 @@ def cropImage(img, lowerBound, upperBound):
     img = cropFilter.Execute(img)
 
     return img
-
-
-def makedir(dirpath):
-    if os.path.isdir(dirpath):
-        shutil.rmtree(dirpath)
-    try:
-        os.makedirs(dirpath)
-    except OSError:
-        # [Errno 17] File exists
-        pass
 
 
 def generateFolds(directory, foldDir, nrSplits=5):

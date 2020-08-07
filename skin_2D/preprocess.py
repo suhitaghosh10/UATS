@@ -1,8 +1,8 @@
-import cv2
 import glob
 import os
-import glob
 import shutil
+
+import cv2
 import numpy as np
 
 IMG_WIDTH = 256
@@ -73,10 +73,7 @@ def preprocess_dir(in_dir, out_dir, filetype ='jpg'):
 
 def hair_removal(in_dir, out_dir):
     import cv2
-    import scipy.misc
-    from PIL import Image
     import numpy as np
-    from matplotlib.pyplot import imshow, show
 
     imgs = os.listdir(in_dir)
 
@@ -91,7 +88,7 @@ def hair_removal(in_dir, out_dir):
 
         # imshow(src)
         # show()
-        # Convert the original image to grayscale
+        # Convert the original_classification image to grayscale
         grayScale = cv2.cvtColor(src, cv2.COLOR_RGB2GRAY)
         # imshow(grayScale)
         # show()
@@ -115,7 +112,7 @@ def hair_removal(in_dir, out_dir):
         # show()
         #cv2.imwrite('/data/suhita/skin/thresholded' + name + '.jpg', thresh2, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
 
-        # inpaint the original image depending on the mask
+        # inpaint the original_classification image depending on the mask
         dst = cv2.inpaint(src, thresh2, 1, cv2.INPAINT_TELEA)
         print('jj')
         # imshow(dst)

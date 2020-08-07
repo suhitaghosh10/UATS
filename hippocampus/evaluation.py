@@ -1,8 +1,8 @@
 import csv
 
 from hippocampus.baseline import get_multi_class_arr
-from eval.preprocess import *
 from kits.utils import makedir
+from utility.prostate.preprocess import *
 
 THRESHOLD = 0.5
 
@@ -338,7 +338,7 @@ def eval_for_uats_entropy(imgs_path, gt_path, model_dir, model_name, batch_size=
 
 
 if __name__ == '__main__':
-    from hippocampus.model import weighted_model
+    from hippocampus import weighted_model
 
     os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 

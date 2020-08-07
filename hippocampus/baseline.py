@@ -7,8 +7,8 @@ import numpy as np
 from keras.callbacks import ModelCheckpoint, TensorBoard, EarlyStopping, CSVLogger
 
 from hippocampus.data_generation import DataGenerator as train_gen
-from hippocampus.model import weighted_model
-from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
+from hippocampus import weighted_model
+from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 from keras.backend import clear_session
 
 #
@@ -61,7 +61,7 @@ def train(gpu_id, nb_gpus, fold_num=None, perc=1.0, augmentation=False):
     model = wm.build_model(img_shape=(DIM[0], DIM[1], DIM[2]), learning_rate=learning_rate)
 
     print('-' * 30)
-    print('Creating and compiling model_impl...')
+    print('Creating and compiling training_scripts...')
     print('-' * 30)
     print(model.summary())
 
@@ -117,7 +117,7 @@ def train(gpu_id, nb_gpus, fold_num=None, perc=1.0, augmentation=False):
               'n_classes': 3}
 
     print('-' * 30)
-    print('Fitting model_impl...')
+    print('Fitting training_scripts...')
     print('-' * 30)
 
     training_generator = train_gen(data_path,
@@ -168,7 +168,7 @@ def train(gpu_id, nb_gpus, fold_num=None, perc=1.0, augmentation=False):
     del val_GT_arr, val_img_arr
 
     # workers=4)
-    # model_impl.save('temporal_max_ramp_final.h5')
+    # training_scripts.save('temporal_max_ramp_final.h5')
 
 if __name__ == '__main__':
     GPU_ID = '2'
@@ -193,13 +193,13 @@ if __name__ == '__main__':
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
     # perc = 0.05
-    # train(None, None, perc=perc, augmentation=True)
+    # train(None, None, perc=perc, augmented=True)
     #
     # perc = 0.1
-    #train(None, None, perc=perc, augmentation=True)
+    # train(None, None, perc=perc, augmented=True)
 
     # perc = 0.25
-    #train(None, None, perc=perc, augmentation=True)
+    #train(None, None, perc=perc, augmented=True)
 
     # perc = 1.0
     train(None, None, fold_num=1, perc=0.05, augmentation=True)

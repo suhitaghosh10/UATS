@@ -1,9 +1,9 @@
-import numpy as np
-import random
 import os
-from shutil import copyfile
-from kits import utils
+
+import numpy as np
+
 from hippocampus.utils import get_multi_class_arr
+from kits import utils
 
 root_path = '/cache/suhita/hippocampus/'
 fold_num = 1

@@ -1,8 +1,9 @@
+import getpass
+
 import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import Callback
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
-import getpass
 
 USER_NAME = getpass.getuser()
 import sys
@@ -11,11 +12,11 @@ if USER_NAME == 'anneke':
     module_root = '../../'
     sys.path.append(module_root)
 
-from skin_2D.softmax.data_generation_softmax_uats import DataGenerator as train_gen
-from skin_2D.softmax.model_softmax_entropy import weighted_model
-from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
-from lib.segmentation.utils import get_array, save_array
-from zonal_utils.AugmentationGenerator import *
+from skin_2D import DataGenerator as train_gen
+from skin_2D import weighted_model
+from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
+from old.preprocess_images import get_array, save_array
+from old.utils.AugmentationGenerator import *
 from shutil import copyfile
 from kits.utils import makedir
 import shutil
@@ -188,7 +189,7 @@ def train(gpu_id, nb_gpus, perc, batch_nos, learning_rate=None, wts=None, clean=
                     cur_pred = np.zeros((actual_batch_size, DIM[0], DIM[1], 2))
                     model_out = model.predict(inp, batch_size=batch_size, verbose=1)  # 1
 
-                    # model_out = np.add(model_out, model_impl.predict(inp, batch_size=2, verbose=1))  # 2
+                    # model_out = np.add(model_out, training_scripts.predict(inp, batch_size=2, verbose=1))  # 2
                     # del inp
 
                     cur_pred[:, :, :, 0] = model_out[0] if bg_save else ensemble_prediction[:, :, :, 0]
@@ -290,7 +291,7 @@ def train(gpu_id, nb_gpus, perc, batch_nos, learning_rate=None, wts=None, clean=
     # params = {'dim': (32, 168, 168),'batch_size': batch_size}
 
     print('-' * 30)
-    print('Fitting model_impl...')
+    print('Fitting training_scripts...')
     print('-' * 30)
     training_generator = train_gen(DATA_PATH,
                                    ENS_GT_PATH,

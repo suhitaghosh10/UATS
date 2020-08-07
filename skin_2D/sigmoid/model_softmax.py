@@ -1,12 +1,10 @@
 import tensorflow as tf
 from keras import backend as K
-from keras.layers import concatenate, Input, Conv2D, MaxPooling2D, Conv2DTranspose, Lambda, \
-    Dropout, BatchNormalization
+from keras.callbacks import Callback
+from keras.layers import concatenate, Input, Conv2D, MaxPooling2D, Conv2DTranspose, Dropout, BatchNormalization
 from keras.models import Model
 from keras.optimizers import Adam
 from keras.utils import multi_gpu_model
-from keras.callbacks import Callback
-from lib.segmentation.ops import ramp_up_weight
 
 # from lib.segmentation.group_norm import GroupNormalization
 

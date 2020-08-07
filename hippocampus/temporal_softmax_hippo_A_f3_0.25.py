@@ -1,20 +1,18 @@
-from time import time
+import shutil
+from shutil import copyfile
 
 import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
-from keras.callbacks import Callback, ReduceLROnPlateau
+from keras.callbacks import Callback
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
 
-from hippocampus.data_generation_uats import DataGenerator as train_gen
+from hippocampus import DataGenerator as train_gen
 from hippocampus.model_softmax import weighted_model
-from lib.segmentation.ops import ramp_down_weight
-from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
-from lib.segmentation.utils import get_array, save_array
-from zonal_utils.AugmentationGenerator import *
-from shutil import copyfile
-from kits.utils import makedir
 from hippocampus.utils import get_multi_class_arr
-import shutil
+from kits.utils import makedir
+from old.preprocess_images import get_array, save_array
+from old.utils.AugmentationGenerator import *
+from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 
 learning_rate = 4e-5
 AUGMENTATION_NO = 5
@@ -246,7 +244,7 @@ def train(gpu_id, nb_gpus, perc):
     # params = {'dim': (32, 168, 168),'batch_size': batch_size}
 
     print('-' * 30)
-    print('Fitting model_impl...')
+    print('Fitting training_scripts...')
     print('-' * 30)
     training_generator = train_gen(DATA_PATH,
                                    ENS_GT_PATH,
@@ -285,7 +283,7 @@ def train(gpu_id, nb_gpus, perc):
                                   )
 
     # workers=4)
-    # model_impl.save('temporal_max_ramp_final.h5')
+    # training_scripts.save('temporal_max_ramp_final.h5')
 
 
 def predict(model_name):

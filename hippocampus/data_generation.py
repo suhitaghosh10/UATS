@@ -1,9 +1,9 @@
+import os
+
 import keras
 import numpy as np
-import SimpleITK as sitk
 
 import hippocampus.AugmentationGenerator as aug
-import os
 
 
 def get_multi_class_arr(arr, n_classes=3):

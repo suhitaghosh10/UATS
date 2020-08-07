@@ -86,7 +86,7 @@ def augment_images_spatial(original_image, reference_image, augmentation_type, T
         for current_parameters in transformation_parameters:
             T_aug.SetParameters(current_parameters)
             # Augmentation is done in the reference image space, so we first map the points from the reference image space
-            # back onto itself T_aug (e.g. rotate the reference image) and then we map to the original image space T0.
+            # back onto itself T_aug (e.g. rotate the reference image) and then we map to the original_classification image space T0.
             T_all = sitk.Transform(T0)
             T_all.AddTransform(T_aug)
             aug_image = sitk.Resample(original_image, reference_image, T_all,
@@ -212,7 +212,7 @@ def get_augmentation_transform(img, reference_image, augmentation_type):
     transform.SetMatrix(img.GetDirection())
     transform.SetTranslation(np.array(img.GetOrigin()) - reference_origin)
 
-    # Modify the transformation to align the centers of the original and reference image instead of their origins.
+    # Modify the transformation to align the centers of the original_classification and reference image instead of their origins.
     centering_transform = sitk.TranslationTransform(dimension)
     img_center = np.array(img.TransformContinuousIndexToPhysicalPoint(np.array(img.GetSize()) / 2.0))
     centering_transform.SetOffset(np.array(transform.GetInverse().TransformPoint(img_center) - reference_center))

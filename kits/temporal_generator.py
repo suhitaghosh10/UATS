@@ -1,7 +1,5 @@
 import keras
 
-from generator.AugmentationGenerator import *
-
 NPY = '.npy'
 
 

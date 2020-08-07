@@ -2,7 +2,8 @@ import csv
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
-from eval.preprocess import *
+
+from utility.prostate.preprocess import *
 
 THRESHOLD = 0.5
 
@@ -521,7 +522,7 @@ def eval_for_uats_softmax(model_dir, model_name, batch_size=1, out_dir=None, con
     GT_dir = '/cache/suhita/skin/preprocessed/labelled/test/'
     img_arr, GT_arr = create_test_arrays(GT_dir)
     DIM = img_arr.shape
-    from skin_2D.sigmoid.model_softmax import weighted_model
+    from skin_2D import weighted_model
     wm = weighted_model()
     model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=learning_rate, gpu_id=None,
                            nb_gpus=None, trained_model=os.path.join(model_dir, model_name + '.h5'))
@@ -541,7 +542,7 @@ def eval_for_uats_mc(model_dir, model_name, batch_size=1, out_dir=None):
     GT_dir = '/cache/suhita/skin/preprocessed/labelled/test/'
     img_arr, GT_arr = create_test_arrays(GT_dir)
     DIM = img_arr.shape
-    from skin_2D.sigmoid.model_mc import weighted_model
+    from skin_2D import weighted_model
     wm = weighted_model()
     model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=learning_rate, gpu_id=None,
                            nb_gpus=None, trained_model=os.path.join(model_dir, model_name + '.h5'))
@@ -562,7 +563,7 @@ def eval_for_supervised(model_dir, img_path, model_name, eval=True, out_dir=None
         img_arr = create_test_arrays(img_path, eval=eval)
         GT_arr = None
     DIM = img_arr.shape
-    from skin_2D.softmax.model_softmax_baseline import weighted_model
+    from skin_2D import weighted_model
     wm = weighted_model()
     model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=learning_rate)
     model.load_weights(os.path.join(model_dir, model_name + '.h5'))

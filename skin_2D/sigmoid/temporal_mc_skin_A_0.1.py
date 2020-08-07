@@ -1,15 +1,16 @@
+from shutil import copyfile
+
 import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import Callback
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
 
-from skin_2D.sigmoid.data_generation_uats import DataGenerator as train_gen
-from skin_2D.sigmoid.model_mc import weighted_model
-from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
-from lib.segmentation.utils import get_array, save_array
-from zonal_utils.AugmentationGenerator import *
-from shutil import copyfile
 from kits.utils import makedir
+from old.preprocess_images import get_array, save_array
+from old.utils.AugmentationGenerator import *
+from skin_2D import DataGenerator as train_gen
+from skin_2D import weighted_model
+from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 
 learning_rate = 1e-7
 AUGMENTATION_NO = 5
@@ -169,7 +170,7 @@ def train(gpu_id, nb_gpus):
                     cur_pred = np.zeros((actual_batch_size, DIM[0], DIM[1], 1))
                     model_out = model.predict(inp, batch_size=batch_size, verbose=1)  # 1
 
-                    # model_out = np.add(model_out, model_impl.predict(inp, batch_size=2, verbose=1))  # 2
+                    # model_out = np.add(model_out, training_scripts.predict(inp, batch_size=2, verbose=1))  # 2
                     # del inp
 
                     cur_pred = model_out if save else ensemble_prediction
@@ -250,7 +251,7 @@ def train(gpu_id, nb_gpus):
     # params = {'dim': (32, 168, 168),'batch_size': batch_size}
 
     print('-' * 30)
-    print('Fitting model_impl...')
+    print('Fitting training_scripts...')
     print('-' * 30)
     training_generator = train_gen(DATA_PATH,
                                    ENS_GT_PATH,
@@ -286,7 +287,7 @@ def train(gpu_id, nb_gpus):
                                   )
 
     # workers=4)
-    # model_impl.save('temporal_max_ramp_final.h5')
+    # training_scripts.save('temporal_max_ramp_final.h5')
 
 
 def predict(model_name):

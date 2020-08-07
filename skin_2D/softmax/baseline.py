@@ -7,9 +7,9 @@ import os
 import numpy as np
 from keras.callbacks import ModelCheckpoint, TensorBoard, EarlyStopping, CSVLogger
 
-from skin_2D.sigmoid.data_generation import DataGenerator as train_gen
-from skin_2D.softmax.model_softmax_baseline import weighted_model
-from lib.segmentation.parallel_gpu_checkpoint import ModelCheckpointParallel
+from skin_2D import DataGenerator as train_gen
+from skin_2D import weighted_model
+from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 from kits import utils
 import SimpleITK as sitk
 
@@ -52,7 +52,7 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation=False):
     model = wm.build_model(img_shape=(DIM[0], DIM[1], N_CHANNELS), learning_rate=learning_rate)
 
     print('-' * 30)
-    print('Creating and compiling model_impl...')
+    print('Creating and compiling training_scripts...')
     print('-' * 30)
 
     # callbacks
@@ -105,7 +105,7 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation=False):
               'n_channels': 3}
 
     print('-' * 30)
-    print('Fitting model_impl...')
+    print('Fitting training_scripts...')
     print('-' * 30)
 
     training_generator = train_gen(data_path,
@@ -164,7 +164,7 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation=False):
     del val_GT_arr, val_img_arr
 
     # workers=4)
-    # model_impl.save('temporal_max_ramp_final.h5')
+    # training_scripts.save('temporal_max_ramp_final.h5')
 
 
 def predict(model_name, onlyEval=False):

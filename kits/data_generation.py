@@ -1,9 +1,10 @@
+import os
+
 import keras
 import numpy as np
-import SimpleITK as sitk
 
 import kits.AugmentationGenerator as aug
-import os
+
 
 def remove_tumor_segmentation(arr):
     arr[arr > 1] = 1

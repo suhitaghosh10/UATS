@@ -1,12 +1,10 @@
+import csv
+import os
+
 import SimpleITK as sitk
 import numpy as np
-import os
+
 from kits import utils
-import csv
-
-import math
-
-
 
 BB_SIZE = [56, 152, 152]
 SPACING = [4.0,1.0,1.0]
@@ -283,7 +281,7 @@ def get_final_roi(img, start_x, start_y, start_z, size_x, size_y, size_z):
     if check_x and check_y and check_z:
         out_img = sitk.RegionOfInterest(img, size , start)
     else:
-        out_img = utils.pad_volume(img, target_size_x=start_x+size_x, target_size_y=start_y+size_y,
+        out_img = utils.pad_volume(img, target_size_x=start_x + size_x, target_size_y=start_y + size_y,
                                    target_size_z=start_z+size_z, padValue=utils.getMinimum(img))
         out_img = sitk.RegionOfInterest(out_img, size , start)
 
@@ -326,7 +324,7 @@ def preprocess():
 
     utils.makedir(preprocessed_dir)
 
-    bb_size = [80, 200, 200] # will be extended by [10,20,20] per side for augmentation
+    bb_size = [80, 200, 200]  # will be extended by [10,20,20] per side for augmented
 
     # get_left_and_right_BB()
     cases = sorted(os.listdir(files_dir))
@@ -404,7 +402,7 @@ def preprocess():
                                                     defaultValue=0, out_dType=sitk.sitkUInt8)
 
         segm_right_final = utils.resampleToReference(segm, img_right_final, sitk.sitkNearestNeighbor,
-                                                    defaultValue=0, out_dType=sitk.sitkUInt8)
+                                                     defaultValue=0, out_dType=sitk.sitkUInt8)
 
 
         # write images
@@ -447,10 +445,10 @@ def preprocess_centered_BB():
         img_left, img_right = normalizeIntensities(img_left, img_right)
 
         segm_left = utils.resampleToReference(segm, img_left, sitk.sitkNearestNeighbor,
-                                                    defaultValue=0, out_dType=sitk.sitkUInt8)
+                                              defaultValue=0, out_dType=sitk.sitkUInt8)
 
         segm_right = utils.resampleToReference(segm, img_right, sitk.sitkNearestNeighbor,
-                                                     defaultValue=0, out_dType=sitk.sitkUInt8)
+                                               defaultValue=0, out_dType=sitk.sitkUInt8)
 
         sitk.WriteImage(segm_left, 'segm_left.nrrd')
         sitk.WriteImage(segm_right, 'segm_right.nrrd')
@@ -488,7 +486,7 @@ def preprocess_centered_BB():
 def preprocess_unlabeled(files_dir, preprocessed_dir):
     utils.makedir(preprocessed_dir)
 
-    #bb_size = [80, 200, 200]  # will be extended by [10,20,20] per side for augmentation
+    # bb_size = [80, 200, 200]  # will be extended by [10,20,20] per side for augmented
 
     # get_left_and_right_BB()
     cases = sorted(os.listdir(files_dir))

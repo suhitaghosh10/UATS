@@ -264,7 +264,7 @@ class weighted_model:
         bn = True
         do = True
 
-        # normal model_impl- without MC
+        # normal training_scripts- without MC
 
         #######################################################
         conv1, conv1_b_m = self.downLayer(input_img, sfs, 1, bn)
