@@ -3,8 +3,6 @@ from shutil import copyfile
 
 import numpy as np
 from keras.callbacks import Callback
-
-from utility.config import MC_FORWARD_PASSES
 from utility.constants import ENS_GT, FLAG, GT, NPY, IMGS, ALPHA
 from utility.utils import makedir, shall_save, get_array, save_array
 
@@ -12,7 +10,7 @@ from utility.utils import makedir, shall_save, get_array, save_array
 class TemporalCallback(Callback):
 
     def __init__(self, dim, data_path, temp_path, save_path, num_train_data, num_labeled_train,
-                 patients_per_batch, pixel_perc_arr, val_metric_keys, nr_class, batch_size, dataset_name):
+                 patients_per_batch, pixel_perc_arr, val_metric_keys, nr_class, batch_size, mc_forward_pass_num, dataset_name):
 
         self.data_path = data_path
         self.temp_path = temp_path
@@ -30,6 +28,7 @@ class TemporalCallback(Callback):
         self.dim = dim
         self.batch_size = batch_size
         self.nr_dim = len(dim)
+        self.mc_forward_pass_num = mc_forward_pass_num
 
         flag_1 = np.ones(shape=dim, dtype='int64')
         flag_0 = np.zeros(shape=dim, dtype='int64')
@@ -119,7 +118,7 @@ class TemporalCallback(Callback):
                 save_array(os.path.join(self.temp_path, ENS_GT), ensemble_prediction, start, end)
                 del ensemble_prediction
 
-                for i in np.arange(MC_FORWARD_PASSES):
+                for i in np.arange(self.mc_forward_pass_num):
                     model_out = self.p_model_MC.predict(inp, batch_size=self.batch_size, verbose=1)
                     for cls in self.nr_class:
                         mc_pred[:, :, :, :, cls] = np.add(model_out[cls], mc_pred[:, :, :, :, cls])
@@ -128,11 +127,11 @@ class TemporalCallback(Callback):
                 entropy = None
                 for z in np.arange(self.nr_class):
                     if z == 0:
-                        entropy = (mc_pred[:, :, :, :, z] / MC_FORWARD_PASSES) * np.log(
-                            (mc_pred[:, :, :, :, z] / MC_FORWARD_PASSES) + 1e-5)
+                        entropy = (mc_pred[:, :, :, :, z] / self.mc_forward_pass_num) * np.log(
+                            (mc_pred[:, :, :, :, z] / self.mc_forward_pass_num) + 1e-5)
                     else:
-                        entropy = entropy + (mc_pred[:, :, :, :, z] / MC_FORWARD_PASSES) * np.log(
-                            (mc_pred[:, :, :, :, z] / MC_FORWARD_PASSES) + 1e-5)
+                        entropy = entropy + (mc_pred[:, :, :, :, z] / self.mc_forward_pass_num) * np.log(
+                            (mc_pred[:, :, :, :, z] / self.mc_forward_pass_num) + 1e-5)
                 entropy = -entropy
                 del mc_pred, inp, model_out
 

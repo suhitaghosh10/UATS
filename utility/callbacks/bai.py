@@ -42,7 +42,7 @@ class TemporalCallback(Callback):
 
     def on_epoch_end(self, epoch, logs={}):
 
-        if epoch % self.update_epoch == 0:
+        if epoch>0 and epoch % self.update_epoch == 0:
 
             # patients_per_batch = 59
             num_batches = self.num_un_labeled_train // self.patients_per_batch

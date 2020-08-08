@@ -71,7 +71,7 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
     training_generator = get_temporal_data_generator(dataset_name, data_path, ens_path, num_train_data, num_labeled_train, bs,
                                                  is_augmented)
     steps = (num_train_data * metadata[m_aug_num]) // bs
-    steps=2
+    #steps=2
 
     x_val, y_val = get_temporal_val_data(data_path, dim, metadata[m_nr_class], metadata[m_nr_channels])
 
