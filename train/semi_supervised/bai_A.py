@@ -4,7 +4,7 @@ from utility.callbacks.bai import TemporalCallback
 from utility.config import get_metadata
 from utility.constants import *
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
-from utility.utils import get_temporal_prostate_val_data, get_temporal_data_generator
+from utility.utils import get_temporal_val_data, get_temporal_data_generator
 
 
 def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_num, model_type, is_augmented=True):
@@ -75,7 +75,7 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
 
     steps = (num_train_data * metadata[m_aug_num]) // bs
 
-    x_val, y_val = get_temporal_prostate_val_data(data_path, dim, metadata[m_nr_class], metadata[m_nr_channels])
+    x_val, y_val = get_temporal_val_data(data_path, dim, metadata[m_nr_class], metadata[m_nr_channels])
 
     history = model.fit_generator(generator=training_generator,
                                   steps_per_epoch=steps,

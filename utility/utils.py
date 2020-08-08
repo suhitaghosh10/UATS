@@ -88,7 +88,7 @@ def get_uats_val_data(data_path, dim, nr_class, nr_channels):
     return x_val, y_val
 
 
-def get_temporal_prostate_val_data(data_path, dim, nr_class, nr_channels):
+def get_temporal_val_data(data_path, dim, nr_class, nr_channels):
     data_path = data_path[:-6]
     val_fold = os.listdir(data_path + VAL_IMGS_PATH)
     num_val_data = len(val_fold)
