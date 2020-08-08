@@ -23,7 +23,7 @@ TRAIN_GT_PATH = '/home/suhita/zonals/data/training/gt/'
 VAL_IMGS_PATH = '/home/suhita/zonals/data/test_anneke/imgs/'
 VAL_GT_PATH = '/home/suhita/zonals/data/test_anneke/gt/'
 
-TRAINED_MODEL_PATH = '/home/suhita/zonals/data/training_scripts.h5'
+TRAINED_MODEL_PATH = '/home/suhita/zonals/data/train.h5'
 # TRAINED_MODEL_PATH = '/home/suhita/zonals/temporal/temporal_sl2.h5'
 
 WEIGHT_PATH = '/home/suhita/zonals/temporal/sadv2/wt/'
@@ -75,10 +75,10 @@ def train(gpu_id, nb_gpus):
     print("Unlabeled Size:", num_un_labeled_train)
 
     print('-' * 30)
-    print('Creating and compiling training_scripts...')
+    print('Creating and compiling train...')
     print('-' * 30)
 
-    # training_scripts.metrics_tensors += training_scripts.outputs
+    # train.metrics_tensors += train.outputs
     model.summary()
 
     class TemporalCallback(Callback):
@@ -180,7 +180,7 @@ def train(gpu_id, nb_gpus):
                     cur_pred = np.zeros((actual_batch_size, 32, 168, 168, NUM_CLASS))
 
                     model_out = model.predict(inp, batch_size=2, verbose=1)  # 1
-                    # model_out = np.add(model_out, training_scripts.predict(inp, batch_size=2, verbose=1))  # 2
+                    # model_out = np.add(model_out, train.predict(inp, batch_size=2, verbose=1))  # 2
                     del inp
 
                     cur_pred[:, :, :, :, 0] = model_out[0] if pz_save else ensemble_prediction[:, :, :, :, 0]
@@ -282,7 +282,7 @@ def train(gpu_id, nb_gpus):
               'batch_size': batch_size}
 
     print('-' * 30)
-    print('Fitting training_scripts...')
+    print('Fitting train...')
     print('-' * 30)
     training_generator = DataGenerator(TRAIN_IMGS_PATH,
                                        TRAIN_GT_PATH,
@@ -316,7 +316,7 @@ def train(gpu_id, nb_gpus):
                                   )
 
     # workers=4)
-    # training_scripts.save('temporal_max_ramp_final.h5')
+    # train.save('temporal_max_ramp_final.h5')
 
 
 def predict(val_x_arr, val_y_arr):
@@ -335,7 +335,7 @@ def predict(val_x_arr, val_y_arr):
     model = wm.build_model(num_class=NUM_CLASS, use_dice_cl=True, learning_rate=learning_rate, gpu_id=None,
                            nb_gpus=None, trained_model=MODEL_NAME)
     print('load_weights')
-    # training_scripts.load_weights()
+    # train.load_weights()
     print('predict')
     out = model.predict(x_val, batch_size=1, verbose=1)
 

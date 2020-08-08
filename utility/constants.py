@@ -1,3 +1,5 @@
+# do not change
+
 NPY = '.npy'
 VAL_IMGS_PATH = '/val/imgs/'
 VAL_GT_PATH = '/val/gt/'
@@ -11,11 +13,35 @@ PATIENCE_EARLY_STOP = 30
 DELTA = 0.0005
 NUM_EPOCH = 1000
 
-# prostate
-PROSTATE_NR_CLASS = 5
-PROSTATE_DIM = [32, 168, 168]
-PROSTATE_DATASET = 'prostate'
-PROSTATE_LABELLED_TRAIN_NUM = 58
-PERCENTAGE_OF_PIXELS = [50, 50, 10, 10, 50]  # pz, tz, us, afs, bg
-PROSTATE_VAL_METRIC_KEY_ARR = ['val_pz_dice_coef', 'val_cz_dice_coef', 'val_us_dice_coef', 'val_afs_dice_coef',
-                               'val_bg_dice_coef']
+# dataset names
+PROSTATE_DATASET_NAME = 'prostate'
+
+# model types
+MODEL_SSL_UATS_SM = 'uats_softmax'
+MODEL_SSL_UATS_ENTROPY = 'uats_mc_entropy'
+MODEL_SSL_UATS_VARIANCE = 'uats_mc_variance'
+MODEL_SSL_TEMPORAL = 'uats_softmax'
+MODEL_SSL_BAI = 'bai'
+MODEL_SSL_PSEUDO_SB = 'pseudo_save_best'
+MODEL_SL_BASELINE = 'baseline'
+MODEL_SL_TEMPORAL = 'supervised_temporal'
+
+# metadata
+m_data_path = 'data_path'
+m_save_path = 'save_path'
+m_root_temp_path = 'temp_path'
+m_batch_size = 'batch_size'
+m_nr_channels = 'nr_channels'
+m_lr = 'lr'
+m_aug_num = 'aug_num'
+m_patients_per_batch = 'patients_per_batch'
+m_update_epoch_num = 'update_epoch_num'
+m_mc_forward_pass = 'mc_forward_pass'
+m_nr_class = 'nr_class'
+m_dim = 'dim'
+m_dataset_name = 'dataset'
+m_labelled_train = 'train_l_num'
+m_labelled_val = 'val_num'
+m_unlabelled_train = 'train_ul_num'
+m_labelled_perc = 'lperc'
+m_metric_keys = 'metric_keys'

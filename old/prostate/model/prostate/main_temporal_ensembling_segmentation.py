@@ -5,12 +5,12 @@ from keras import backend as K
 from keras.optimizers import Adam
 from sklearn.utils import shuffle
 
+from dataset_specific.prostate.generator import AugmentTypes
 from old.preprocess_images import split_supervised_train, make_train_test_dataset, whiten_zca, \
     data_augmentation_tempen
 from old.utils.AugmentationGenerator import *
 from old.utils.ops import ramp_up_weight, update_unsupervised_target, evaluate, \
     ramp_down_weight, update_weight
-from prostate.generator import AugmentTypes
 from utility.weight_norm import AdamWithWeightnorm
 
 

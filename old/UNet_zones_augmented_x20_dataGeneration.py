@@ -212,14 +212,14 @@ class weighted_model:
         print("Mask Size:", train_mask.shape)
 
         print('-' * 30)
-        print('Creating and compiling training_scripts...')
+        print('Creating and compiling train...')
         print('-' * 30)
 
         model = self.get_net(1, LR, bn, do, mask)
-        # plot_model(training_scripts, to_file='training_scripts.png')
+        # plot_model(train, to_file='train.png')
 
         print('-' * 30)
-        print('Fitting training_scripts...')
+        print('Fitting train...')
         print('-' * 30)
 
         cb=[csv_logger, model_checkpoint]
@@ -245,7 +245,7 @@ class weighted_model:
         val_id_list = [str(i) for i in np.arange(0, val_imgs.shape[0])]
         val_generator = ValDataGenerator(val_imgs, val_gt_list, val_mask, val_id_list, bs, **params)
         steps = 58/2
-        #  history = training_scripts.fit(1, train_id_list, batch_size=bs, epochs=nr_epochs, verbose=1, validation_data=[val_imgs, val_gt_list], shuffle=True, callbacks=cb)
+        #  history = train.fit(1, train_id_list, batch_size=bs, epochs=nr_epochs, verbose=1, validation_data=[val_imgs, val_gt_list], shuffle=True, callbacks=cb)
         history = model.fit_generator(generator=training_generator,
                                       steps_per_epoch= steps,
                                       validation_data=val_generator,

@@ -1,6 +1,6 @@
 import numpy as np
 
-from kits.utils import makedir
+from dataset_specific.kits import makedir
 
 root_path = '/cache/suhita/data/prostate/'
 fold_num = 2

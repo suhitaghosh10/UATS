@@ -6,11 +6,11 @@ import tensorflow as tf
 from keras.callbacks import Callback
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
 
-from kits.utils import makedir
+from dataset_specific.kits import makedir
+from dataset_specific.prostate.generator import DataGenerator as train_gen
+from dataset_specific.prostate.model import weighted_model
 from old.preprocess_images import get_array, save_array
 from old.utils.AugmentationGenerator import *
-from prostate.generator.uats import DataGenerator as train_gen
-from prostate.model import weighted_model
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 
 learning_rate = 5e-5
@@ -161,7 +161,7 @@ def train(gpu_id, nb_gpus, perc):
                     # cur_sigmoid_pred = np.zeros((actual_batch_size, 32, 168, 168, NUM_CLASS))
                     model_out = model.predict(inp, batch_size=2, verbose=1)  # 1
 
-                    # model_out = np.add(model_out, training_scripts.predict(inp, batch_size=2, verbose=1))  # 2
+                    # model_out = np.add(model_out, train.predict(inp, batch_size=2, verbose=1))  # 2
                     del inp
 
                     cur_pred[:, :, :, :, 0] = model_out[0] if pz_save else ensemble_prediction[:, :, :, :, 0]
@@ -248,7 +248,7 @@ def train(gpu_id, nb_gpus, perc):
     # params = {'dim': (32, 168, 168),'batch_size': batch_size}
 
     print('-' * 30)
-    print('Fitting training_scripts...')
+    print('Fitting train...')
     print('-' * 30)
     training_generator = train_gen(DATA_PATH,
                                    ENS_GT_PATH,
@@ -283,7 +283,7 @@ def train(gpu_id, nb_gpus, perc):
     del model
 
     # workers=4)
-    # training_scripts.save('temporal_max_ramp_final.h5')
+    # train.save('temporal_max_ramp_final.h5')
 
 
 def cleanup():

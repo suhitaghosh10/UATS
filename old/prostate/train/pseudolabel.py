@@ -5,10 +5,10 @@ from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import Callback
 from keras.callbacks import ModelCheckpoint, TensorBoard, ReduceLROnPlateau, CSVLogger
 
+from dataset_specific.prostate.generator import DataGenerator as gen
+from dataset_specific.prostate.model import weighted_model
 from old.utils.AugmentationGenerator import *
 from old.utils.ops import ramp_down_weight
-from prostate.generator import DataGenerator as gen
-from prostate.model import weighted_model
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 
 # 294 Training 58 have gt
@@ -60,10 +60,10 @@ def train(gpu_id, nb_gpus, trained_model=None):
             print(time() - self.starttime)
 
     print('-' * 30)
-    print('Creating and compiling training_scripts...')
+    print('Creating and compiling train...')
     print('-' * 30)
 
-    # training_scripts.metrics_tensors += training_scripts.outputs
+    # train.metrics_tensors += train.outputs
     model.summary()
     # callbacks
     print('-' * 30)
@@ -99,7 +99,7 @@ def train(gpu_id, nb_gpus, trained_model=None):
               'batch_size': batch_size}
 
     print('-' * 30)
-    print('Fitting training_scripts...')
+    print('Fitting train...')
     print('-' * 30)
     training_generator = gen(TRAIN_IMGS_PATH,
                              TRAIN_GT_PATH,
@@ -128,7 +128,7 @@ def train(gpu_id, nb_gpus, trained_model=None):
                                   )
 
     # workers=4)
-    # training_scripts.save('temporal_max_ramp_final.h5')
+    # train.save('temporal_max_ramp_final.h5')
 
 
 def predict(model_name, eval=True):
@@ -140,7 +140,7 @@ def predict(model_name, eval=True):
     model = wm.build_model(learning_rate=learning_rate, gpu_id=None,
                            nb_gpus=None, trained_model=model_name)
     print('load_weights')
-    # training_scripts.load_weights(TRAINED_MODEL_PATH)
+    # train.load_weights(TRAINED_MODEL_PATH)
     out = model.predict([val_imgs], batch_size=1, verbose=1)
     np.save(os.path.join(out_dir, 'gn_predicted.npy'), out)
     if eval:

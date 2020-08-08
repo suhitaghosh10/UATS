@@ -4,7 +4,7 @@ from shutil import copyfile
 import numpy as np
 from keras.callbacks import Callback
 
-from prostate.config import UPDATE_EPOCH_NO
+from utility.config import UPDATE_EPOCH_NO
 from utility.constants import ENS_GT, FLAG, GT, NPY, IMGS
 from utility.utils import makedir, get_array, save_array
 

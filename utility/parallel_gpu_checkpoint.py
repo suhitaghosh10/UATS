@@ -9,19 +9,19 @@ class ModelCheckpointParallel(keras.callbacks.Callback):
 
     borrow from: https://github.com/rmkemker/main/blob/master/machine_learning/model_checkpoint_parallel.py
 
-    Save the training_scripts after every epoch.
+    Save the train after every epoch.
     `filepath` can contain named formatting options,
     which will be filled the value of `epoch` and
     keys in `logs` (passed in `on_epoch_end`).
     For example: if `filepath` is `weights.{epoch:02d}-{val_loss:.2f}.hdf5`,
-    then the training_scripts checkpoints will be saved with the epoch number and
+    then the train checkpoints will be saved with the epoch number and
     the validation loss in the filename.
     # Arguments
-        filepath: string, path to save the training_scripts file.
+        filepath: string, path to save the train file.
         monitor: quantity to monitor.
         verbose: verbosity mode, 0 or 1.
         save_best_only: if `save_best_only=True`,
-            the latest best training_scripts according to
+            the latest best train according to
             the quantity monitored will not be overwritten.
         mode: one of {auto, min, max}.
             If `save_best_only=True`, the decision
@@ -31,9 +31,9 @@ class ModelCheckpointParallel(keras.callbacks.Callback):
             this should be `max`, for `val_loss` this should
             be `min`, etc. In `auto` mode, the direction is
             automatically inferred from the name of the monitored quantity.
-        save_weights_only: if True, then only the training_scripts's weights will be
-            saved (`training_scripts.save_weights(filepath)`), else the full training_scripts
-            is saved (`training_scripts.save(filepath)`).
+        save_weights_only: if True, then only the train's weights will be
+            saved (`train.save_weights(filepath)`), else the full train
+            is saved (`train.save(filepath)`).
         period: Interval (number of epochs) between checkpoints.
     """
 
@@ -80,7 +80,7 @@ class ModelCheckpointParallel(keras.callbacks.Callback):
 
     def on_batch_end(self, batch, logs=None):
         if self.at_batch_end is not None and np.mod(batch + 1, self.at_batch_end) == 0:
-            print("Saving training_scripts at batch end!")
+            print("Saving train at batch end!")
             self.on_model_save(self.current_epoch, batch + 1, logs=logs)
 
     def on_epoch_end(self, epoch, logs=None):
@@ -89,7 +89,7 @@ class ModelCheckpointParallel(keras.callbacks.Callback):
         self.current_epoch = epoch + 1
 
     def on_model_save(self, epoch, iter, logs=None):
-        """ save the training_scripts to hdf5. Code mostly from keras core """
+        """ save the train to hdf5. Code mostly from keras core """
 
         logs = logs or {}
         num_outputs = len(self.model.outputs)
@@ -100,13 +100,13 @@ class ModelCheckpointParallel(keras.callbacks.Callback):
             if self.save_best_only:
                 current = logs.get(self.monitor)
                 if current is None:
-                    warnings.warn('Can save best training_scripts only with %s available, '
+                    warnings.warn('Can save best train only with %s available, '
                                   'skipping.' % (self.monitor), RuntimeWarning)
                 else:
                     if self.monitor_op(current, self.best):
                         if self.verbose > 0:
                             print('Epoch %05d: Iter%05d: %s improved from %0.5f to %0.5f,'
-                                  ' saving training_scripts to %s'
+                                  ' saving train to %s'
                                   % (epoch, iter, self.monitor, self.best,
                                      current, filepath))
                         self.best = current
@@ -120,7 +120,7 @@ class ModelCheckpointParallel(keras.callbacks.Callback):
                                   (epoch, iter, self.monitor))
             else:
                 if self.verbose > 0:
-                    print('Epoch %05d: saving training_scripts to %s' % (epoch, filepath))
+                    print('Epoch %05d: saving train to %s' % (epoch, filepath))
                 if self.save_weights_only:
                     self.model.layers[-(num_outputs + 1)].save_weights(filepath, overwrite=True)
                 else:

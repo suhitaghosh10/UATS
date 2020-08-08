@@ -4,11 +4,11 @@ from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import Callback, ReduceLROnPlateau
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger
 
+from dataset_specific.prostate.model import weighted_model
 from old.preprocess_images import get_complete_array, get_array, save_array
 from old.prostate.generator import DataGenerator as train_gen
 from old.utils.AugmentationGenerator import *
 from old.utils.ops import ramp_down_weight
-from prostate.model import weighted_model
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 
 # 294 Training 58 have gt
@@ -30,7 +30,7 @@ VAL_IMGS_PATH = '/cache/suhita/data/test_anneke/imgs/'
 VAL_GT_PATH = '/cache/suhita/data/test_anneke/gt/'
 
 # TRAINED_MODEL_PATH = '/cache/suhita/temporal/supervised_F' + str(FOLD_NUM) + '.h5'
-TRAINED_MODEL_PATH = '/cache/suhita/data/training_scripts.h5'
+TRAINED_MODEL_PATH = '/cache/suhita/data/train.h5'
 
 ENS_GT_PATH = '/cache/suhita/temporal/SADV1/ens_gt/'
 FLAG_PATH = '/cache/suhita/temporal/SADV1/flag/'
@@ -73,7 +73,7 @@ def train(gpu_id, nb_gpus):
     print("Unlabeled Size:", num_un_labeled_train)
 
     print('-' * 30)
-    print('Creating and compiling training_scripts...')
+    print('Creating and compiling train...')
     print('-' * 30)
 
     model.summary()
@@ -161,7 +161,7 @@ def train(gpu_id, nb_gpus):
                     # cur_sigmoid_pred = np.zeros((actual_batch_size, 32, 168, 168, NUM_CLASS))
 
                     model_out = model.predict(inp, batch_size=2, verbose=1)  # 1
-                    # model_out = np.add(model_out, training_scripts.predict(inp, batch_size=2, verbose=1))  # 2
+                    # model_out = np.add(model_out, train.predict(inp, batch_size=2, verbose=1))  # 2
                     del inp
 
                     cur_pred[:, :, :, :, 0] = model_out[0] if pz_save else ensemble_prediction[:, :, :, :, 0]
@@ -253,7 +253,7 @@ def train(gpu_id, nb_gpus):
     # params = {'dim': (32, 168, 168),'batch_size': batch_size}
 
     print('-' * 30)
-    print('Fitting training_scripts...')
+    print('Fitting train...')
     print('-' * 30)
     training_generator = train_gen(TRAIN_IMGS_PATH,
                                    TRAIN_GT_PATH,
@@ -290,7 +290,7 @@ def train(gpu_id, nb_gpus):
                                   )
 
     # workers=4)
-    # training_scripts.save('temporal_max_ramp_final.h5')
+    # train.save('temporal_max_ramp_final.h5')
 
 
 def predict(val_x_arr, val_y_arr, model):
@@ -308,7 +308,7 @@ def predict(val_x_arr, val_y_arr, model):
     model = wm.build_model(num_class=NUM_CLASS, learning_rate=learning_rate, gpu_id=None,
                            nb_gpus=None, trained_model=model, temp=TEMP)
     print('load_weights')
-    # training_scripts.load_weights()
+    # train.load_weights()
     print('predict')
     out = model.predict(x_val, batch_size=1, verbose=1)
     print(model.metrics_names)

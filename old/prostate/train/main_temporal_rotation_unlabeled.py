@@ -61,10 +61,10 @@ def train(train_x, train_y, train_ux, train_ux_predicted, val_x, val_y, gpu_id, 
     print("Images Size:", num_train_data)
 
     print('-' * 30)
-    print('Creating and compiling training_scripts...')
+    print('Creating and compiling train...')
     print('-' * 30)
 
-    # training_scripts.metrics_tensors += training_scripts.outputs
+    # train.metrics_tensors += train.outputs
     model.summary()
 
     class TemporalCallback(Callback):
@@ -190,7 +190,7 @@ def train(train_x, train_y, train_ux, train_ux_predicted, val_x, val_y, gpu_id, 
               'shuffle': True}
 
     print('-' * 30)
-    print('Fitting training_scripts...')
+    print('Fitting train...')
     print('-' * 30)
     training_generator = DataGenerator(train_x, unsupervised_target, supervised_label, supervised_flag,
                                        unsupervised_weight, tcb.get_training_list(), **params)
@@ -219,7 +219,7 @@ def train(train_x, train_y, train_ux, train_ux_predicted, val_x, val_y, gpu_id, 
                                   workers=4
                                   )
     # workers=4)
-    # training_scripts.save('temporal_max_ramp_final.h5')
+    # train.save('temporal_max_ramp_final.h5')
 
 
 def predict(val_x, val_y):

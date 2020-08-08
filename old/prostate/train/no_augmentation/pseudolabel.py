@@ -2,10 +2,10 @@ import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import ModelCheckpoint, TensorBoard, ReduceLROnPlateau, CSVLogger
 
+from dataset_specific.prostate.generator.baseline import DataGenerator as gen
+from dataset_specific.prostate.model import weighted_model
 from old.utils.AugmentationGenerator import *
 from old.utils.ops import ramp_down_weight
-from prostate.generator.baseline import DataGenerator as gen
-from prostate.model import weighted_model
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 
 # 294 Training 58 have gt
@@ -23,7 +23,7 @@ TRAIN_GT_PATH = '/cache/suhita/data/training/gt/'
 TEST_IMGS_PATH = '/cache/suhita/data/test_anneke/imgs/'
 TEST_GT_PATH = '/cache/suhita/data/test_anneke/gt/'
 
-TRAINED_MODEL_PATH = '/data/suhita/data/training_scripts.h5'
+TRAINED_MODEL_PATH = '/data/suhita/data/train.h5'
 
 NUM_CLASS = 5
 num_epoch = 351
@@ -50,10 +50,10 @@ def train(gpu_id, nb_gpus, trained_model=None):
     gen_lr_weight = ramp_down_weight(ramp_down_period)
 
     print('-' * 30)
-    print('Creating and compiling training_scripts...')
+    print('Creating and compiling train...')
     print('-' * 30)
 
-    # training_scripts.metrics_tensors += training_scripts.outputs
+    # train.metrics_tensors += train.outputs
     model.summary()
     # callbacks
     print('-' * 30)
@@ -89,7 +89,7 @@ def train(gpu_id, nb_gpus, trained_model=None):
               'batch_size': batch_size}
 
     print('-' * 30)
-    print('Fitting training_scripts...')
+    print('Fitting train...')
     print('-' * 30)
     training_generator = gen(TRAIN_IMGS_PATH,
                              TRAIN_GT_PATH,
@@ -118,7 +118,7 @@ def train(gpu_id, nb_gpus, trained_model=None):
                                   )
 
     # workers=4)
-    # training_scripts.save('temporal_max_ramp_final.h5')
+    # train.save('temporal_max_ramp_final.h5')
 
 
 def predict(val_imgs, val_gt, model_name, evaluate=True):
@@ -132,7 +132,7 @@ def predict(val_imgs, val_gt, model_name, evaluate=True):
                            nb_gpus=None,
                            trained_model=model_name)
     print('load_weights')
-    # training_scripts.load_weights(TRAINED_MODEL_PATH)
+    # train.load_weights(TRAINED_MODEL_PATH)
     out = model.predict([val_imgs], batch_size=1, verbose=1)
     np.save(os.path.join(out_dir, 'original_predicted.npy'), out)
 

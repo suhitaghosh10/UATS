@@ -1,9 +1,6 @@
 import csv
-import math
 
-import SimpleITK as sitk
 import matplotlib.pyplot as plt
-import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 
 from utility.prostate.preprocess import *
@@ -527,7 +524,7 @@ def predict_for_uats_mc(val_x_arr, val_y_arr, model, mc=False):
 
     x_val = [val_x_arr, val_y_arr, val_supervised_flag]
     print('load_weights')
-    # training_scripts.load_weights()
+    # train.load_weights()
     print('predict')
     out = model.predict(x_val, batch_size=1, verbose=1)
     output_arr = np.zeros((out[0].shape[0], 32, 168, 168, 5))
@@ -549,7 +546,7 @@ def predict_for_uats_mc(val_x_arr, val_y_arr, model, mc=False):
 
 def generate_predictions(model_dir, model_name, ul_imgs):
     csvName = model_dir + model_name + '.csv'
-    from prostate.model import weighted_model
+    from dataset_specific.prostate.model import weighted_model
     wm = weighted_model()
     model = wm.build_model()
     model.load_weights(model_dir + model_name + '.h5')
@@ -570,14 +567,14 @@ def evaluate_uats(model_dir, model_name, val_x, val_y, mc=False):
     csvName = model_dir + model_name + '.csv'
 
     if mc:
-        from prostate.model import weighted_model
+        from dataset_specific.prostate.model import weighted_model
         wm = weighted_model()
         model = wm.build_model(trained_model=model_dir + model_name)[0]
         model.load_weights(model_dir + model_name)
         prediction_arr = predict_for_uats_mc(val_x, val_y, model, mc=True)
 
     else:
-        from prostate.model.uats_scaled import weighted_model
+        from dataset_specific.prostate.model import weighted_model
         wm = weighted_model()
         model = wm.build_model(trained_model=model_dir + model_name, temp=1.0)
         model.load_weights(model_dir + model_name)
@@ -590,7 +587,7 @@ def evaluate_uats(model_dir, model_name, val_x, val_y, mc=False):
 def evaluate_supervised(model_dir, model_name, val_x, val_y):
     csvName = model_dir + model_name + '.csv'
 
-    from prostate.model.baseline import weighted_model
+    from dataset_specific.prostate.model import weighted_model
     wm = weighted_model()
     model = wm.build_model()
     model.load_weights(model_dir + model_name + '.h5')

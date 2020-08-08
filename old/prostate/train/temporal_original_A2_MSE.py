@@ -4,11 +4,11 @@ from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import Callback, ReduceLROnPlateau
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
 
+from dataset_specific.prostate.generator import DataGenerator
+from dataset_specific.prostate.model import weighted_model
 from old.preprocess_images import get_complete_array, get_array, save_array
 from old.utils.AugmentationGenerator import *
 from old.utils.ops import ramp_down_weight
-from prostate.generator.uats_A import DataGenerator
-from prostate.model import weighted_model
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 
 # 294 Training 58 have gt
@@ -70,7 +70,7 @@ def train(gpu_id, nb_gpus):
     print("Unlabeled Size:", num_un_labeled_train)
 
     print('-' * 30)
-    print('Creating and compiling training_scripts...')
+    print('Creating and compiling train...')
     print('-' * 30)
 
     model.summary()
@@ -192,7 +192,7 @@ def train(gpu_id, nb_gpus):
               'batch_size': batch_size}
 
     print('-' * 30)
-    print('Fitting training_scripts...')
+    print('Fitting train...')
     print('-' * 30)
     training_generator = DataGenerator(TRAIN_IMGS_PATH,
                                        TRAIN_GT_PATH,
@@ -225,7 +225,7 @@ def train(gpu_id, nb_gpus):
                                   )
 
     # workers=4)
-    # training_scripts.save('temporal_max_ramp_final.h5')
+    # train.save('temporal_max_ramp_final.h5')
 
 
 def predict(val_x_arr, val_y_arr):
@@ -243,7 +243,7 @@ def predict(val_x_arr, val_y_arr):
     model = wm.build_model(num_class=NUM_CLASS, use_dice_cl=True, learning_rate=learning_rate, gpu_id=None,
                            nb_gpus=None, trained_model=MODEL_NAME, temp=1)
     print('load_weights')
-    # training_scripts.load_weights()
+    # train.load_weights()
     print('predict')
     out = model.predict(x_val, batch_size=1, verbose=1)
     print(model.metrics_names)

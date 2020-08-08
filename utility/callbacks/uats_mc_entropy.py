@@ -4,7 +4,7 @@ from shutil import copyfile
 import numpy as np
 from keras.callbacks import Callback
 
-from prostate.config import MC_FORWARD_PASSES
+from utility.config import MC_FORWARD_PASSES
 from utility.constants import ENS_GT, FLAG, GT, NPY, IMGS, ALPHA
 from utility.utils import makedir, shall_save, get_array, save_array
 

@@ -153,7 +153,7 @@ class weighted_model:
 
             # model_copy = Model([input_img, unsupervised_label, supervised_flag, unsupervised_weight],[pz_out, cz_out, us_out, afs_out, bg_out])
 
-            # intermediate_layer_model = Model(inputs=training_scripts.input,outputs=training_scripts.get_layer(layer_name).output)
+            # intermediate_layer_model = Model(inputs=train.input,outputs=train.get_layer(layer_name).output)
 
             p_model.compile(optimizer=optimizer,
                             loss={'pz': self.semi_supervised_loss(supervised_flag),
@@ -179,7 +179,7 @@ class weighted_model:
 
                 # model_copy = Model([input_img, unsupervised_label, gt, supervised_flag, unsupervised_weight],[pz_out, cz_out, us_out, afs_out, bg_out])
 
-                # intermediate_layer_model = Model(inputs=training_scripts.input,outputs=training_scripts.get_layer(layer_name).output)
+                # intermediate_layer_model = Model(inputs=train.input,outputs=train.get_layer(layer_name).output)
 
                 p_model.compile(optimizer=optimizer,
                                 loss={'pz': self.semi_supervised_loss(supervised_flag),

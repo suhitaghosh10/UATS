@@ -5,7 +5,7 @@ import numpy as np
 from old.preprocess_images import get_complete_array
 from old.prostate import weighted_model
 
-MODEL_NAME = '/home/suhita/zonals/data/training_scripts.h5'
+MODEL_NAME = '/home/suhita/zonals/data/train.h5'
 VAL_IMGS_PATH = '/home/suhita/zonals/data/test_anneke/imgs/'
 VAL_GT_PATH = '/home/suhita/zonals/data/test_anneke/gt/'
 

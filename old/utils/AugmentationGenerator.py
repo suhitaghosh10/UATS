@@ -372,7 +372,7 @@ if __name__ == '__main__':
     gt_path = '/home/suhita/zonals/data/training/trainArray_GT_fold1.npy'
     img_array_aniso = np.load(img_path)
     gt_array_aniso = np.load(gt_path)
-    from prostate.generator import AugmentTypes
+    from dataset_specific.prostate.generator import AugmentTypes
     augmentation_type = AugmentTypes.FLIP_HORIZ.value
 
     #image = img_array_aniso[0, :, :, :, :]

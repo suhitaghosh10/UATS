@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 
-from prostate.model import weighted_model
+from dataset_specific.prostate.model import weighted_model
 
 learning_rate = 5e-5
 MODEL_NAME = '/data/suhita/temporal/supervised_F1_6.h5'
