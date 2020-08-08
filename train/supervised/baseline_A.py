@@ -6,8 +6,8 @@ from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import ModelCheckpoint, TensorBoard, ReduceLROnPlateau, CSVLogger
 
 # from generator.baseline_A import DataGenerator as train_gen
-from dataset_specific.prostate.generator import DataGenerator as train_gen
-from dataset_specific.prostate.model import weighted_model
+from dataset_specific.prostate.generator.baseline_A import DataGenerator as train_gen
+from dataset_specific.prostate.model.baseline import weighted_model
 from old.preprocess_images import get_complete_array
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 from utility.prostate.utils import get_val_id_list
@@ -15,10 +15,11 @@ from utility.prostate.utils import get_val_id_list
 learning_rate = 5e-5
 AUGMENTATION_NO = 2
 TRAIN_NUM = 58
-FOLD_NUM = 1
+FOLD_NUM = 2
+PERC = 1.0
 CSV_NAME = '/data/suhita/temporal/CSV/Supervised_F_A' + str(FOLD_NUM) + '.csv'
-NAME = 'Supervised_A_S' + str(FOLD_NUM)
-TB_LOG_DIR = '/data/suhita/temporal/tb/variance_mcdropout/' + NAME + '_' + str(learning_rate) + '/'
+NAME = 'supervised_F' + str(FOLD_NUM)+'P'+str(PERC)
+TB_LOG_DIR = '/data/suhita/experiments/' + NAME + '_' + str(learning_rate) + '/'
 MODEL_NAME = '/data/suhita/temporal/' + NAME + '.h5'
 
 TRAIN_IMGS_PATH = '/cache/suhita/prostate/fold_2_supervised/train/imgs/'
@@ -70,7 +71,7 @@ def train(gpu_id, nb_gpus, trained_model=None):
                                 epsilon=0.01)
 
     # datagen listmake_dataset
-    train_id_list = [str(i) for i in get_train_id_list(FOLD_NUM)]
+    train_id_list = [str(i) for i in range(58)]
 
     # del unsupervised_target, unsupervised_weight, supervised_flag, imgs
     # del supervised_flag
@@ -145,7 +146,7 @@ if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
     batch_size = 2
-    gpu_id = '2'
+    gpu_id = '1'
     # gpu_id = '0'
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
     # os.environ["CUDA_VISIBLE_DEVICES"] = '2'

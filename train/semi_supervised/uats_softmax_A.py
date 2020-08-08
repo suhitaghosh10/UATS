@@ -5,7 +5,7 @@ from utility.callbacks.uats_softmax import TemporalCallback
 from utility.config import get_metadata
 from utility.constants import *
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
-from utility.utils import get_uats_val_data, get_data_generator
+from utility.utils import get_uats_val_data, get_uats_data_generator
 
 
 def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_num, model_type, is_augmented=True):
@@ -73,8 +73,8 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
     print('Fitting model...')
     print('-' * 30)
 
-    training_generator = get_data_generator(dataset_name, data_path, ens_path, num_train_data, num_labeled_train, bs,
-                                            is_augmented)
+    training_generator = get_uats_data_generator(dataset_name, data_path, ens_path, num_train_data, num_labeled_train, bs,
+                                                 is_augmented)
 
     steps = (num_train_data * metadata[m_aug_num]) // bs
 

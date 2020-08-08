@@ -60,10 +60,7 @@ class weighted_model:
 
         return dice_loss
 
-    def c_dice_loss(self, y_true, y_pred, weight, smooth=1., axis=(1, 2, 3)):
-
-        y_true = y_true * weight
-        y_pred = y_pred * weight
+    def c_dice_loss(self, y_true, y_pred, smooth=1., axis=(1, 2, 3)):
 
         intersection = K.sum(y_true * y_pred, axis=axis)
         y_true_sum = K.sum(y_true, axis=axis)
@@ -77,10 +74,7 @@ class weighted_model:
 
         return - K.mean((2. * intersection + smooth) / ((c * y_pred_sum) + y_true_sum + smooth))
 
-    def dice_loss(self, y_true, y_pred, weight, smooth=1., axis=(1, 2, 3)):
-
-        y_true = y_true * weight
-        y_pred = y_pred * weight
+    def dice_loss(self, y_true, y_pred, smooth=1., axis=(1, 2, 3)):
 
         intersection = K.sum(y_true * y_pred, axis=axis)
         y_true_sum = K.sum(y_true, axis=axis)
@@ -90,10 +84,7 @@ class weighted_model:
 
         return - avg_dice_coef
 
-    def unsup_dice_loss(self, y_true, y_pred, weight, smooth=1., axis=(1, 2, 3)):
-
-        y_true = y_true
-        y_pred = y_pred
+    def unsup_dice_loss(self, y_true, y_pred, smooth=1., axis=(1, 2, 3)):
 
         intersection = K.sum(y_true * y_pred, axis=axis)
         y_true_sum = K.sum(y_true, axis=axis)
@@ -123,12 +114,7 @@ class weighted_model:
     def semi_supervised_loss(self, input):
 
         def loss_func(y_true, y_pred):
-            supervised_flag = input[1, :, :, :, :]
-            # supervised_flag = tf.where(tf.equal(supervised_flag, 2), K.ones_like(supervised_flag), supervised_flag)
-            # check its validation data, then no consistency loss
-            # validation data (denoted by 3)
-            # supervised_flag = tf.where(tf.equal(supervised_flag, 3), K.ones_like(supervised_flag), supervised_flag)
-            supervised_loss = self.c_dice_loss(y_true, y_pred, supervised_flag)
+            supervised_loss = self.c_dice_loss(y_true, y_pred)
 
             return supervised_loss
 
@@ -167,7 +153,6 @@ class weighted_model:
                     nb_gpus=None):
         input_img = Input((*img_shape, 1), name='img_inp')
         unsupervised_label = Input((*img_shape, 5), name='unsup_label_inp')
-        supervised_flag = Input(shape=img_shape, name='flag_inp')
 
         kernel_init = 'he_normal'
         sfs = 16  # start filter size
@@ -238,25 +223,19 @@ class weighted_model:
         bg_ensemble_pred = Lambda(lambda x: x[:, :, :, :, 4], name='bgu')(
             unsupervised_label)
 
-        pz = K.stack([pz_ensemble_pred, supervised_flag])
-        cz = K.stack([cz_ensemble_pred, supervised_flag])
-        us = K.stack([us_ensemble_pred, supervised_flag])
-        afs = K.stack([afs_ensemble_pred, supervised_flag])
-        bg = K.stack([bg_ensemble_pred, supervised_flag])
-
         optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999)
 
         if (nb_gpus is None):
-            p_model = Model([input_img, unsupervised_label, supervised_flag],
+            p_model = Model([input_img, unsupervised_label],
                             [pz_sm_out, cz_sm_out, us_sm_out, afs_sm_out, bg_sm_out])
             if trained_model is not None:
                 p_model.load_weights(trained_model)
             p_model.compile(optimizer=optimizer,
-                            loss={'pz': self.semi_supervised_loss(pz),
-                                  'cz': self.semi_supervised_loss(cz),
-                                  'us': self.semi_supervised_loss(us),
-                                  'afs': self.semi_supervised_loss(afs),
-                                  'bg': self.semi_supervised_loss(bg)
+                            loss={'pz': self.semi_supervised_loss(pz_ensemble_pred),
+                                  'cz': self.semi_supervised_loss(cz_ensemble_pred),
+                                  'us': self.semi_supervised_loss(us_ensemble_pred),
+                                  'afs': self.semi_supervised_loss(afs_ensemble_pred),
+                                  'bg': self.semi_supervised_loss(bg_ensemble_pred)
                                   }
                             ,
                             metrics={'pz': [self.dice_coef],
@@ -268,18 +247,18 @@ class weighted_model:
                             )
         else:
             with tf.device(gpu_id):
-                model = Model([input_img, unsupervised_label, supervised_flag],
+                model = Model([input_img, unsupervised_label],
                               [pz_sm_out, cz_sm_out, us_sm_out, afs_sm_out, bg_sm_out])
 
                 p_model = multi_gpu_model(model, gpus=nb_gpus)
                 if trained_model is not None:
                     p_model.load_weights(trained_model)
                 p_model.compile(optimizer=optimizer,
-                                loss={'pz': self.semi_supervised_loss(pz),
-                                      'cz': self.semi_supervised_loss(cz),
-                                      'us': self.semi_supervised_loss(us),
-                                      'afs': self.semi_supervised_loss(afs),
-                                      'bg': self.semi_supervised_loss(bg)
+                                loss={'pz': self.semi_supervised_loss(pz_ensemble_pred),
+                                      'cz': self.semi_supervised_loss(cz_ensemble_pred),
+                                      'us': self.semi_supervised_loss(us_ensemble_pred),
+                                      'afs': self.semi_supervised_loss(afs_ensemble_pred),
+                                      'bg': self.semi_supervised_loss(bg_ensemble_pred)
                                       }
                                 ,
                                 metrics={'pz': [self.dice_coef],
@@ -292,5 +271,3 @@ class weighted_model:
                                 )
 
         return p_model
-    # return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg])
-    # return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg, input_idx])

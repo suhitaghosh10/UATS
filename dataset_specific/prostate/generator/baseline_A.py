@@ -44,11 +44,11 @@ class DataGenerator(keras.utils.Sequence):
                                                                          np.load(self.gt_path + ID + '.npy',
                                                                                  allow_pickle=True), img_no=ID)
 
-            y1[i, :, :, :] = aug_gt[0, :, :, :, 0]
-            y2[i, :, :, :] = aug_gt[0, :, :, :, 1]
-            y3[i, :, :, :] = aug_gt[0, :, :, :, 2]
-            y4[i, :, :, :] = aug_gt[0, :, :, :, 3]
-            y5[i, :, :, :] = aug_gt[0, :, :, :, 4]
+            y1[i, :, :, :] = aug_gt[:, :, :, 0]
+            y2[i, :, :, :] = aug_gt[:, :, :, 1]
+            y3[i, :, :, :] = aug_gt[:, :, :, 2]
+            y4[i, :, :, :] = aug_gt[:, :, :, 3]
+            y5[i, :, :, :] = aug_gt[:, :, :, 4]
 
         return X, [y1, y2, y3, y4, y5]
 

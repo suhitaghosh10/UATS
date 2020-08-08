@@ -3,8 +3,6 @@ from shutil import copyfile
 
 import numpy as np
 from keras.callbacks import Callback
-
-from utility.config import UPDATE_EPOCH_NO
 from utility.constants import ENS_GT, FLAG, GT, NPY, IMGS
 from utility.utils import makedir, get_array, save_array
 
@@ -12,7 +10,7 @@ from utility.utils import makedir, get_array, save_array
 class TemporalCallback(Callback):
 
     def __init__(self, dim, data_path, temp_path, save_path, num_train_data, num_labeled_train,
-                 patients_per_batch, nr_class, batch_size, dataset_name):
+                 patients_per_batch, nr_class, batch_size, update_epoch_num, dataset_name):
 
         self.data_path = data_path
         self.temp_path = temp_path
@@ -25,6 +23,7 @@ class TemporalCallback(Callback):
         self.dim = dim
         self.nr_dim = len(dim)
         self.batch_size = batch_size
+        self.update_epoch = update_epoch_num
 
         flag_1 = np.ones(shape=dim, dtype='int64')
 
@@ -43,30 +42,14 @@ class TemporalCallback(Callback):
 
     def on_epoch_end(self, epoch, logs={}):
 
-        if epoch > 0 and epoch % UPDATE_EPOCH_NO == 0:
+        if epoch % self.update_epoch == 0:
 
             # patients_per_batch = 59
             num_batches = self.num_un_labeled_train // self.patients_per_batch
             remainder = self.num_un_labeled_train % self.patients_per_batch
 
-            if self.nr_dim == 2:
-                remainder_pixels = remainder * self.dim[0] * self.dim[1]
-                # calculate maximum number of confident pixels (background)
-                confident_pixels_no_per_batch_bg = (self.pixel_perc_arr[-1] * self.patients_per_batch * self.dim[0] *
-                                                    self.dim[1]) // 100
-                total_pixels = self.dim[0] * self.dim[1]
-            else:
-                remainder_pixels = remainder * self.dim[0] * self.dim[1] * self.dim[2]
-                # calculate maximum number of confident pixels (background)
-                confident_pixels_no_per_batch_bg = (self.pixel_perc_arr[-1] * self.patients_per_batch * self.dim[0] *
-                                                    self.dim[1] * self.dim[2]) // 100
-                total_pixels = self.dim[0] * self.dim[1] * self.dim[2]
-
-            if remainder_pixels < confident_pixels_no_per_batch_bg:
-                patients_in_last_batch = self.patients_per_batch + remainder
-            else:
-                patients_in_last_batch = remainder
-                num_batches = num_batches + 1
+            patients_in_last_batch = self.patients_per_batch if remainder == 0 else (
+                    self.patients_per_batch + remainder)
 
             for b_no in range(num_batches):
                 actual_batch_size = self.patients_per_batch if (
@@ -74,12 +57,11 @@ class TemporalCallback(Callback):
 
                 start = (b_no * self.patients_per_batch) + self.num_labeled_train
                 end = (start + actual_batch_size)
-                imgs = get_array(os.path.join(self.data_path + IMGS), start, end)
-                ensemble_prediction = get_array(os.path.join(self.temp_path + ENS_GT), start, end, dtype='float32')
-                supervised_flag = get_array(os.path.join(self.temp_path + FLAG), start, end, dtype='int64')
+                imgs = get_array(os.path.join(self.data_path , IMGS), start, end)
+                ensemble_prediction = get_array(os.path.join(self.temp_path , ENS_GT), start, end, dtype='float32')
 
-                inp = [imgs, ensemble_prediction, supervised_flag]
-                del imgs, supervised_flag
+                inp = [imgs, ensemble_prediction]
+                del imgs
 
                 cur_pred = np.zeros((actual_batch_size, self.dim[0], self.dim[1], self.nr_class)) if self.nr_dim == 2 \
                     else np.zeros((actual_batch_size, self.dim[0], self.dim[1], self.dim[2], self.nr_class))

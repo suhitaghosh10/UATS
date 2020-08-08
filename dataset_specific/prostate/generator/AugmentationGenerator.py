@@ -476,6 +476,35 @@ def get_single_image_augmentation_with_ensemble(augmentation_type, orig_image, o
     return out_img, out_gt, out_ens_gt, ch_flag
 
 
+def get_single_image_augmentation(augmentation_type, orig_image, orig_gt, img_no):
+    out_img = np.zeros([32, 168, 168, 1], dtype=np.float32)
+
+    img1 = sitk.GetImageFromArray(orig_image[:, :, :, 0])
+    img1.SetSpacing(reference_spacing)
+    reference_image = get_reference_image(img1)
+
+    img = sitk.GetImageFromArray(orig_image)
+    img.SetSpacing(reference_spacing)
+
+    centered_transform, aug_transform, transformation_parameters_list = get_augmentation_transform(img, reference_image,
+                                                                                                   augmentation_type)
+
+    # transform image
+    res_img = augment_images_spatial(img, reference_image, augmentation_type, centered_transform,
+                                     aug_transform, transformation_parameters_list)
+
+    out_img[:, :, :, 0] = sitk.GetArrayFromImage(res_img)
+
+    # transform gt
+    gt_ref = sitk.GetImageFromArray(orig_gt)
+    gt_ref.SetSpacing(reference_spacing)
+
+    out_gt = get_transformed_gt(orig_gt, augmentation_type, centered_transform, aug_transform,
+                                    transformation_parameters_list)
+
+    return out_img, out_gt
+
+
 def get_single_image_augmentation_with_only_ensemble(augmentation_type, orig_image, orig_gt, ens_gt, img_no,
                                                      labelled_num):
     # print(img_no, augmentation_type)

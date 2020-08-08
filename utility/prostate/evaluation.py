@@ -567,14 +567,14 @@ def evaluate_uats(model_dir, model_name, val_x, val_y, mc=False):
     csvName = model_dir + model_name + '.csv'
 
     if mc:
-        from dataset_specific.prostate.model import weighted_model
+        from dataset_specific.prostate.model.uats_mc_dropout import weighted_model
         wm = weighted_model()
         model = wm.build_model(trained_model=model_dir + model_name)[0]
         model.load_weights(model_dir + model_name)
         prediction_arr = predict_for_uats_mc(val_x, val_y, model, mc=True)
 
     else:
-        from dataset_specific.prostate.model import weighted_model
+        from dataset_specific.prostate.model.uats_scaled import weighted_model
         wm = weighted_model()
         model = wm.build_model(trained_model=model_dir + model_name, temp=1.0)
         model.load_weights(model_dir + model_name)
@@ -607,10 +607,11 @@ if __name__ == '__main__':
 
     # generate_predictions('/data/suhita/prostate/', 'supervised_F2_P1.0',np.load('/cache/suhita/data/prostate/npy_img_unlabeled.npy'))
 
-    evaluate_uats(model_dir='/data/suhita/temporal/prostate/',
+    evaluate_uats(#model_dir='/data/suhita/experiments/model/prostate/',
+                  model_dir='/data/suhita/prostate/',
                   # model_name='prostate_softmax_F3_Perct_Labelled_1.0',
                   # model_name='NO_scaling_F1',
-                  model_name='no_rot_B59_Adam_prostate_softmax_F1_Perct_Labelled_1.0_Pix10_10.h5',
+                  model_name='supervised_F2_P1.0.h5',
                   val_x=np.load('/cache/suhita/data/prostate/final_test_array_imgs.npy'),
                   val_y=np.load('/cache/suhita/data/prostate/final_test_array_GT.npy').astype('int8'),
                   mc=False
