@@ -31,7 +31,7 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
     print('Creating and compiling model...')
     print('-' * 30)
 
-    model = model_type.build_model(img_shape=(dim[0], dim[1], dim[2]),
+    model, p_model_MC, normal_model = model_type.build_model(img_shape=(dim[0], dim[1], dim[2]),
                                    learning_rate=metadata[m_lr],
                                    gpu_id=gpu_id,
                                    nb_gpus=nb_gpus,

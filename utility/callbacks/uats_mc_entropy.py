@@ -53,6 +53,7 @@ class TemporalCallback(Callback):
 
     def on_epoch_end(self, epoch, logs={}):
 
+        self.p_model_MC.set_weights(self.normal_model.get_weights())
         for idx in range(self.nr_class):
             self.save_flag[idx], self.val_dice_coef[idx] = shall_save(logs[self.val_metric_keys[idx]],
                                                                       self.val_dice_coef[idx])

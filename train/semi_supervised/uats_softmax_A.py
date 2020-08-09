@@ -9,7 +9,7 @@ from utility.utils import get_uats_val_data, get_uats_data_generator
 
 
 def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_num, model_type, is_augmented=True):
-    global metadata
+
     metadata = get_metadata(dataset_name, fold_num, labelled_perc)
     name = 'uats_softmax_F' + str(fold_num) + '_Perct_Labelled_' + str(labelled_perc)
 
