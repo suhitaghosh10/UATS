@@ -394,14 +394,14 @@ class weighted_model:
             layer.trainable = False
 
         ########################################################
-        merged_model = Model([input_img, unsupervised_label, supervised_flag],
-                             [pz_sm_out, cz_sm_out, us_sm_out, afs_sm_out, bg_sm_out, pz_sm_out_mc, cz_sm_out_mc,
-                              us_sm_out_mc, afs_sm_out_mc, bg_sm_out_mc])
+        # merged_model = Model([input_img, unsupervised_label, supervised_flag],
+        #                      [pz_sm_out, cz_sm_out, us_sm_out, afs_sm_out, bg_sm_out, pz_sm_out_mc, cz_sm_out_mc,
+        #                       us_sm_out_mc, afs_sm_out_mc, bg_sm_out_mc])
 
         optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999)
 
         if (nb_gpus is None):
-            merged_model.compile(optimizer=optimizer,
+            p_model_normal.compile(optimizer=optimizer,
                                  loss={'pz': self.semi_supervised_loss(pz, unsup_loss_class_wt=1),
                                        'cz': self.semi_supervised_loss(cz, 1),
                                        'us': self.semi_supervised_loss(us, 1),
@@ -419,9 +419,9 @@ class weighted_model:
                                  )
         else:
             with tf.device(gpu_id):
-                merged_model = multi_gpu_model(merged_model, gpus=nb_gpus)
+                merged_model = multi_gpu_model(p_model_normal, gpus=nb_gpus)
 
-                merged_model.compile(optimizer=optimizer,
+                p_model_normal.compile(optimizer=optimizer,
                                      loss={'pz': self.semi_supervised_loss(pz, unsup_loss_class_wt=1),
                                            'cz': self.semi_supervised_loss(cz, 1),
                                            'us': self.semi_supervised_loss(us, 1),
@@ -440,6 +440,6 @@ class weighted_model:
                                      loss_weights={'pz': 1, 'cz': 1, 'us': 1, 'afs': 1, 'bg': 1}
                                      )
 
-        return merged_model, p_model_MC, p_model_normal
+        return  p_model_MC, p_model_normal
     # return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg])
     # return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg, input_idx])

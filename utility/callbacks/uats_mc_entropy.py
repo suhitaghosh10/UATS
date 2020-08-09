@@ -10,7 +10,7 @@ from utility.utils import makedir, shall_save, get_array, save_array
 class TemporalCallback(Callback):
 
     def __init__(self, dim, data_path, temp_path, save_path, num_train_data, num_labeled_train,
-                 patients_per_batch, pixel_perc_arr, val_metric_keys, nr_class, batch_size, mc_forward_pass_num, dataset_name):
+                 patients_per_batch, pixel_perc_arr, val_metric_keys, nr_class, batch_size, mc_forward_pass_num, dataset_name, mc_model):
 
         self.data_path = data_path
         self.temp_path = temp_path
@@ -29,6 +29,7 @@ class TemporalCallback(Callback):
         self.batch_size = batch_size
         self.nr_dim = len(dim)
         self.mc_forward_pass_num = mc_forward_pass_num
+        self.mc_model = mc_model
 
         flag_1 = np.ones(shape=dim, dtype='int64')
         flag_0 = np.zeros(shape=dim, dtype='int64')
@@ -53,7 +54,7 @@ class TemporalCallback(Callback):
 
     def on_epoch_end(self, epoch, logs={}):
 
-        self.p_model_MC.set_weights(self.normal_model.get_weights())
+        self.mc_model.set_weights(self.model.get_weights())
         for idx in range(self.nr_class):
             self.save_flag[idx], self.val_dice_coef[idx] = shall_save(logs[self.val_metric_keys[idx]],
                                                                       self.val_dice_coef[idx])
@@ -93,9 +94,9 @@ class TemporalCallback(Callback):
 
                 start = (b_no * self.patients_per_batch) + self.num_labeled_train
                 end = (start + actual_batch_size)
-                imgs = get_array(os.path.join(self.data_path + IMGS), start, end)
-                ensemble_prediction = get_array(os.path.join(self.temp_path + ENS_GT), start, end, dtype='float32')
-                supervised_flag = get_array(os.path.join(self.temp_path + FLAG), start, end, dtype='int64')
+                imgs = get_array(os.path.join(self.data_path , IMGS), start, end)
+                ensemble_prediction = get_array(os.path.join(self.temp_path , ENS_GT), start, end, dtype='float32')
+                supervised_flag = get_array(os.path.join(self.temp_path , FLAG), start, end, dtype='int64')
 
                 inp = [imgs, ensemble_prediction, supervised_flag]
                 del imgs, supervised_flag
@@ -106,7 +107,6 @@ class TemporalCallback(Callback):
                     else np.zeros((actual_batch_size, self.dim[0], self.dim[1], self.dim[2], self.nr_class))
 
                 model_out = self.model.predict(inp, batch_size=self.batch_size, verbose=1)
-                del inp
 
                 for idx in range(self.nr_class):
                     cur_pred[:, :, :, :, idx] = model_out[idx] if self.save_flag[idx] else ensemble_prediction[:, :, :,
@@ -120,8 +120,8 @@ class TemporalCallback(Callback):
                 del ensemble_prediction
 
                 for i in np.arange(self.mc_forward_pass_num):
-                    model_out = self.p_model_MC.predict(inp, batch_size=self.batch_size, verbose=1)
-                    for cls in self.nr_class:
+                    model_out = self.mc_model.predict(inp, batch_size=self.batch_size, verbose=1)
+                    for cls in range(self.nr_class):
                         mc_pred[:, :, :, :, cls] = np.add(model_out[cls], mc_pred[:, :, :, :, cls])
 
                 # avg_pred = mc_pred / T#
@@ -145,8 +145,8 @@ class TemporalCallback(Callback):
                     entropy_zone = np.ravel(entropy[:, :, :, :])
                     final_max_ravel = np.where(argmax_pred_ravel == zone, np.zeros_like(entropy_zone),
                                                entropy_zone)
-                    zone_indices = np.argpartition(final_max_ravel, -self.confident_pixels_no_per_batch)[
-                                   -self.confident_pixels_no_per_batch:]
+                    zone_indices = np.argpartition(final_max_ravel, -self.confident_pixels_no_per_batch[zone])[
+                                   -self.confident_pixels_no_per_batch[zone]:]
                     if zone == 0:
                         indices = zone_indices
                     else:

@@ -32,7 +32,7 @@ try:
     gpu_num = '0'
     fold_num = 1
     perc = 1.0
-    temp_path = 'sadv11'
+    temp_path = 'sadv1'
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_num
     metadata = get_metadata(args.ds, fold_num, perc)

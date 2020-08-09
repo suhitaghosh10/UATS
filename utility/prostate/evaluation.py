@@ -607,18 +607,18 @@ if __name__ == '__main__':
 
     # generate_predictions('/data/suhita/prostate/', 'supervised_F2_P1.0',np.load('/cache/suhita/data/prostate/npy_img_unlabeled.npy'))
 
-    evaluate_uats(model_dir='/data/suhita/experiments/model/prostate/',
-                  #model_dir='/data/suhita/prostate/',
-                  # model_name='prostate_softmax_F3_Perct_Labelled_1.0',
-                  # model_name='NO_scaling_F1',
-                  model_name='uats_softmax_F2_Perct_Labelled_1.0.h5',
-                  val_x=np.load('/cache/suhita/data/prostate/final_test_array_imgs.npy'),
-                  val_y=np.load('/cache/suhita/data/prostate/final_test_array_GT.npy').astype('int8'),
-                  mc=False
-                  )
+    # evaluate_uats(model_dir='/data/suhita/experiments/model/prostate/',
+    #               #model_dir='/data/suhita/prostate/',
+    #               # model_name='prostate_softmax_F3_Perct_Labelled_1.0',
+    #               # model_name='NO_scaling_F1',
+    #               model_name='uats_softmax_F3_Perct_Labelled_1.0.h5',
+    #               val_x=np.load('/cache/suhita/data/prostate/final_test_array_imgs.npy'),
+    #               val_y=np.load('/cache/suhita/data/prostate/final_test_array_GT.npy').astype('int8'),
+    #               mc=False
+    #               )
 
-    # evaluate_supervised(model_dir='/data/suhita/prostate/',
-    #                model_name='supervised_F1_P1.0',
-    #                val_x=np.load('/cache/suhita/data/prostate/final_test_array_imgs.npy'),
-    #                val_y=np.load('/cache/suhita/data/prostate/final_test_array_GT.npy').astype('int8'),
-    #                )
+    evaluate_supervised(model_dir='/data/suhita/experiments/prostate/',
+                   model_name='supervised_F2_P1.0',
+                   val_x=np.load('/cache/suhita/data/prostate/final_test_array_imgs.npy'),
+                   val_y=np.load('/cache/suhita/data/prostate/final_test_array_GT.npy').astype('int8'),
+                   )

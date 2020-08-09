@@ -30,13 +30,12 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
     print('-' * 30)
     print('Creating and compiling model...')
     print('-' * 30)
-
-    model, p_model_MC, normal_model = model_type.build_model(img_shape=(dim[0], dim[1], dim[2]),
+    p_model_MC, normal_model = model_type.build_model(img_shape=(dim[0], dim[1], dim[2]),
                                    learning_rate=metadata[m_lr],
                                    gpu_id=gpu_id,
                                    nb_gpus=nb_gpus,
                                    trained_model=trained_model_path)
-    model.summary()
+    normal_model.summary()
 
     # callbacks
     print('-' * 30)
@@ -60,7 +59,7 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
 
     tcb = TemporalCallback(dim, data_path, ens_path, metadata[m_save_path], num_train_data, num_labeled_train,
                            metadata[m_patients_per_batch], metadata[m_labelled_perc], metadata[m_metric_keys],
-                           metadata[m_nr_class], bs, metadata[m_mc_forward_pass], dataset_name)
+                           metadata[m_nr_class], bs, metadata[m_mc_forward_pass], dataset_name, p_model_MC)
 
     lcb = model_type.LossCallback()
     es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=PATIENCE_EARLY_STOP, min_delta=DELTA)
@@ -79,7 +78,7 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
 
     x_val, y_val = get_uats_val_data(data_path, dim, metadata[m_nr_class], metadata[m_nr_channels])
 
-    history = model.fit_generator(generator=training_generator,
+    history = normal_model.fit_generator(generator=training_generator,
                                   steps_per_epoch=steps,
                                   validation_data=[x_val, y_val],
                                   epochs=NUM_EPOCH,
