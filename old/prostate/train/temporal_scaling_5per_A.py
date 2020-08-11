@@ -5,7 +5,7 @@ from keras.callbacks import Callback, ReduceLROnPlateau
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger
 
 from dataset_specific.prostate.model import weighted_model
-from old.preprocess_images import get_complete_array, get_array, save_array
+from old.utils.preprocess_images import get_complete_array, get_array, save_array
 from old.prostate.generator import DataGenerator as train_gen
 from old.utils.AugmentationGenerator import *
 from old.utils.ops import ramp_down_weight

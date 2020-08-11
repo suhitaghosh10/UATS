@@ -8,7 +8,7 @@ from keras.callbacks import ModelCheckpoint, TensorBoard, ReduceLROnPlateau, CSV
 # from generator.baseline_A import DataGenerator as train_gen
 from dataset_specific.prostate.generator.baseline_A import DataGenerator as train_gen
 from dataset_specific.prostate.model.baseline import weighted_model
-from old.preprocess_images import get_complete_array
+from old.utils.preprocess_images import get_complete_array
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 from utility.prostate.utils import get_val_id_list
 

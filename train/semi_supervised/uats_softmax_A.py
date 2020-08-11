@@ -10,7 +10,7 @@ from utility.utils import get_uats_val_data, get_uats_data_generator
 
 def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_num, model_type, is_augmented=True):
 
-    metadata = get_metadata(dataset_name, fold_num, labelled_perc)
+    metadata = get_metadata(dataset_name)
     name = 'uats_softmax_F' + str(fold_num) + '_Perct_Labelled_' + str(labelled_perc)
 
     data_path = os.path.join(metadata[m_data_path], 'fold_' + str(fold_num) + '_P' + str(labelled_perc), 'train')
@@ -23,9 +23,15 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
         labelled_perc) + H5)
     dim = metadata[m_dim]
     bs = metadata[m_batch_size]
-    num_train_data = metadata[m_labelled_train] + metadata[m_unlabelled_train]
 
-    num_labeled_train = int(labelled_perc * metadata[m_labelled_train])
+    num_labeled_train = int(labelled_perc * metadata[m_labelled_train]) #actual labelled data
+    num_ul = metadata[m_unlabelled_train]
+    num_train_data = num_labeled_train + num_ul
+
+    print("Labelled Images:", num_labeled_train)
+    print("Unlabeled Images:",  metadata[m_unlabelled_train])
+    print("Total Images:", num_train_data)
+
 
     print('-' * 30)
     print('Creating and compiling model...')

@@ -57,7 +57,7 @@ def generate_mask(gt_array_aniso):
 if __name__ == '__main__':
     gt_path = '/home/suhita/zonals/data/training/gt/'
     OUTPUT_DIR = '/home/suhita/zonals/data/training/mask/'
-    from old.preprocess_images import get_complete_array
+    from old.utils.preprocess_images import get_complete_array
 
     gt_arr = get_complete_array(gt_path, dtype='int8')
     arr = generate_mask(gt_arr)

@@ -544,23 +544,23 @@ def predict_for_uats_mc(val_x_arr, val_y_arr, model, mc=False):
     return output_arr
 
 
-# def generate_predictions(model_dir, model_name, ul_imgs):
-#     csvName = model_dir + model_name + '.csv'
-#     from dataset_specific.prostate.model import weighted_model
-#     wm = weighted_model()
-#     model = wm.build_model()
-#     model.load_weights(model_dir + model_name + '.h5')
-#     out = model.predict(ul_imgs, batch_size=1, verbose=1)
-#     output_arr = np.zeros((out[0].shape[0], 32, 168, 168, 5))
-#     output_arr[:, :, :, :, 0] = out[0]
-#     output_arr[:, :, :, :, 1] = out[1]
-#     output_arr[:, :, :, :, 2] = out[2]
-#     output_arr[:, :, :, :, 3] = out[3]
-#     output_arr[:, :, :, :, 4] = out[4]
-#     print(output_arr.shape)
-#
-#     postprocesAndEvaluateFiles(model_dir, output_arr, None, eval=False, csvName=csvName, prediction_arr_exists=False,
-#                                model_name=model_name)
+def generate_predictions(model_dir, model_name, ul_imgs):
+    csvName = model_dir + model_name + '.csv'
+    from dataset_specific.prostate.model.baseline import weighted_model
+    wm = weighted_model()
+    model = wm.build_model()
+    model.load_weights(model_dir + model_name + '.h5')
+    out = model.predict(ul_imgs, batch_size=1, verbose=1)
+    output_arr = np.zeros((out[0].shape[0], 32, 168, 168, 5))
+    output_arr[:, :, :, :, 0] = out[0]
+    output_arr[:, :, :, :, 1] = out[1]
+    output_arr[:, :, :, :, 2] = out[2]
+    output_arr[:, :, :, :, 3] = out[3]
+    output_arr[:, :, :, :, 4] = out[4]
+    print(output_arr.shape)
+
+    postprocesAndEvaluateFiles(model_dir, output_arr, None, eval=False, csvName=csvName, prediction_arr_exists=False,
+                               model_name=model_name)
 
 
 def evaluate_uats(model_dir, model_name, val_x, val_y, mc=False):
@@ -584,7 +584,7 @@ def evaluate_uats(model_dir, model_name, val_x, val_y, mc=False):
                                prediction_arr_exists=False, model_name=model_name)
 
 
-def evaluate_supervised(model_dir, model_name, val_x, val_y):
+def evaluate_supervised(model_dir, model_name, val_x, val_y, eval=True):
     csvName = model_dir + model_name + '.csv'
 
     from dataset_specific.prostate.model.baseline import weighted_model
@@ -599,26 +599,27 @@ def evaluate_supervised(model_dir, model_name, val_x, val_y):
     output_arr[:, :, :, :, 3] = out[3]
     output_arr[:, :, :, :, 4] = out[4]
     print(output_arr.shape)
-    postprocesAndEvaluateFiles(model_dir, output_arr, val_y, eval=True, csvName=csvName,
+    postprocesAndEvaluateFiles(model_dir, output_arr, val_y, eval=eval, csvName=csvName,
                                prediction_arr_exists=False, model_name=model_name)
 if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = '3'
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 
-    # generate_predictions('/data/suhita/prostate/', 'supervised_F2_P1.0',np.load('/cache/suhita/data/prostate/npy_img_unlabeled.npy'))
 
-    # evaluate_uats(model_dir='/data/suhita/experiments/model/prostate/',
-    #               #model_dir='/data/suhita/prostate/',
-    #               # model_name='prostate_softmax_F3_Perct_Labelled_1.0',
-    #               # model_name='NO_scaling_F1',
-    #               model_name='uats_softmax_F3_Perct_Labelled_1.0.h5',
-    #               val_x=np.load('/cache/suhita/data/prostate/final_test_array_imgs.npy'),
-    #               val_y=np.load('/cache/suhita/data/prostate/final_test_array_GT.npy').astype('int8'),
-    #               mc=False
-    #               )
 
-    evaluate_supervised(model_dir='/data/suhita/experiments/prostate/',
-                   model_name='supervised_F2_P1.0',
-                   val_x=np.load('/cache/suhita/data/prostate/final_test_array_imgs.npy'),
-                   val_y=np.load('/cache/suhita/data/prostate/final_test_array_GT.npy').astype('int8'),
-                   )
+    evaluate_uats(model_dir='/data/suhita/experiments/model/prostate/',
+                  #model_dir='/data/suhita/prostate/',
+                  # model_name='prostate_softmax_F3_Perct_Labelled_1.0',
+                  # model_name='NO_scaling_F1',
+                  model_name='uats_mc_entropy_F3_Perct_Labelled_1.0.h5',
+                  val_x=np.load('/cache/suhita/data/prostate/final_test_array_imgs.npy'),
+                  val_y=np.load('/cache/suhita/data/prostate/final_test_array_GT.npy').astype('int8'),
+                  mc=True,
+
+                  )
+
+    # evaluate_supervised(model_dir='/data/suhita/experiments/prostate/',
+    #                model_name='supervised_F3_P0.5',
+    #                val_x=np.load('/cache/suhita/data/prostate/final_test_array_imgs.npy'),
+    #                val_y=np.load('/cache/suhita/data/prostate/final_test_array_GT.npy').astype('int8')
+    #                )

@@ -31,11 +31,11 @@ try:
     # gpu_num = args.gpu_num
     gpu_num = '0'
     fold_num = 1
-    perc = 1.0
+    perc = 0.5
     temp_path = 'sadv1'
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_num
-    metadata = get_metadata(args.ds, fold_num, perc)
+    metadata = get_metadata(args.ds)
     # Build Model
     wm = weighted_model()
     train(None, None,

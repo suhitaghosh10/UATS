@@ -1,6 +1,6 @@
 import numpy as np
 
-from dataset_specific.kits import makedir
+from utility.utils import makedir
 
 root_path = '/cache/suhita/data/prostate/'
 

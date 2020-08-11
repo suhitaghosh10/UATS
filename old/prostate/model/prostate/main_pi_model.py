@@ -5,7 +5,7 @@ from keras import backend as K
 from keras.optimizers import Adam
 from sklearn.utils import shuffle
 
-from old.preprocess_images import load_data, split_supervised_train, make_train_test_dataset, normalize_images, \
+from old.utils.preprocess_images import load_data, split_supervised_train, make_train_test_dataset, normalize_images, \
     whiten_zca, \
     data_augmentation_tempen
 from old.utils.ops import ramp_up_weight, semi_supervised_loss, evaluate, \

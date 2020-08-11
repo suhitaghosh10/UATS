@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 
-from old.preprocess_images import get_complete_array
+from old.utils.preprocess_images import get_complete_array
 from old.prostate import weighted_model
 
 MODEL_NAME = '/home/suhita/zonals/data/train.h5'

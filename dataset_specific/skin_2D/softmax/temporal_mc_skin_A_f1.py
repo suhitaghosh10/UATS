@@ -14,7 +14,7 @@ if USER_NAME == 'anneke':
 from dataset_specific.skin_2D import DataGenerator as train_gen
 from dataset_specific.skin_2D import weighted_model
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
-from old.preprocess_images import get_array, save_array
+from old.utils.preprocess_images import get_array, save_array
 from old.utils.AugmentationGenerator import *
 from shutil import copyfile
 from dataset_specific.kits import makedir

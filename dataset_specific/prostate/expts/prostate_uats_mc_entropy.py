@@ -29,13 +29,13 @@ try:
     # perc = args.perc
     # temp_path = args.temp_path
     # gpu_num = args.gpu_num
-    gpu_num = '0'
+    gpu_num = '3'
     fold_num = 1
     perc = 1.0
-    temp_path = 'sadv1'
+    temp_path = 'sadv4'
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_num
-    metadata = get_metadata(args.ds, fold_num, perc)
+    metadata = get_metadata(args.ds)
     # Build Model
     wm = weighted_model()
     train(None, None,

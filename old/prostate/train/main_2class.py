@@ -3,7 +3,7 @@ from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import ModelCheckpoint, TensorBoard
 from keras.callbacks import ReduceLROnPlateau
 
-from old.preprocess_images import get_complete_array
+from old.utils.preprocess_images import get_complete_array
 from old.prostate import weighted_model
 from old.prostate.generator.data_gen_optim_2class import DataGenerator
 from old.utils.AugmentationGenerator import *

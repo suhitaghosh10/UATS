@@ -7,7 +7,7 @@ from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStoppi
 
 from dataset_specific.prostate.generator.uats_A import DataGenerator as train_gen
 from dataset_specific.prostate.model import weighted_model
-from old.preprocess_images import get_complete_array, get_array, save_array
+from old.utils.preprocess_images import get_complete_array, get_array, save_array
 from old.utils.AugmentationGenerator import *
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 
