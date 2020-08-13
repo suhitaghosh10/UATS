@@ -4,11 +4,11 @@ from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import Callback
 from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, EarlyStopping, TensorBoard, CSVLogger
 
-from old.utils.preprocess_images import make_train_test_dataset
 from old.prostate import build_model
 from old.prostate.generator import DataGenerator
 from old.utils.AugmentationGenerator import *
 from old.utils.ops import ramp_up_weight, ramp_down_weight
+from old.utils.preprocess_images import make_train_test_dataset
 
 TB_LOG_DIR = './tb/variance_mcdropout/2'
 
@@ -110,12 +110,11 @@ def train(train_x, train_y, val_x, val_y, gpu_id, nb_gpus):
                 temp[:, :, :, :, 3] = (model_out1[3] + model_out2[3] + model_out3[3]) / 3
                 temp[:, :, :, :, 4] = (model_out1[4] + model_out2[4] + model_out3[4]) / 3
 
-
                 del model_out1, model_out2, model_out3
 
                 max = np.reshape(np.max(temp, axis=-1), (num_train_data, 32, 168, 168, 1))
                 # approach 1 -> cur_pred_final = np.where(temp == max, max, temp)
-                cur_pred_final = np.where(temp == max, max, 0)  #assign 0 to non-class and 1 to zone belonging to class
+                cur_pred_final = np.where(temp == max, max, 0)  # assign 0 to non-class and 1 to zone belonging to class
 
                 # Z = αZ + (1 - α)z
                 self.ensemble_prediction = alpha * self.ensemble_prediction + (1 - alpha) * cur_pred_final
@@ -151,9 +150,7 @@ def train(train_x, train_y, val_x, val_y, gpu_id, nb_gpus):
                 # summary.value.add(tag='sd_3', value=sd[0, 16, 0, 0, 2])
                 # summary.value.add(tag='sd_4', value=sd[0, 16, 0, 0, 3])
                 # summary.value.add(tag='sd_5', value=sd[0, 16, 0, 0, 4])
-                #self.writer.add_summary(summary, self.epoch)
-
-
+                # self.writer.add_summary(summary, self.epoch)
 
         def on_epoch_begin(self, epoch, logs=None):
             self.epoch = epoch
@@ -178,7 +175,6 @@ def train(train_x, train_y, val_x, val_y, gpu_id, nb_gpus):
 
         def get_training_list(self):
             return self.train_idx_list
-
 
     # callbacks
     print('-' * 30)

@@ -30,6 +30,7 @@ def ramp_down_weight(ramp_period):
 
         cur_epoch += 1
 
+
 def update_weight(y, unsupervised_weight, next_weight):
     """update weight of the unsupervised part of loss"""
     y[:, :, :, :, -1] = next_weight
@@ -76,7 +77,7 @@ def evaluate(model, num_class, num_test, test_x, test_y):
         # print('Validation Accuracy: ', cnt, flush=True)
         axis = (-3, -2, -1)
         intersection = np.sum(gt * pr, axis=axis)
-    # return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
+        # return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
         dice[index] = np.mean((2. * intersection + 1.) / (np.sum(gt, axis=axis) + np.sum(pr, axis=axis) + 1.))
 
     print('Validation DSC: ', ZONE[0], ': ', dice[0], ZONE[1], ': ', dice[1], ZONE[2], ': ', dice[2], ZONE[3], ': ',

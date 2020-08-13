@@ -7,8 +7,8 @@ from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStoppi
 
 from dataset_specific.prostate.generator import DataGenerator as gen
 from dataset_specific.prostate.model import weighted_model
-from old.utils.preprocess_images import get_array, save_array
 from old.utils.AugmentationGenerator import *
+from old.utils.preprocess_images import get_array, save_array
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 
 # 294 Training 58 have gt
@@ -28,7 +28,6 @@ VAL_GT_PATH = '/cache/suhita/data/fold4/val/gt/'
 TRAINED_MODEL_PATH = '/data/suhita/temporal/supervised_F4.h5'
 
 ENS_GT_PATH = '/data/suhita/temporal/sadv2/ens_gt/'
-
 
 PERCENTAGE_OF_PIXELS = 5
 UPDATE_EPOCH_NO = 50
@@ -101,7 +100,7 @@ def train(gpu_id, nb_gpus):
             return flag_save, val_save
 
         def on_epoch_begin(self, epoch, logs=None):
-            self.starttime=time()
+            self.starttime = time()
 
         def on_epoch_end(self, epoch, logs={}):
             print(time() - self.starttime)

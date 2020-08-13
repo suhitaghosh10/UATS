@@ -4,11 +4,11 @@ from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import Callback
 from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, EarlyStopping, TensorBoard
 
-from old.utils.preprocess_images import make_dataset
 from old.prostate import build_model
 from old.prostate.generator import DataGenerator
 from old.utils.AugmentationGenerator import *
 from old.utils.ops import ramp_down_weight, ramp_up_weight
+from old.utils.preprocess_images import make_dataset
 
 TB_LOG_DIR = './tb/variance_mcdropout/5'
 UPDATE_ENS_AFTER_EPOCH = 50

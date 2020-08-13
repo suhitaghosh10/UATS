@@ -18,7 +18,7 @@ TRAIN_NUM = 58
 FOLD_NUM = 2
 PERC = 1.0
 CSV_NAME = '/data/suhita/temporal/CSV/Supervised_F_A' + str(FOLD_NUM) + '.csv'
-NAME = 'supervised_F' + str(FOLD_NUM)+'P'+str(PERC)
+NAME = 'supervised_F' + str(FOLD_NUM) + 'P' + str(PERC)
 TB_LOG_DIR = '/data/suhita/experiments/' + NAME + '_' + str(learning_rate) + '/'
 MODEL_NAME = '/data/suhita/temporal/' + NAME + '.h5'
 
@@ -28,15 +28,14 @@ TRAIN_GT_PATH = '/cache/suhita/prostate/fold_2_supervised/train/gt/'
 VAL_IMGS_PATH = '/cache/suhita/prostate/fold_2_supervised/val/imgs/'
 VAL_GT_PATH = '/cache/suhita/prostate/fold_2_supervised/val/gt/'
 
-
 TRAINED_MODEL_PATH = MODEL_NAME
 
 NUM_CLASS = 5
 num_epoch = 351
 batch_size = 2
 
-def train(gpu_id, nb_gpus, trained_model=None):
 
+def train(gpu_id, nb_gpus, trained_model=None):
     wm = weighted_model()
     model = wm.build_model(learning_rate=learning_rate, gpu_id=gpu_id,
                            nb_gpus=nb_gpus, trained_model=trained_model)
@@ -168,5 +167,5 @@ if __name__ == '__main__':
     # val_y = np.load('/cache/suhita/data/validation/valArray_GT_fold1.npy').astype('int8')
 
     # val_x = TEST_IMGS_PATH
-    #val_y = TEST_GT_PATH
-    #predict(val_x, val_y, TRAINED_MODEL_PATH)
+    # val_y = TEST_GT_PATH
+    # predict(val_x, val_y, TRAINED_MODEL_PATH)

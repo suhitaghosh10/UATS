@@ -2,15 +2,14 @@ import os
 
 import numpy as np
 
-from old.utils.preprocess_images import get_complete_array
 from old.prostate import weighted_model
+from old.utils.preprocess_images import get_complete_array
 
 MODEL_NAME = '/home/suhita/zonals/data/train.h5'
 VAL_IMGS_PATH = '/home/suhita/zonals/data/test_anneke/imgs/'
 VAL_GT_PATH = '/home/suhita/zonals/data/test_anneke/gt/'
 
 os.environ["CUDA_VISIBLE_DEVICES"] = '3'
-
 
 w = weighted_model()
 model = w.build_model(num_class=5, use_dice_cl=True, learning_rate=2.5e-5, gpu_id=None,

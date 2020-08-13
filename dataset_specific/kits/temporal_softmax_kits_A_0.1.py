@@ -8,8 +8,8 @@ from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStoppi
 from dataset_specific.kits import DataGenerator as train_gen
 from dataset_specific.kits import makedir
 from dataset_specific.kits import weighted_model
-from old.utils.preprocess_images import get_array_kits, save_array_kits
 from old.utils.AugmentationGenerator import *
+from old.utils.preprocess_images import get_array_kits, save_array_kits
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 
 # 294 Training 58 have gt
@@ -266,7 +266,7 @@ def train(gpu_id, nb_gpus):
     else:
         augm_no = AUGMENTATION_NO
     steps = (num_train_data * augm_no) / batch_size
-    #steps = 2
+    # steps = 2
 
     val_fold = np.load('/data/suhita/temporal/kits/Folds/val_fold' + str(FOLD_NUM) + '.npy')
     num_val_data = len(val_fold)

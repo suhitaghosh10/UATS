@@ -104,7 +104,6 @@ def evaluateFiles_arr(prediction, img_arr, GT_arr, csvName, connected_component=
             else:
                 prediction_temp = np.asarray(prediction)[:, imgNumber, :, :, :]
             if not eval:
-
                 np.save(save_dir + '/imgs/' + str(imgNumber) + '.npy', img_arr[imgNumber])
                 np.save(save_dir + '/GT/' + str(imgNumber) + '.npy', prediction_temp)
 
@@ -157,14 +156,14 @@ def evaluateFiles_arr(prediction, img_arr, GT_arr, csvName, connected_component=
                 csvwriter.writerow(std)
 
     if eval:
-            print('Dices')
-            print(np.average(dices, axis=0))
+        print('Dices')
+        print(np.average(dices, axis=0))
 
-            print('Mean Dist')
-            print(np.average(mad, axis=0))
+        print('Mean Dist')
+        print(np.average(mad, axis=0))
 
-            print('Hausdorff 95%')
-            print(np.average(hdf, axis=0))
+        print('Hausdorff 95%')
+        print(np.average(hdf, axis=0))
 
 
 def thresholdArray(array, threshold):
@@ -228,7 +227,6 @@ def removeIslands(predictedArray):
     finalPrediction[0] = array_bg
     finalPrediction[1] = array_c1
     finalPrediction[2] = array_c2
-
 
     for x in range(0, pred_bg_img.GetSize()[0]):
         for y in range(0, pred_bg_img.GetSize()[1]):

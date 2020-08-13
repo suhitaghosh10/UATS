@@ -6,11 +6,11 @@ from keras import backend as K
 from keras.optimizers import Adam
 from sklearn.utils import shuffle
 
+from old.utils.ops import ramp_up_weight, semi_supervised_loss, update_unsupervised_target, evaluate, \
+    ramp_down_weight, update_weight
 from old.utils.preprocess_images import load_data, split_supervised_train, make_train_test_dataset, normalize_images, \
     whiten_zca, \
     data_augmentation_tempen
-from old.utils.ops import ramp_up_weight, semi_supervised_loss, update_unsupervised_target, evaluate, \
-    ramp_down_weight, update_weight
 
 
 def parse_args():
@@ -40,9 +40,9 @@ def parse_args():
 
 
 def main():
-    #50,000 Training -> 4000 supervised data(400 per class) and 46,000 unsupervised data.
+    # 50,000 Training -> 4000 supervised data(400 per class) and 46,000 unsupervised data.
     # Prepare args
-    #args = parse_args()
+    # args = parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = '0'
     num_labeled_train = 4000
     num_test = 10000
@@ -61,8 +61,8 @@ def main():
 
     # Data Preparation
     train_x, train_y, test_x, test_y = load_data('./data/cifar10.npz')
-    #here we are getting all the data (all have GT). Therefore we split some of them having GT and some not having (unsupervised)
-    #ret_dic{labeled_x(4000,32,32,3), labeled_y(4000,),  unlabeled_x(46000,32,32,3)}
+    # here we are getting all the data (all have GT). Therefore we split some of them having GT and some not having (unsupervised)
+    # ret_dic{labeled_x(4000,32,32,3), labeled_y(4000,),  unlabeled_x(46000,32,32,3)}
     ret_dic = split_supervised_train(train_x, train_y, num_labeled_train)
 
     ret_dic['test_x'] = test_x

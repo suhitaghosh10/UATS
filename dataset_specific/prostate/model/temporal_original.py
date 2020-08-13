@@ -167,7 +167,6 @@ class weighted_model:
             unsupervised_gt = input
             unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
 
-
             # supervised_loss =  self.c_dice_loss(y_true, y_pred, supervised_flag)
             supervised_loss = -self.dice_coef(y_true, y_pred)
             r = weighted_model.ramp_wt

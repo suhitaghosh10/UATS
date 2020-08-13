@@ -6,11 +6,11 @@ from keras.optimizers import Adam
 from sklearn.utils import shuffle
 
 from dataset_specific.prostate.generator import AugmentTypes
-from old.utils.preprocess_images import split_supervised_train, make_train_test_dataset, whiten_zca, \
-    data_augmentation_tempen
 from old.utils.AugmentationGenerator import *
 from old.utils.ops import ramp_up_weight, update_unsupervised_target, evaluate, \
     ramp_down_weight, update_weight
+from old.utils.preprocess_images import split_supervised_train, make_train_test_dataset, whiten_zca, \
+    data_augmentation_tempen
 from utility.weight_norm import AdamWithWeightnorm
 
 
@@ -41,9 +41,9 @@ def parse_args():
 
 
 def main():
-    #50,000 Training -> 4000 supervised data(400 per class) and 46,000 unsupervised data.
+    # 50,000 Training -> 4000 supervised data(400 per class) and 46,000 unsupervised data.
     # Prepare args
-    #args = parse_args()
+    # args = parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = '0'
     num_labeled_train = 38
     num_test = 20
@@ -79,8 +79,8 @@ def main():
                                                        'final_test_array_imgs.npy', 'final_test_array_gt.npy',
                                                        save_orig=False, save_numpy=False)
 
-    #here we are getting all the data (all have GT). Therefore we split some of them having GT and some not having (unsupervised)
-    #ret_dic{labeled_x(4000,32,32,3), labeled_y(4000,),  unlabeled_x(46000,32,32,3)}
+    # here we are getting all the data (all have GT). Therefore we split some of them having GT and some not having (unsupervised)
+    # ret_dic{labeled_x(4000,32,32,3), labeled_y(4000,),  unlabeled_x(46000,32,32,3)}
     ret_dic = split_supervised_train(train_x, train_y, num_labeled_train)
 
     ret_dic['val_x'] = test_x
@@ -100,8 +100,8 @@ def main():
     # Build Model
     if weight_norm_flag:
         from old.prostate import build_model
-        #from lib.segmentation.weight_norm import AdamWithWeightnorm
-        #optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
+        # from lib.segmentation.weight_norm import AdamWithWeightnorm
+        # optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
         from old.prostate import build_model
         optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
     else:
@@ -181,6 +181,7 @@ def main():
         # if epoch % 5 == 0:
         print('Evaluate epoch :  ', epoch, flush=True)
         evaluate(model, num_class, 20, test_x, test_y)
+
 
 if __name__ == '__main__':
     main()

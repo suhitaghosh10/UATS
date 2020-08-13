@@ -7,6 +7,7 @@ from utility.prostate.preprocess import *
 
 THRESHOLD = 0.5
 
+
 def getDice(prediction, groundTruth):
     filter = sitk.LabelOverlapMeasuresImageFilter()
     filter.Execute(prediction, groundTruth)
@@ -113,7 +114,7 @@ def evaluateFiles_zones(GT_array, pred_directory, csvName):
                 GT_label = castImage(GT_label, sitk.sitkUInt8)
 
                 # sitk.WriteImage(pred_img, 'predImg.nrrd')
-                #sitk.WriteImage(GT_label, 'GT_label.nrrd')
+                # sitk.WriteImage(GT_label, 'GT_label.nrrd')
 
                 dice = getDice(pred_img, GT_label)
                 temp_dice.append(dice)
@@ -121,19 +122,19 @@ def evaluateFiles_zones(GT_array, pred_directory, csvName):
                 # avd = relativeAbsoluteVolumeDifference(pred_img, GT_label)
                 [hausdorff, avgDist] = getBoundaryDistances(pred_img, GT_label)
                 # hausdorff = hausdorff_distance(sitk.GetArrayFromImage(pred_img).reshape(168*168,32),sitk.GetArrayFromImage(GT_label).reshape(168*168,32), distance="haversine")
-                #print(hausdorff, avgDist )
+                # print(hausdorff, avgDist )
                 temp_mad.append(avgDist)
                 temp_hdf.append(hausdorff)
                 # values.append(dice)
                 # values.append(avgDist)
 
                 # roc_auc = roc_auc_score(np.ravel(GT_array[imgNumber, :, :, :, zoneIndex]), np.ravel(pred_arr))
-                #temp_auc.append(roc_auc)
+                # temp_auc.append(roc_auc)
 
                 dices[imgNumber, zoneIndex] = dice
                 mad[imgNumber, zoneIndex] = avgDist
                 hdf[imgNumber, zoneIndex] = hausdorff
-                #auc[imgNumber, zoneIndex] = roc_auc
+                # auc[imgNumber, zoneIndex] = roc_auc
 
             values.append(temp_dice[0])
             values.append(temp_dice[1])
@@ -156,7 +157,7 @@ def evaluateFiles_zones(GT_array, pred_directory, csvName):
             # values.append(temp_auc[0])
             # values.append(temp_auc[1])
             # values.append(temp_auc[2])
-            #values.append(temp_auc[3])
+            # values.append(temp_auc[3])
             # values.append(temp_mad)
             csvwriter.writerow(values)
 
@@ -545,7 +546,7 @@ def postprocesAndEvaluateFiles(name, GT_array, csvName, eval=True):
     for i in range(0, prediction.shape[1]):
         print(i)
         array = removeIslands(prediction[:, i, :, :, :])
-        #np.save(outDir + 'predicted_' + str(i) + '.npy', array)
+        # np.save(outDir + 'predicted_' + str(i) + '.npy', array)
         print(array.shape)
         out_arr[i] = np.transpose(array, (1, 2, 3, 0))
         # print('preditction', prediction.shape)
@@ -565,7 +566,6 @@ if __name__ == '__main__':
     if GT_array_name is not None:
         GT_array = np.load(GT_array_name)
     # GT_array = get_complete_array('/home/suhita/zonals/data/test_anneke/gt/')
-
 
     # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
     postprocesAndEvaluateFiles(name, GT_array, eval=True, csvName=csvName)

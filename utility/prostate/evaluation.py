@@ -481,7 +481,6 @@ def removeIslands(predictedArray):
     finalPrediction[:, :, :, 3] = array_afs
     finalPrediction[:, :, :, 4] = array_bg
 
-
     for x in range(0, pred_cz_img.GetSize()[0]):
         for y in range(0, pred_cz_img.GetSize()[1]):
             for z in range(0, pred_cz_img.GetSize()[2]):
@@ -601,17 +600,16 @@ def evaluate_supervised(model_dir, model_name, val_x, val_y, eval=True):
     print(output_arr.shape)
     postprocesAndEvaluateFiles(model_dir, output_arr, val_y, eval=eval, csvName=csvName,
                                prediction_arr_exists=False, model_name=model_name)
+
+
 if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = '3'
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 
-
-
-    evaluate_uats(model_dir='/data/suhita/experiments/model/prostate/',
-                  #model_dir='/data/suhita/prostate/',
-                  # model_name='prostate_softmax_F3_Perct_Labelled_1.0',
-                  # model_name='NO_scaling_F1',
-                  model_name='uats_mc_entropy_F3_Perct_Labelled_1.0.h5',
+    evaluate_uats(model_dir='/data/suhita/experiments/model/uats/prostate/',
+                  # model_dir='/data/suhita/prostate/',
+                  #model_name='uats_softmax_F3_Perct_Labelled_0.5.h5',
+                  #model_name='uats_mc_entropy_F1_Perct_Labelled_1.0.h5',
                   val_x=np.load('/cache/suhita/data/prostate/final_test_array_imgs.npy'),
                   val_y=np.load('/cache/suhita/data/prostate/final_test_array_GT.npy').astype('int8'),
                   mc=True,

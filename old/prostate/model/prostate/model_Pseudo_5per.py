@@ -77,7 +77,7 @@ class weighted_model:
         # voxels_no = tf.cast(tf.count_nonzero(weight), 'float32')
         return - K.mean((2. * intersection + smooth) / ((c * y_pred_sum) + y_true_sum + smooth))
         # loss =  - (2. * intersection + smooth) / ((c * y_pred_sum) + y_true_sum + smooth)
-        #return loss/voxels_no
+        # return loss/voxels_no
 
     def unsup_dice_tb(self, input, class_wt=1.):
         def unsup_dice_loss(y_true, y_pred, smooth=1., axis=(1, 2, 3)):
@@ -185,7 +185,7 @@ class weighted_model:
                     nb_gpus=None,
                     trained_model=None, temp=1.5):
         input_img = Input((*img_shape, 1), name='img_inp')
-        #unsupervised_label = Input((*img_shape, 5), name='unsup_label_inp')
+        # unsupervised_label = Input((*img_shape, 5), name='unsup_label_inp')
         supervised_flag = Input(shape=img_shape, name='flag_inp')
 
         kernel_init = 'he_normal'
@@ -255,7 +255,7 @@ class weighted_model:
         # cz = K.stack([cz_ensemble_pred, supervised_flag])
         # us = K.stack([us_ensemble_pred, supervised_flag])
         # afs = K.stack([afs_ensemble_pred, supervised_flag])
-        #bg = K.stack([bg_ensemble_pred, supervised_flag])
+        # bg = K.stack([bg_ensemble_pred, supervised_flag])
 
         optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999)
 

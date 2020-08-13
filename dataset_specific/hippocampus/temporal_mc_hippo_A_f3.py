@@ -10,8 +10,8 @@ from dataset_specific.hippocampus import DataGenerator as train_gen
 from dataset_specific.hippocampus import get_multi_class_arr
 from dataset_specific.hippocampus import weighted_model
 from dataset_specific.kits import makedir
-from old.utils.preprocess_images import get_array, save_array
 from old.utils.AugmentationGenerator import *
+from old.utils.preprocess_images import get_array, save_array
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 
 learning_rate = 4e-5
@@ -363,7 +363,7 @@ if __name__ == '__main__':
         # shutil.rmtree(ENS_GT_PATH)
         # train(None, None, 0.25)
         # shutil.rmtree(ENS_GT_PATH)
-        #train(None, None, 0.05)
+        # train(None, None, 0.05)
 
     finally:
 

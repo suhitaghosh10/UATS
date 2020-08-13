@@ -10,11 +10,11 @@ print('label -', labels.shape)
 
 import matplotlib.pyplot as plt
 
-plt.imshow(images[20,:,:,:])
+plt.imshow(images[20, :, :, :])
 plt.show()
 
-print(images[20,:,:,:].shape)
-trs = np.pad(images[20,:,:,:], ((2, 2), (2, 2), (0, 0)), 'reflect')
+print(images[20, :, :, :].shape)
+trs = np.pad(images[20, :, :, :], ((2, 2), (2, 2), (0, 0)), 'reflect')
 plt.imshow(trs)
 plt.show()
 print(trs.shape)

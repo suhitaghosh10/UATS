@@ -9,8 +9,8 @@ from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStoppi
 from dataset_specific.kits import makedir
 from dataset_specific.skin_2D import DataGenerator as train_gen
 from dataset_specific.skin_2D import weighted_model
-from old.utils.preprocess_images import get_array, save_array
 from old.utils.AugmentationGenerator import *
+from old.utils.preprocess_images import get_array, save_array
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 
 # learning_rate = 1e-7
@@ -133,7 +133,6 @@ def train(gpu_id, nb_gpus, perc, batch_nos, learning_rate=None):
 
             bg_save, self.val_bg_dice_coef = self.shall_save(logs['val_bg_dice_coef'], self.val_bg_dice_coef)
             lesion_save, self.val_skin_dice_coef = self.shall_save(logs['val_skin_dice_coef'], self.val_skin_dice_coef)
-
 
             if epoch > 0:
 

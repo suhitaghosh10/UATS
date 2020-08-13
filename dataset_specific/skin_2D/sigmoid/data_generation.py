@@ -9,35 +9,35 @@ def remove_tumor_segmentation(arr):
     arr[arr > 1] = 1
     return arr
 
+
 def augment_image(img, augmentation_type, datagen):
-
-    if augmentation_type==0: #rotation
+    if augmentation_type == 0:  # rotation
         delta = np.random.uniform(0, 180)
-        out = datagen.apply_transform(x=img,transform_parameters={'theta':delta})
-    if augmentation_type==1: # translation
+        out = datagen.apply_transform(x=img, transform_parameters={'theta': delta})
+    if augmentation_type == 1:  # translation
         [delta_x, delta_y] = [np.random.uniform(-15, 15), np.random.uniform(-10, 10)]  # in mm
-        out = datagen.apply_transform(x=img, transform_parameters={'tx':delta_x, 'ty':delta_y})
+        out = datagen.apply_transform(x=img, transform_parameters={'tx': delta_x, 'ty': delta_y})
 
-
-    if augmentation_type==2: # scale
+    if augmentation_type == 2:  # scale
         scale_factor = np.random.uniform(1.0, 1.2)
-        out = datagen.apply_transform(x=img, transform_parameters={'sx':scale_factor, 'sy':scale_factor})
+        out = datagen.apply_transform(x=img, transform_parameters={'sx': scale_factor, 'sy': scale_factor})
 
     if augmentation_type == 3:
         out = img
 
-    if augmentation_type== 4:
-        out = datagen.apply_transform(x=img,transform_parameters={'flip_horizontal':True})
+    if augmentation_type == 4:
+        out = datagen.apply_transform(x=img, transform_parameters={'flip_horizontal': True})
 
-    if augmentation_type== 5:
-        out = datagen.apply_transform(x=img,transform_parameters={'flip_vertical':True})
+    if augmentation_type == 5:
+        out = datagen.apply_transform(x=img, transform_parameters={'flip_vertical': True})
 
     return out
+
 
 class DataGenerator(keras.utils.Sequence):
 
     def __init__(self, data_path, id_list, batch_size=2, dim=(32, 168, 168), n_channels=1,
-                 n_classes=1, shuffle=True, rotation=True, augmentation = False):
+                 n_classes=1, shuffle=True, rotation=True, augmentation=False):
         'Initialization'
         self.dim = dim
         self.data_path = data_path
@@ -52,7 +52,6 @@ class DataGenerator(keras.utils.Sequence):
         self.datagen_img = ImageDataGenerator(fill_mode='constant', cval=0, interpolation_order=1)
         self.datagen_GT = ImageDataGenerator(fill_mode='constant', cval=0, interpolation_order=0)
 
-
     def on_epoch_end(self):
         np.random.shuffle(self.indexes)
 
@@ -60,28 +59,26 @@ class DataGenerator(keras.utils.Sequence):
         'Generates data containing batch_size samples'  # X : (n_samples, *dim, n_channels)
         # Initialization
         # 32,168,168
-        X = np.empty((self.batch_size, *self.dim, self.n_channels), dtype = float)
+        X = np.empty((self.batch_size, *self.dim, self.n_channels), dtype=float)
         Y = np.empty((self.batch_size, *self.dim, 2), dtype=np.uint8)
-
 
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
 
-            #Y[i, :, :, :, 0] = remove_tumor_segmentation(np.load(os.path.join(self.data_path, segm_file_name)))#[10:-10, 10:-10, 2:-2]
+            # Y[i, :, :, :, 0] = remove_tumor_segmentation(np.load(os.path.join(self.data_path, segm_file_name)))#[10:-10, 10:-10, 2:-2]
 
-           # sitk.WriteImage(sitk.GetImageFromArray(X[i, :, :, :, 0]), 'img.nrrd')
-           # sitk.WriteImage(sitk.GetImageFromArray(Y[i, :, :, :, 0]), 'segm.nrrd')
+            # sitk.WriteImage(sitk.GetImageFromArray(X[i, :, :, :, 0]), 'img.nrrd')
+            # sitk.WriteImage(sitk.GetImageFromArray(Y[i, :, :, :, 0]), 'segm.nrrd')
             x = np.load(os.path.join(self.data_path, 'imgs', ID))
             y = np.load(os.path.join(self.data_path, 'GT', ID[:-4] + '_segmentation.npy'))
             x = x / 255
             y = y / 255
 
-
             if self.augmentation:
 
                 aug_type = np.random.randint(0, 6)
 
-                X[i, :, :, :] = augment_image(x,aug_type, self.datagen_img)
+                X[i, :, :, :] = augment_image(x, aug_type, self.datagen_img)
                 augm_GT = augment_image(y, aug_type, self.datagen_GT)[:, :, 0]
                 Y[i, :, :, 1] = augm_GT
                 augm_GT_bg = np.where(augm_GT == 0, 1, 0)

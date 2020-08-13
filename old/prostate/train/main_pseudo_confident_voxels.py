@@ -4,11 +4,11 @@ from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import Callback, ReduceLROnPlateau
 from keras.callbacks import ModelCheckpoint, TensorBoard
 
-from old.utils.preprocess_images import get_complete_array, get_array, save_array
 from old.prostate import weighted_model
 from old.prostate.generator import DataGenerator
 from old.utils.AugmentationGenerator import *
 from old.utils.ops import ramp_down_weight
+from old.utils.preprocess_images import get_complete_array, get_array, save_array
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 
 # 294 Training 58 have gt
@@ -45,16 +45,16 @@ alpha = 0.6
 VAR_THRESHOLD = 0.5
 
 AFS = 3
+
+
 def train(gpu_id, nb_gpus, trained_model=TRAINED_MODEL_PATH):
     num_labeled_train = 58
     num_train_data = len(os.listdir(TRAIN_IMGS_PATH))
     num_un_labeled_train = num_train_data - num_labeled_train
     num_val_data = len(os.listdir(VAL_IMGS_PATH))
 
-
-
     # prepare weights and arrays for updates
-    #gen_weight = ramp_up_weight(ramp_up_period, weight_max * (num_labeled_train / num_train_data))
+    # gen_weight = ramp_up_weight(ramp_up_period, weight_max * (num_labeled_train / num_train_data))
     gen_lr_weight = ramp_down_weight(ramp_down_period)
 
     # prepare dataset
@@ -103,7 +103,6 @@ def train(gpu_id, nb_gpus, trained_model=TRAINED_MODEL_PATH):
 
         def on_batch_begin(self, batch, logs=None):
             pass
-
 
         def on_epoch_begin(self, epoch, logs=None):
             # tf.summary.scalar("labeled_pixels", np.count_nonzero(self.supervised_flag))
@@ -164,9 +163,9 @@ def train(gpu_id, nb_gpus, trained_model=TRAINED_MODEL_PATH):
                         logs['pz_dice_coef'] = K.eval(self.dice_coef(y_true[:, :, :, :, 0], cur_pred[0:58, :, :, :, 0]))
                         logs['cz_dice_coef'] = K.eval(self.dice_coef(y_true[:, :, :, :, 1], cur_pred[0:58, :, :, :, 1]))
                         logs['us_dice_coef'] = K.eval(self.dice_coef(y_true[:, :, :, :, 2], cur_pred[0:58, :, :, :, 2]))
-                        logs['afs_dice_coef'] = K.eval(self.dice_coef(y_true[:, :, :, :, 3], cur_pred[0:58, :, :, :, 3]))
+                        logs['afs_dice_coef'] = K.eval(
+                            self.dice_coef(y_true[:, :, :, :, 3], cur_pred[0:58, :, :, :, 3]))
                         logs['bg_dice_coef'] = K.eval(self.dice_coef(y_true[:, :, :, :, 4], cur_pred[0:58, :, :, :, 4]))
-
 
                         flag = supervised_flag[num_labeled_train:actual_batch_size]
                         flag = np.where(
@@ -238,9 +237,8 @@ def train(gpu_id, nb_gpus, trained_model=TRAINED_MODEL_PATH):
                                        FLAG_PATH,
                                        train_id_list)
 
-
     steps = num_train_data / batch_size
-    #steps =2
+    # steps =2
 
     val_supervised_flag = np.ones((num_val_data, 32, 168, 168, 1), dtype='int8')
     val_x_arr = get_complete_array(VAL_IMGS_PATH)
@@ -314,7 +312,7 @@ if __name__ == '__main__':
         '''
 
     train(None, None, trained_model=TRAINED_MODEL_PATH)
-    #train(gpu, nb_gpus)
+    # train(gpu, nb_gpus)
     # val_x = np.load('/home/suhita/zonals/data/validation/valArray_imgs_fold1.npy')
     # val_y = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy').astype('int8')
 

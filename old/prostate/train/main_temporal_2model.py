@@ -4,11 +4,11 @@ from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import Callback, ReduceLROnPlateau
 from keras.callbacks import ModelCheckpoint, TensorBoard
 
-from old.utils.preprocess_images import get_complete_array, get_array, save_array
 from old.prostate import weighted_model
 from old.prostate.generator.data_gen_optim import DataGenerator
 from old.utils.AugmentationGenerator import *
 from old.utils.ops import ramp_down_weight
+from old.utils.preprocess_images import get_complete_array, get_array, save_array
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 
 # 294 Training 58 have gt

@@ -30,8 +30,6 @@ TRAINED_MODEL_PATH = '/data/suhita/temporal/supervised_F4.h5'
 ENS_GT_PATH = '/data/suhita/temporal/sadv2/ens_gt/'
 FLAG_PATH = '/data/suhita/temporal/sadv2/flag/'
 
-
-
 NUM_CLASS = 5
 num_epoch = 351
 batch_size = 2
@@ -52,9 +50,8 @@ def train(gpu_id, nb_gpus, trained_model=None):
         def __init__(self, imgs_path, gt_path, ensemble_path, supervised_flag_path, train_idx_list):
             pass
 
-
         def on_epoch_begin(self, epoch, logs=None):
-            self.starttime=time()
+            self.starttime = time()
 
         def on_epoch_end(self, epoch, logs={}):
             print(time() - self.starttime)
@@ -153,8 +150,6 @@ def predict(model_name, eval=True):
             print("%s: %.16f%%" % (model.metrics_names[i], scores[i]))
 
 
-
-
 if __name__ == '__main__':
     gpu = '/GPU:0'
     # gpu = '/GPU:0'
@@ -176,7 +171,7 @@ if __name__ == '__main__':
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
     train(None, None, trained_model=TRAINED_MODEL_PATH)
-    #train(gpu, nb_gpus, trained_model=TRAINED_MODEL_PATH)
+    # train(gpu, nb_gpus, trained_model=TRAINED_MODEL_PATH)
     # val_x = np.load('/cache/suhita/data/validation/valArray_imgs_fold1.npy')
     # val_y = np.load('/cache/suhita/data/validation/valArray_GT_fold1.npy').astype('int8')
     predict(TRAINED_MODEL_PATH)

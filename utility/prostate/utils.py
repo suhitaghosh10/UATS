@@ -19,6 +19,7 @@ def similarity3D_parameter_space_regular_sampling(thetaX, thetaY, thetaZ, tx, ty
             [np.asscalar(p) for p in parameter_values[3:]] for parameter_values in
             np.nditer(np.meshgrid(thetaX, thetaY, thetaZ, tx, ty, tz, scale))]
 
+
 def eul2quat(ax, ay, az, atol=1e-8):
     '''
     Translate between Euler angle (ZYX) order and quaternion representation of a rotation.
@@ -70,6 +71,7 @@ def eul2quat(ax, ay, az, atol=1e-8):
         qv[1] = (r[0, 2] - r[2, 0]) / denom;
         qv[2] = (r[1, 0] - r[0, 1]) / denom;
     return qv
+
 
 def augment_images_spatial(original_image, reference_image, T0, T_aug, transformation_parameters, flip_hor, flip_z,
                            output_prefix, output_suffix,
@@ -155,6 +157,7 @@ def get_train_id_list(fold_num):
         return None
 """
 
+
 def get_val_id_list(fold_num):
     if fold_num == 1:
         return np.arange(58, 78)
@@ -167,4 +170,3 @@ def get_val_id_list(fold_num):
     else:
         print('wrong fold number')
         return None
-

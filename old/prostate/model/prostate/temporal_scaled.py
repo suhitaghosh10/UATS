@@ -15,13 +15,11 @@ class weighted_model:
     alpha = 0.6
     epoch_ctr = K.variable(0, name='epoch_ctr')
 
-
     class LossCallback(Callback):
 
         def on_epoch_end(self, epoch, logs={}):
             weighted_model.epoch_ctr = epoch
             print(weighted_model.epoch_ctr)
-
 
     def dice_coef(self, y_true, y_pred, smooth=1.):
 
@@ -96,7 +94,7 @@ class weighted_model:
     def unsup_dice_tb(self, input, class_wt=1.):
         unsupervised_gt = input[0, :, :, :, :]
 
-        #unsupervised_gt = unsupervised_gt / (1 -  (0.6** (self.epoch_ctr + 1)))
+        # unsupervised_gt = unsupervised_gt / (1 -  (0.6** (self.epoch_ctr + 1)))
 
         def unsup_dice_loss(y_true, y_pred, smooth=1., axis=(1, 2, 3)):
 
@@ -120,6 +118,7 @@ class weighted_model:
                 avg_dice_coef = K.mean((2. * intersection + smooth) / ((c * y_pred_sum) + y_true_sum + smooth))
 
                 return 1 - avg_dice_coef
+
         return unsup_dice_loss
 
     def dice_loss(self, y_true, y_pred, weight, smooth=1., axis=(1, 2, 3)):
@@ -175,7 +174,6 @@ class weighted_model:
             unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
             supervised_flag = input[1, :, :, :, :]
 
-
             y_true_final = tf.where(tf.equal(supervised_flag, 2), unsupervised_gt, y_true)
             supervised_flag = tf.where(tf.equal(supervised_flag, 2), K.ones_like(supervised_flag), supervised_flag)
 
@@ -185,10 +183,9 @@ class weighted_model:
             # for validation loss, make unsup_loss_class_wt zero
             supervised_flag = input[1, :, :, :, :]
 
-
             unsupervised_loss = self.unsup_c_dice_loss(unsupervised_gt, y_pred)
             if supervised_flag[0, 0, 0, 0] is 3:
-                unsupervised_loss =0
+                unsupervised_loss = 0
 
             return supervised_loss + unsup_loss_class_wt * unsupervised_loss
 
@@ -300,11 +297,9 @@ class weighted_model:
 
         # conv_out = Lambda(lambda x: Temp_Scaling.SadLayer(x), name='scaling')(conv_out)
 
-        #conv_out = Lambda(lambda x: x / y, name='scaling')(conv_out)
-
+        # conv_out = Lambda(lambda x: x / y, name='scaling')(conv_out)
 
         conv_out_sm = Activation('softmax')(conv_out)
-
 
         pz_sm_out = Lambda(lambda x: x[:, :, :, :, 0], name='pz')(conv_out_sm)
         cz_sm_out = Lambda(lambda x: x[:, :, :, :, 1], name='cz')(conv_out_sm)
@@ -348,7 +343,7 @@ class weighted_model:
             # model_copy = Model([input_img, unsupervised_label, supervised_flag, unsupervised_weight],[pz_out, cz_out, us_out, afs_out, bg_out])
 
             # intermediate_layer_model = Model(inputs=train.input,outputs=train.get_layer(layer_name).output)
-            #p_model.layers.extend(temp)
+            # p_model.layers.extend(temp)
 
             p_model.compile(optimizer=optimizer,
                             loss={'pz': self.semi_supervised_loss(pz, unsup_loss_class_wt=1),
@@ -379,7 +374,7 @@ class weighted_model:
                 # model_copy = Model([input_img, unsupervised_label, gt, supervised_flag, unsupervised_weight],[pz_out, cz_out, us_out, afs_out, bg_out])
 
                 # intermediate_layer_model = Model(inputs=train.input,outputs=train.get_layer(layer_name).output)
-                #p_model.layers.extend(temp)
+                # p_model.layers.extend(temp)
 
                 p_model.compile(optimizer=optimizer,
                                 loss={'pz': self.semi_supervised_loss(pz, unsup_loss_class_wt=1),

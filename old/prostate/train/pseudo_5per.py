@@ -7,8 +7,8 @@ from keras.callbacks import ModelCheckpoint, TensorBoard
 
 from dataset_specific.prostate.generator import DataGenerator
 from dataset_specific.prostate.model import weighted_model
-from old.utils.preprocess_images import get_complete_array, get_array, save_array
 from old.utils.AugmentationGenerator import *
+from old.utils.preprocess_images import get_complete_array, get_array, save_array
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 
 # 294 Training 58 have gt

@@ -167,7 +167,7 @@ def binaryThresholdImage(img, lowerThreshold):
     return thresholded
 
 
-def resampleImage(inputImage, newSpacing, interpolator, defaultValue, output_pixel_type = sitk.sitkFloat32):
+def resampleImage(inputImage, newSpacing, interpolator, defaultValue, output_pixel_type=sitk.sitkFloat32):
     castImageFilter = sitk.CastImageFilter()
     castImageFilter.SetOutputPixelType(output_pixel_type)
     inputImage = castImageFilter.Execute(inputImage)
@@ -196,7 +196,7 @@ def resampleImage(inputImage, newSpacing, interpolator, defaultValue, output_pix
     return outImage
 
 
-def resampleToReference(inputImg, referenceImg, interpolator, defaultValue, out_dType= sitk.sitkFloat32):
+def resampleToReference(inputImg, referenceImg, interpolator, defaultValue, out_dType=sitk.sitkFloat32):
     castImageFilter = sitk.CastImageFilter()
     castImageFilter.SetOutputPixelType(out_dType)
     inputImg = castImageFilter.Execute(inputImg)
@@ -269,6 +269,7 @@ def sizeCorrectionImage(img, factor, imgSize):
     else:
         return img
 
+
 def getMinimum(img):
     # get minimum value for padding
     filter = sitk.StatisticsImageFilter()
@@ -277,21 +278,20 @@ def getMinimum(img):
 
     return minValue
 
-def pad_volume(img, target_size_x=0, target_size_y=0, target_size_z=0, padValue = 0):
 
-    act_size= img.GetSize()
+def pad_volume(img, target_size_x=0, target_size_y=0, target_size_z=0, padValue=0):
+    act_size = img.GetSize()
     cX = 0
     cY = 0
     cZ = 0
-    if target_size_x>0:
-        cX = max(0,target_size_x - act_size[0])
+    if target_size_x > 0:
+        cX = max(0, target_size_x - act_size[0])
 
     if target_size_y > 0:
-        cY = max(0,target_size_y - act_size[1])
+        cY = max(0, target_size_y - act_size[1])
 
     if target_size_z > 0:
-        cZ = max(0,target_size_z - act_size[2])
-
+        cZ = max(0, target_size_z - act_size[2])
 
     filter = sitk.ConstantPadImageFilter()
     filter.SetPadLowerBound([int(math.floor(cX / 2)), int(math.floor(cY / 2)), int(math.floor(cZ / 2))])
@@ -335,7 +335,7 @@ def getLargestConnectedComponents(img):
     labelStatistics = sitk.LabelShapeStatisticsImageFilter()
     labelStatistics.Execute(connectedComponents)
     nrLabels = labelStatistics.GetNumberOfLabels()
-    #print('Nr Of Labels:', nrLabels)
+    # print('Nr Of Labels:', nrLabels)
 
     if nrLabels == 1:
         return img

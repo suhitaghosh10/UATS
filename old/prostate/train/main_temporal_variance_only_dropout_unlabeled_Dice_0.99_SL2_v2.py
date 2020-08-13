@@ -4,11 +4,11 @@ from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import Callback, ReduceLROnPlateau
 from keras.callbacks import ModelCheckpoint, TensorBoard
 
-from old.utils.preprocess_images import get_complete_array, get_array, save_array
 from old.prostate import weighted_model
 from old.prostate.generator.data_gen_optim import DataGenerator
 from old.utils.AugmentationGenerator import *
 from old.utils.ops import ramp_down_weight
+from old.utils.preprocess_images import get_complete_array, get_array, save_array
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 
 # 294 Training 58 have gt
@@ -48,16 +48,16 @@ alpha = 0.6
 VAR_THRESHOLD = 0.5
 
 AFS = 3
+
+
 def train(gpu_id, nb_gpus):
     num_labeled_train = 58
     num_train_data = len(os.listdir(TRAIN_IMGS_PATH))
     num_un_labeled_train = num_train_data - num_labeled_train
     num_val_data = len(os.listdir(VAL_IMGS_PATH))
 
-
-
     # prepare weights and arrays for updates
-    #gen_weight = ramp_up_weight(ramp_up_period, weight_max * (num_labeled_train / num_train_data))
+    # gen_weight = ramp_up_weight(ramp_up_period, weight_max * (num_labeled_train / num_train_data))
     gen_lr_weight = ramp_down_weight(ramp_down_period)
 
     # prepare dataset
@@ -91,7 +91,7 @@ def train(gpu_id, nb_gpus):
             self.val_cz_dice_coef = 0.
             self.val_pz_dice_coef = 0.
             self.val_us_dice_coef = 0.
-            #self.dice_coef = 0.
+            # self.dice_coef = 0.
 
             self.imgs_path = imgs_path
             self.gt_path = gt_path
@@ -103,7 +103,7 @@ def train(gpu_id, nb_gpus):
             unsupervised_target = get_complete_array(TRAIN_GT_PATH, dtype='float32')
             flag = np.ones((32, 168, 168, 1)).astype('int8')
             wt = np.ones((32, 168, 168, 5)).astype('int8')
-            #wt[:, :, :, AFS] = 2
+            # wt[:, :, :, AFS] = 2
             for patient in np.arange(num_train_data):
                 np.save(self.weight_path + str(patient) + '.npy', wt)
                 np.save(self.ensemble_path + str(patient) + '.npy', unsupervised_target[patient])
@@ -127,7 +127,6 @@ def train(gpu_id, nb_gpus):
 
             return flag_save, val_save
 
-
         def on_epoch_begin(self, epoch, logs=None):
             # tf.summary.scalar("labeled_pixels", np.count_nonzero(self.supervised_flag))
             if epoch > num_epoch - ramp_down_period:
@@ -140,7 +139,7 @@ def train(gpu_id, nb_gpus):
 
             # if epoch >= ramp_up_period - 5:
             # if epoch >= SAVE_WTS_AFTR_EPOCH:
-            #next_weight = next(gen_weight)
+            # next_weight = next(gen_weight)
             #   print('rampup wt', next_weight)
 
             pz_save, self.val_pz_dice_coef = self.shall_save(logs['val_pz_dice_coef'], self.val_pz_dice_coef)
@@ -189,7 +188,6 @@ def train(gpu_id, nb_gpus):
                     cur_pred[:, :, :, :, 2] = model_out[2] if us_save else ensemble_prediction[:, :, :, :, 2]
                     cur_pred[:, :, :, :, 3] = model_out[3] if afs_save else ensemble_prediction[:, :, :, :, 3]
                     cur_pred[:, :, :, :, 4] = model_out[4] if bg_save else ensemble_prediction[:, :, :, :, 4]
-
 
                     del model_out
 
@@ -293,9 +291,8 @@ def train(gpu_id, nb_gpus):
                                        FLAG_PATH,
                                        train_id_list)
 
-
     steps = num_train_data / batch_size
-    #steps =2
+    # steps =2
 
     val_supervised_flag = np.ones((num_val_data, 32, 168, 168, 1), dtype='int8')
     val_unsupervised_weight = np.ones((num_val_data, 32, 168, 168, 5), dtype='float32')
@@ -368,9 +365,9 @@ if __name__ == '__main__':
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
     # train(gpu, nb_gpus)
-    #train(gpu, nb_gpus)
-    #val_x = np.load('/home/suhita/zonals/data/validation/valArray_imgs_fold1.npy')
-    #val_y = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy').astype('int8')
+    # train(gpu, nb_gpus)
+    # val_x = np.load('/home/suhita/zonals/data/validation/valArray_imgs_fold1.npy')
+    # val_y = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy').astype('int8')
 
     val_x = np.load('/home/suhita/zonals/data/test_anneke/final_test_array_imgs.npy')
     val_y = np.load('/home/suhita/zonals/data/test_anneke/final_test_array_GT.npy').astype('int8')

@@ -68,7 +68,8 @@ def make_train_test_dataset(train_x, train_y, val_x, val_y, num_labeled_train, n
 
     # flag to indicate that supervised(1) or not(0) in train data
 
-    supervised_flag = np.concatenate( (np.ones((num_train_data - num_train_unlabeled, 32, 168, 168,1)), np.zeros((num_train_unlabeled, 32, 168, 168,1))))
+    supervised_flag = np.concatenate((np.ones((num_train_data - num_train_unlabeled, 32, 168, 168, 1)),
+                                      np.zeros((num_train_unlabeled, 32, 168, 168, 1))))
     # initialize ensemble prediction label for unsupervised component. It corresponds to matrix Z
     if unsupervised_target_init:
         unsupervised_target = train_y
@@ -85,6 +86,7 @@ def make_train_test_dataset(train_x, train_y, val_x, val_y, num_labeled_train, n
     ret_dic['unsupervised_weight'] = unsupervised_weight
 
     return ret_dic
+
 
 def make_train_test_dataset(train_x, train_y, val_x, val_y, num_labeled_train, num_class,
                             unsupervised_target_init=False):
@@ -116,7 +118,8 @@ def make_train_test_dataset(train_x, train_y, val_x, val_y, num_labeled_train, n
 
     # flag to indicate that supervised(1) or not(0) in train data
 
-    supervised_flag = np.concatenate( (np.ones((num_train_data - num_train_unlabeled, 32, 168, 168,1)), np.zeros((num_train_unlabeled, 32, 168, 168,1))))
+    supervised_flag = np.concatenate((np.ones((num_train_data - num_train_unlabeled, 32, 168, 168, 1)),
+                                      np.zeros((num_train_unlabeled, 32, 168, 168, 1))))
     # initialize ensemble prediction label for unsupervised component. It corresponds to matrix Z
     if unsupervised_target_init:
         unsupervised_target = train_y
@@ -186,9 +189,6 @@ def get_complete_array(folder_path, dtype=None):
     return total_arr
 
 
-
-
-
 def get_array_kits(folder_path, start, end, npy_name, dtype=None):
     img_num = (end - start) * 2
     if dtype is None:
@@ -225,13 +225,12 @@ def get_array_from_list(folder_path, imgs_no=[], dtype=None):
     return total_arr
 
 
-
-
 def save_array_kits(path, arr, npy_name, start, end):
     for idx in np.arange(start, end):
         arr_idx = (idx - start) * 2
         np.save(path + 'case_' + str(idx) + '/' + npy_name + '_left.npy', arr[arr_idx])
         np.save(path + 'case_' + str(idx) + '/' + npy_name + '_right.npy', arr[arr_idx + 1])
+
 
 def save_dice_array(path, cur_pred, ens_pred, start, end, T=1.5):
     axis = (1, 2, 3)
@@ -253,8 +252,6 @@ def save_dice_array(path, cur_pred, ens_pred, start, end, T=1.5):
     for idx in np.arange(start, end):
         arr_idx = idx - start
         np.save(path + str(idx) + '.npy', dice[arr_idx])
-
-
 
 
 def data_augmentation_tempen(inputs, trans_range):

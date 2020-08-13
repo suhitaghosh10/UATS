@@ -7,9 +7,9 @@ from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger
 from dataset_specific.kits import makedir
 from dataset_specific.prostate.generator import DataGenerator
 from dataset_specific.prostate.model import weighted_model
-from old.utils.preprocess_images import get_complete_array, get_array, save_array
 from old.utils.AugmentationGenerator import *
 from old.utils.ops import ramp_down_weight
+from old.utils.preprocess_images import get_complete_array, get_array, save_array
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 
 # 294 Training 58 have gt
@@ -285,7 +285,7 @@ def train(gpu_id, nb_gpus):
                                        train_id_list)
 
     steps = num_train_data / batch_size
-    #steps =2
+    # steps =2
 
     val_supervised_flag = np.ones((num_val_data, 32, 168, 168), dtype='int8')
     val_x_arr = get_complete_array(VAL_IMGS_PATH)
@@ -301,11 +301,11 @@ def train(gpu_id, nb_gpus):
     x_val = [val_x_arr, val_y_arr, val_supervised_flag]
     del val_supervised_flag, pz, cz, us, afs, bg, val_y_arr, val_x_arr
     history = merged_model.fit_generator(generator=training_generator,
-                                  steps_per_epoch=steps,
-                                  validation_data=[x_val, y_val],
-                                  epochs=num_epoch,
-                                  callbacks=cb
-                                  )
+                                         steps_per_epoch=steps,
+                                         validation_data=[x_val, y_val],
+                                         epochs=num_epoch,
+                                         callbacks=cb
+                                         )
 
     # workers=4)
     # train.save('temporal_max_ramp_final.h5')

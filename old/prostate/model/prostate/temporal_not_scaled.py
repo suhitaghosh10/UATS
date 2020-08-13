@@ -94,7 +94,7 @@ class weighted_model:
     def unsup_dice_tb(self, input, class_wt=1.):
         unsupervised_gt = input[0, :, :, :, :]
 
-        #unsupervised_gt = unsupervised_gt / (1 -  (0.6** (self.epoch_ctr + 1)))
+        # unsupervised_gt = unsupervised_gt / (1 -  (0.6** (self.epoch_ctr + 1)))
 
         def unsup_dice_loss(y_true, y_pred, smooth=1., axis=(1, 2, 3)):
             y_true = unsupervised_gt
@@ -113,6 +113,7 @@ class weighted_model:
             avg_dice_coef = K.mean((2. * intersection + smooth) / ((c * y_pred_sum) + y_true_sum + smooth))
 
             return 1 - avg_dice_coef
+
         return unsup_dice_loss
 
     def dice_loss(self, y_true, y_pred, weight, smooth=1., axis=(1, 2, 3)):

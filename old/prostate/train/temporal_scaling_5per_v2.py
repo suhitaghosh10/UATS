@@ -5,10 +5,10 @@ from keras.callbacks import Callback, ReduceLROnPlateau
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger
 
 from dataset_specific.prostate.generator import DataGenerator
-from old.utils.preprocess_images import get_complete_array, get_array, save_array, get_array_from_list
 from old.prostate import weighted_model
 from old.utils.AugmentationGenerator import *
 from old.utils.ops import ramp_down_weight
+from old.utils.preprocess_images import get_complete_array, get_array, save_array, get_array_from_list
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 from utility.prostate.utils import get_val_id_list
 
@@ -155,7 +155,7 @@ def train(gpu_id, nb_gpus):
 
                 for b_no in np.arange(num_batches):
                     actual_batch_size = patients_per_batch if (
-                                b_no <= num_batches - 1 and remainder == 0) else remainder
+                            b_no <= num_batches - 1 and remainder == 0) else remainder
                     start = (b_no * patients_per_batch) + num_labeled_train
                     end = (start + actual_batch_size)
                     imgs = get_array(self.imgs_path, start, end)

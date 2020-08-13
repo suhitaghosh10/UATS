@@ -7,6 +7,7 @@ from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStoppi
 
 USER_NAME = getpass.getuser()
 import sys
+
 if USER_NAME == 'anneke':
     module_root = '../../'
     sys.path.append(module_root)
@@ -19,7 +20,6 @@ from old.utils.AugmentationGenerator import *
 from shutil import copyfile
 from dataset_specific.kits import makedir
 import shutil
-
 
 # learning_rate = 1e-7
 AUGMENTATION_NO = 5
@@ -45,8 +45,6 @@ ramp_down_period = 50
 
 
 def train(gpu_id, nb_gpus, perc, batch_nos, learning_rate=None, wts=None):
-
-
     if USER_NAME == 'suhita':
         DATA_PATH = '/cache/suhita/data/skin/softmax/fold_' + str(FOLD_NUM) + '_P' + str(perc) + '/'
         FOLD_DIR = '/cache/suhita/skin/Folds'
@@ -66,7 +64,7 @@ def train(gpu_id, nb_gpus, perc, batch_nos, learning_rate=None, wts=None):
     elif USER_NAME == 'anneke':
         DATA_PATH = DATA_ROOT + '/arrays/fold_' + str(FOLD_NUM) + '_P' + str(perc) + '/'
         FOLD_DIR = '/home/anneke/projects/zones_UATS/Temporal_Thesis/skin_2D/Folds'
-        TRAIN_NUM = len(np.load(FOLD_DIR+'/train_fold' + str(FOLD_NUM) + '.npy'))
+        TRAIN_NUM = len(np.load(FOLD_DIR + '/train_fold' + str(FOLD_NUM) + '.npy'))
         NAME = 'sm_skin_entropy_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(perc)
 
         TB_LOG_DIR = DATA_ROOT + '/temporal_models/tb/' + NAME + '_' + str(learning_rate) + '/'
@@ -76,7 +74,6 @@ def train(gpu_id, nb_gpus, perc, batch_nos, learning_rate=None, wts=None):
 
         TRAINED_MODEL_PATH = DATA_ROOT + '/supervised_models/softmax_supervised_sfs32_F_' + str(
             FOLD_NUM) + '_1000_5e-05_Perc_' + str(perc) + '_augm.h5' if wts is None else wts
-
 
     num_labeled_train = int(perc * TRAIN_NUM)
     num_train_data = len(os.listdir(DATA_PATH + '/imgs/'))
@@ -314,12 +311,12 @@ def train(gpu_id, nb_gpus, perc, batch_nos, learning_rate=None, wts=None):
     steps = (num_train_data * augm_no) / batch_size
     # steps = 2
 
-    val_fold = np.load(FOLD_DIR+'/val_fold' + str(FOLD_NUM) + '.npy')
+    val_fold = np.load(FOLD_DIR + '/val_fold' + str(FOLD_NUM) + '.npy')
     num_val_data = len(val_fold)
     val_supervised_flag = np.ones((num_val_data, DIM[0], DIM[1], 1), dtype='int8')
     val_img_arr = np.zeros((num_val_data, DIM[0], DIM[1], 3), dtype=float)
     val_GT_arr = np.zeros((num_val_data, DIM[0], DIM[1], 2), dtype=float)
-    if USER_NAME=='suhita':
+    if USER_NAME == 'suhita':
         VAL_DATA = '/cache/suhita/skin/preprocessed/labelled/train'
     elif USER_NAME == 'anneke':
         VAL_DATA = '/home/anneke/data/skin/preprocessed/labelled/train'

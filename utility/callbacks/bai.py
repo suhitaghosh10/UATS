@@ -3,6 +3,7 @@ from shutil import copyfile
 
 import numpy as np
 from keras.callbacks import Callback
+
 from utility.constants import ENS_GT, FLAG, GT, NPY, IMGS
 from utility.utils import makedir, get_array, save_array
 
@@ -42,7 +43,7 @@ class TemporalCallback(Callback):
 
     def on_epoch_end(self, epoch, logs={}):
 
-        if epoch>0 and epoch % self.update_epoch == 0:
+        if epoch > 0 and epoch % self.update_epoch == 0:
 
             # patients_per_batch = 59
             num_batches = self.num_un_labeled_train // self.patients_per_batch
@@ -57,8 +58,8 @@ class TemporalCallback(Callback):
 
                 start = (b_no * self.patients_per_batch) + self.num_labeled_train
                 end = (start + actual_batch_size)
-                imgs = get_array(os.path.join(self.data_path , IMGS), start, end)
-                ensemble_prediction = get_array(os.path.join(self.temp_path , ENS_GT), start, end, dtype='float32')
+                imgs = get_array(os.path.join(self.data_path, IMGS), start, end)
+                ensemble_prediction = get_array(os.path.join(self.temp_path, ENS_GT), start, end, dtype='float32')
 
                 inp = [imgs, ensemble_prediction]
                 del imgs

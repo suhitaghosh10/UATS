@@ -1,4 +1,5 @@
 import sys
+
 sys.path.append('../')
 
 import os
@@ -18,15 +19,13 @@ out_dir = '/data/suhita/hippocampus/output/models/'
 #
 
 
-
-
 learning_rate = 4e-5
 AUGMENTATION_NO = 5
 TRAIN_NUM = 150
 # PERC = 0.25
 # FOLD_NUM = 1
 
-#NUM_CLASS = 1
+# NUM_CLASS = 1
 num_epoch = 1000
 batch_size = 4
 DIM = [48, 64, 48]
@@ -44,7 +43,6 @@ def get_multi_class_arr(arr, n_classes=3):
 
 
 def train(gpu_id, nb_gpus, fold_num=None, perc=1.0, augmentation=False):
-
     if augmentation:
         augm = '_augm'
     else:
@@ -102,7 +100,6 @@ def train(gpu_id, nb_gpus, fold_num=None, perc=1.0, augmentation=False):
     for i in range(train_fold.shape[0]):
         train_id_list.append(train_fold[i][:-7] + '.npy')
 
-
     # del unsupervised_target, unsupervised_weight, supervised_flag, imgs
     # del supervised_flag
 
@@ -152,7 +149,7 @@ def train(gpu_id, nb_gpus, fold_num=None, perc=1.0, augmentation=False):
     # steps=2
 
     # get validation fold
-    #val_fold = np.load('Folds/val_fold'+str(FOLD_NUM)+'.npy')
+    # val_fold = np.load('Folds/val_fold'+str(FOLD_NUM)+'.npy')
     # val_x_arr = get_complete_array(data_path, val_fold, GT = False)
     # val_y_arr = get_complete_array(data_path, val_fold, dtype='int8', GT = True)
 
@@ -169,6 +166,7 @@ def train(gpu_id, nb_gpus, fold_num=None, perc=1.0, augmentation=False):
 
     # workers=4)
     # train.save('temporal_max_ramp_final.h5')
+
 
 if __name__ == '__main__':
     GPU_ID = '2'
@@ -199,7 +197,7 @@ if __name__ == '__main__':
     # train(None, None, perc=perc, augmented=True)
 
     # perc = 0.25
-    #train(None, None, perc=perc, augmented=True)
+    # train(None, None, perc=perc, augmented=True)
 
     # perc = 1.0
     train(None, None, fold_num=1, perc=0.05, augmentation=True)
@@ -209,4 +207,4 @@ if __name__ == '__main__':
 
     # predict(out_dir+'/supervised_F_centered_BB_1_50_0.0005_Perc_0.5_augm.h5', onlyEval=True)
 
-    #predict_unlabeled('/home/anneke/projects/uats/code/kits/output/models/supervised_F_centered_BB_1_50_5e-05_Perc_1.0_augm.h5')
+    # predict_unlabeled('/home/anneke/projects/uats/code/kits/output/models/supervised_F_centered_BB_1_50_5e-05_Perc_1.0_augm.h5')

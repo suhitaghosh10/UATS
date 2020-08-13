@@ -13,6 +13,7 @@ from keras.layers import concatenate, Input, Conv3D, MaxPooling3D, Conv3DTranspo
 from keras.callbacks import CSVLogger
 
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
@@ -21,8 +22,8 @@ from data_generation.generator.train_data_gen import DataGenerator
 
 LOG_DIR = './tensorboard_logs/'
 
-class weighted_model:
 
+class weighted_model:
 
     def get_Tversky(alpha=.3, beta=.7, verb=0):
         def Tversky(y_true, y_pred):
@@ -57,7 +58,6 @@ class weighted_model:
     def jaccard_distance(self, y_true, y_pred):
         return -self.jaccard_distance(y_true, y_pred)
 
-
     def dice_coef_loss(self, y_true, y_pred):
         dice_loss = -self.dice_coef(y_true, y_pred)
 
@@ -76,54 +76,52 @@ class weighted_model:
             dice_denominator = K.sum(y_true * mask, axis=axis) + \
                                K.sum(y_pred * mask, axis=axis) + epsilon
             w_dice_coef = (dice_numerator / dice_denominator)
-            #ce = K.categorical_crossentropy(y_pred, y_pred)
+            # ce = K.categorical_crossentropy(y_pred, y_pred)
 
-            #loss_c = np.multiply(w_dice_coef, ce)
+            # loss_c = np.multiply(w_dice_coef, ce)
             return -K.mean(w_dice_coef)
 
         return loss
 
     def weighted_dice_coef_loss(self, y_true, y_pred):
-        return -self.afs_weight*self.dice_coef(y_true, y_pred)
-
-
+        return -self.afs_weight * self.dice_coef(y_true, y_pred)
 
     # downsampling, analysis path
     def downLayer(self, inputLayer, filterSize, i, bn=False):
 
-        conv = Conv3D(filterSize, (3, 3, 3), activation='relu', padding='same',  name='conv'+str(i)+'_1')(inputLayer)
+        conv = Conv3D(filterSize, (3, 3, 3), activation='relu', padding='same', name='conv' + str(i) + '_1')(inputLayer)
         if bn:
             conv = BatchNormalization()(conv)
-        conv = Conv3D(filterSize * 2, (3, 3, 3), activation='relu', padding='same',  name='conv'+str(i)+'_2')(conv)
+        conv = Conv3D(filterSize * 2, (3, 3, 3), activation='relu', padding='same', name='conv' + str(i) + '_2')(conv)
         if bn:
             conv = BatchNormalization()(conv)
         pool = MaxPooling3D(pool_size=(1, 2, 2))(conv)
 
         return pool, conv
 
-
     # upsampling, synthesis path
-    def upLayer(self, inputLayer, concatLayer, filterSize, i, bn=False, do= False):
+    def upLayer(self, inputLayer, concatLayer, filterSize, i, bn=False, do=False):
 
-        up = Conv3DTranspose(filterSize, (2, 2, 2), strides=(1, 2, 2), activation='relu', padding='same',  name='up'+str(i))(inputLayer)
-       # print( concatLayer.shape)
+        up = Conv3DTranspose(filterSize, (2, 2, 2), strides=(1, 2, 2), activation='relu', padding='same',
+                             name='up' + str(i))(inputLayer)
+        # print( concatLayer.shape)
         up = concatenate([up, concatLayer])
-        conv = Conv3D(int(filterSize/2), (3, 3, 3), activation='relu', padding='same',  name='conv'+str(i)+'_1')(up)
+        conv = Conv3D(int(filterSize / 2), (3, 3, 3), activation='relu', padding='same', name='conv' + str(i) + '_1')(
+            up)
         if bn:
             conv = BatchNormalization()(conv)
         if do:
-            conv = Dropout(0.5, seed = 3, name='Dropout_' + str(i))(conv)
-        conv = Conv3D(int(filterSize/2), (3, 3, 3), activation='relu', padding='same',  name='conv'+str(i)+'_2')(conv)
+            conv = Dropout(0.5, seed=3, name='Dropout_' + str(i))(conv)
+        conv = Conv3D(int(filterSize / 2), (3, 3, 3), activation='relu', padding='same', name='conv' + str(i) + '_2')(
+            conv)
         if bn:
             conv = BatchNormalization()(conv)
 
         return conv
 
+    def get_net(self, nrInputChannels, learningRate=5e-5, bn=True, do=False, mask=False):
 
-
-    def get_net(self, nrInputChannels, learningRate=5e-5, bn = True, do = False, mask = False):
-
-        sfs = 16 # start filter size
+        sfs = 16  # start filter size
 
         if mask:
             inputs = Input((32, 168, 168, nrInputChannels))
@@ -132,42 +130,41 @@ class weighted_model:
         yTrueInputs = Input((32, 168, 168, 5))
 
         conv1, conv1_b_m = self.downLayer(inputs, sfs, 1, bn)
-        conv2, conv2_b_m = self.downLayer(conv1, sfs*2, 2, bn)
+        conv2, conv2_b_m = self.downLayer(conv1, sfs * 2, 2, bn)
 
-        conv3 = Conv3D(sfs*4, (3, 3, 3), activation='relu', padding='same', name='conv' + str(3) + '_1')(conv2)
+        conv3 = Conv3D(sfs * 4, (3, 3, 3), activation='relu', padding='same', name='conv' + str(3) + '_1')(conv2)
         if bn:
             conv3 = BatchNormalization()(conv3)
-        conv3 = Conv3D(sfs * 8, (3, 3, 3), activation='relu', padding='same',  name='conv' + str(3) + '_2')(conv3)
+        conv3 = Conv3D(sfs * 8, (3, 3, 3), activation='relu', padding='same', name='conv' + str(3) + '_2')(conv3)
         if bn:
             conv3 = BatchNormalization()(conv3)
         pool3 = MaxPooling3D(pool_size=(2, 2, 2))(conv3)
-        #conv3, conv3_b_m = downLayer(conv2, sfs*4, 3, bn)
+        # conv3, conv3_b_m = downLayer(conv2, sfs*4, 3, bn)
 
-        conv4 = Conv3D(sfs*16 , (3, 3, 3), activation='relu', padding='same',  name='conv4_1')(pool3)
+        conv4 = Conv3D(sfs * 16, (3, 3, 3), activation='relu', padding='same', name='conv4_1')(pool3)
         if bn:
             conv4 = BatchNormalization()(conv4)
         if do:
-            conv4= Dropout(0.5, seed = 4, name='Dropout_' + str(4))(conv4)
-        conv4 = Conv3D(sfs*16 , (3, 3, 3), activation='relu', padding='same',  name='conv4_2')(conv4)
+            conv4 = Dropout(0.5, seed=4, name='Dropout_' + str(4))(conv4)
+        conv4 = Conv3D(sfs * 16, (3, 3, 3), activation='relu', padding='same', name='conv4_2')(conv4)
         if bn:
             conv4 = BatchNormalization()(conv4)
 
-        #conv5 = upLayer(conv4, conv3_b_m, sfs*16, 5, bn, do)
-        up1 = Conv3DTranspose(sfs*16, (2, 2, 2), strides=(2, 2, 2), activation='relu', padding='same', name='up'+str(5))(conv4)
+        # conv5 = upLayer(conv4, conv3_b_m, sfs*16, 5, bn, do)
+        up1 = Conv3DTranspose(sfs * 16, (2, 2, 2), strides=(2, 2, 2), activation='relu', padding='same',
+                              name='up' + str(5))(conv4)
         up1 = concatenate([up1, conv3])
-        conv5 = Conv3D(int(sfs*8), (3, 3, 3), activation='relu', padding='same',  name='conv'+str(5)+'_1')(up1)
+        conv5 = Conv3D(int(sfs * 8), (3, 3, 3), activation='relu', padding='same', name='conv' + str(5) + '_1')(up1)
         if bn:
             conv5 = BatchNormalization()(conv5)
         if do:
-            conv5 = Dropout(0.5, seed = 5, name='Dropout_' + str(5))(conv5)
-        conv5 = Conv3D(int(sfs*8), (3, 3, 3), activation='relu', padding='same', name='conv'+str(5)+'_2')(conv5)
+            conv5 = Dropout(0.5, seed=5, name='Dropout_' + str(5))(conv5)
+        conv5 = Conv3D(int(sfs * 8), (3, 3, 3), activation='relu', padding='same', name='conv' + str(5) + '_2')(conv5)
         if bn:
             conv5 = BatchNormalization()(conv5)
 
-        conv6 = self.upLayer(conv5, conv2_b_m, sfs*8, 6, bn, do)
-        conv7 = self.upLayer(conv6, conv1_b_m, sfs*4, 7, bn, do)
-
-
+        conv6 = self.upLayer(conv5, conv2_b_m, sfs * 8, 6, bn, do)
+        conv7 = self.upLayer(conv6, conv1_b_m, sfs * 4, 7, bn, do)
 
         conv_out = Conv3D(5, (1, 1, 1), activation='softmax', name='conv_final_softmax')(conv7)
 
@@ -192,16 +189,17 @@ class weighted_model:
 
         return model
 
-
-
-    def train(self, train_imgs, train_gt, train_mask, val_imgs, val_gt_list, val_mask, bs, nr_epochs, csvFile, modelSaveFile, LR=5e-5, mask = False, bn = False, do = False, LRScheduling = False, EarlyStop=False, tbLogDir=''):
+    def train(self, train_imgs, train_gt, train_mask, val_imgs, val_gt_list, val_mask, bs, nr_epochs, csvFile,
+              modelSaveFile, LR=5e-5, mask=False, bn=False, do=False, LRScheduling=False, EarlyStop=False, tbLogDir=''):
 
         csv_logger = CSVLogger(csvFile, append=True, separator=';')
-        model_checkpoint = ModelCheckpoint(modelSaveFile, monitor='val_loss', save_best_only=True, verbose = 1, mode='min')
-        tensorboard = TensorBoard(log_dir=LOG_DIR, write_graph=False, write_grads = True, histogram_freq=0, batch_size=5, write_images=False)
+        model_checkpoint = ModelCheckpoint(modelSaveFile, monitor='val_loss', save_best_only=True, verbose=1,
+                                           mode='min')
+        tensorboard = TensorBoard(log_dir=LOG_DIR, write_graph=False, write_grads=True, histogram_freq=0, batch_size=5,
+                                  write_images=False)
         earlyStopImprovement = EarlyStopping(monitor='val_loss', min_delta=0.001, patience=200, verbose=1, mode='min')
-        LRDecay=ReduceLROnPlateau(monitor='val_loss', factor=0.8, patience=50, verbose=1, mode='min', min_lr=1e-8, epsilon=0.01)
-
+        LRDecay = ReduceLROnPlateau(monitor='val_loss', factor=0.8, patience=50, verbose=1, mode='min', min_lr=1e-8,
+                                    epsilon=0.01)
 
         print('-' * 30)
         print('Loading train data...')
@@ -222,7 +220,7 @@ class weighted_model:
         print('Fitting train...')
         print('-' * 30)
 
-        cb=[csv_logger, model_checkpoint]
+        cb = [csv_logger, model_checkpoint]
         if EarlyStop:
             cb.append(earlyStopImprovement)
         if LRScheduling:
@@ -231,7 +229,7 @@ class weighted_model:
 
         print('BATCH Size = ', bs)
 
-        print('Callbacks: ',cb)
+        print('Callbacks: ', cb)
         params = {'dim': (32, 168, 168),
                   'batch_size': bs,
                   'n_classes': 5,
@@ -244,17 +242,16 @@ class weighted_model:
 
         val_id_list = [str(i) for i in np.arange(0, val_imgs.shape[0])]
         val_generator = ValDataGenerator(val_imgs, val_gt_list, val_mask, val_id_list, bs, **params)
-        steps = 58/2
+        steps = 58 / 2
         #  history = train.fit(1, train_id_list, batch_size=bs, epochs=nr_epochs, verbose=1, validation_data=[val_imgs, val_gt_list], shuffle=True, callbacks=cb)
         history = model.fit_generator(generator=training_generator,
-                                      steps_per_epoch= steps,
+                                      steps_per_epoch=steps,
                                       validation_data=val_generator,
                                       use_multiprocessing=False,
-                                      epochs =nr_epochs,
-                                      callbacks = cb)
-                            #workers=4)
+                                      epochs=nr_epochs,
+                                      callbacks=cb)
+        # workers=4)
         model.save(modelSaveFile[:-3] + '_final.h5')
-
 
         return history
 
@@ -291,6 +288,7 @@ def plot_loss(history, title):
     plt.clf()
     # plt.show()
 
+
 def augmentData(array):
     size = array.shape
     bla = size[0] * 2
@@ -311,10 +309,10 @@ def load_data_and_train_model(train_imgs, train_gt, train_mask, epochs, learning
 
     learningRate = float(learningRate)
 
-    #nrChanels = 1
-    name =  'augmented_x20_sfs16_dataGeneration_LR_' + str(learningRate)
+    # nrChanels = 1
+    name = 'augmented_x20_sfs16_dataGeneration_LR_' + str(learningRate)
 
-    #id_list_train = [ str(i) for i in np.arange(0,train_imgs_no) ]
+    # id_list_train = [ str(i) for i in np.arange(0,train_imgs_no) ]
 
     his = w_model.train(train_imgs, train_gt, train_mask,
                         val_imgs, val_gt_list, val_mask,
@@ -332,30 +330,24 @@ def load_data_and_train_model(train_imgs, train_gt, train_mask, epochs, learning
     plot_loss(his, name)
 
 
-
 def predict(val_imgs, val_gt_list, learningRate):
-
-
     nrChanels = 1
 
     name = 'augmented_x20_sfs16_dataGeneration_LR_' + str(learningRate)
-
 
     print(name)
     model = weighted_model()
     model = model.get_net(nrChanels, bn=True, do=False)
     script_dir = os.path.dirname(os.path.abspath(__file__))
     print('load_weights')
-    model.load_weights(script_dir+'/data_78/'+name+'_final.h5')
+    model.load_weights(script_dir + '/data_78/' + name + '_final.h5')
     print('predict')
     out = model.predict([val_imgs], batch_size=1, verbose=1)
 
-    print(model.evaluate([val_imgs], val_gt_list , batch_size=1, verbose=1))
+    print(model.evaluate([val_imgs], val_gt_list, batch_size=1, verbose=1))
     print(name)
 
-    np.save(script_dir+'/predictions/predicted_'+name + '.npy', out)
-
-
+    np.save(script_dir + '/predictions/predicted_' + name + '.npy', out)
 
 
 if __name__ == '__main__':
@@ -365,12 +357,11 @@ if __name__ == '__main__':
     img_cols = 168
     img_depth = 168
     smooth = 1.
-    train_imgs_no =58
+    train_imgs_no = 58
 
     epochs = 300
     LR = 5e-5
     prediction = False
-
 
     #    LR decay
     train_imgs = np.load('/home/suhita/zonals/data/training/trainArray_imgs_fold1.npy')
@@ -381,12 +372,11 @@ if __name__ == '__main__':
     val_gt = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy')
     val_mask = np.load('/home/suhita/zonals/data/validation/distance_mask_val.npy')
 
-
     val_gt = val_gt.astype(int)
     val_gt_list = [val_gt[:, :, :, :, 0], val_gt[:, :, :, :, 1], val_gt[:, :, :, :, 2], val_gt[:, :, :, :, 3],
                    val_gt[:, :, :, :, 4]]
 
-    if not prediction=='True':
+    if not prediction == 'True':
         load_data_and_train_model(train_imgs, train_gt, train_mask, epochs, LR, val_imgs, val_gt, val_mask)
     else:
         np.save('imgs_test.npy', val_imgs)
@@ -395,6 +385,4 @@ if __name__ == '__main__':
         print('****** predict segmentations ******')
         predict(val_imgs, val_gt_list, LR)
 
-
-    #load_data_and_train_model(gpu_id=0, weights=False)
-
+    # load_data_and_train_model(gpu_id=0, weights=False)

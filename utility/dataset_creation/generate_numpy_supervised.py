@@ -24,7 +24,6 @@ for i in np.arange(58):
     counter = counter + 1
     print(i, counter)
 
-
 # validation
 vimgs = np.load(root_path + 'valArray_imgs_fold1.npy')
 print(vimgs.shape)
@@ -35,8 +34,7 @@ for i in np.arange(vimgs.shape[0]):
     np.save(root_path + 'fold_' + str(fold) + '/val/gt/' + str(i), vgt[i, :, :, :, :])
     print(i)
 
-
-#test
+# test
 '''
 vimgs = np.load('/cache/suhita/data/final_test_array_imgs.npy')
 print(vimgs.shape)

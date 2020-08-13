@@ -9,7 +9,6 @@ from utility.utils import get_uats_val_data, get_uats_data_generator
 
 
 def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_num, model_type, is_augmented=True):
-
     metadata = get_metadata(dataset_name)
     name = 'uats_mc_entropy_F' + str(fold_num) + '_Perct_Labelled_' + str(labelled_perc)
 
@@ -19,7 +18,7 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
     model_name = os.path.join(metadata[m_save_path], 'model', dataset_name, name + H5)
     csv_name = os.path.join(metadata[m_save_path], 'csv', dataset_name, name + '.csv')
     ens_path = os.path.join(metadata[m_root_temp_path], ens_folder_name)
-    trained_model_path = os.path.join(metadata[m_save_path], dataset_name, 'supervised_F' + str(fold_num) + '_P' + str(
+    trained_model_path = os.path.join(metadata[m_trained_model_path], dataset_name, 'supervised_F' + str(fold_num) + '_P' + str(
         labelled_perc) + H5)
     dim = metadata[m_dim]
     bs = metadata[m_batch_size]
@@ -35,10 +34,10 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
     print('Creating and compiling model...')
     print('-' * 30)
     p_model_MC, normal_model = model_type.build_model(img_shape=(dim[0], dim[1], dim[2]),
-                                   learning_rate=metadata[m_lr],
-                                   gpu_id=gpu_id,
-                                   nb_gpus=nb_gpus,
-                                   trained_model=trained_model_path)
+                                                      learning_rate=metadata[m_lr],
+                                                      gpu_id=gpu_id,
+                                                      nb_gpus=nb_gpus,
+                                                      trained_model=trained_model_path)
     normal_model.summary()
 
     # callbacks
@@ -75,7 +74,8 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
     print('Fitting model...')
     print('-' * 30)
 
-    training_generator = get_uats_data_generator(dataset_name, data_path, ens_path, num_train_data, num_labeled_train, bs,
+    training_generator = get_uats_data_generator(dataset_name, data_path, ens_path, num_train_data, num_labeled_train,
+                                                 bs,
                                                  is_augmented)
 
     steps = (num_train_data * metadata[m_aug_num]) // bs
@@ -83,9 +83,9 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
     x_val, y_val = get_uats_val_data(data_path, dim, metadata[m_nr_class], metadata[m_nr_channels])
 
     history = normal_model.fit_generator(generator=training_generator,
-                                  steps_per_epoch=steps,
-                                  validation_data=[x_val, y_val],
-                                  epochs=NUM_EPOCH,
-                                  callbacks=cb
-                                  )
+                                         steps_per_epoch=steps,
+                                         validation_data=[x_val, y_val],
+                                         epochs=NUM_EPOCH,
+                                         callbacks=cb
+                                         )
     return history

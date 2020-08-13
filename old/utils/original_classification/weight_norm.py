@@ -31,7 +31,7 @@ class AdamWithWeightnorm(Adam):
             # if a weight tensor (len > 1) use weight normalized parameterization
             # this is the only part changed w.r.t. keras.optimizers.Adam
             ps = K.get_variable_shape(p)
-            if len(ps)>1:
+            if len(ps) > 1:
 
                 # get weight normalization parameters
                 V, V_norm, V_scaler, g_param, grad_g, grad_V = get_weightnorm_params_and_grads(p, g)
@@ -63,7 +63,7 @@ class AdamWithWeightnorm(Adam):
                 # wn param updates --> W updates
                 add_weightnorm_param_updates(self.updates, new_V_param, new_g_param, p, V_scaler)
 
-            else: # do optimization normally
+            else:  # do optimization normally
                 m_t = (self.beta_1 * m) + (1. - self.beta_1) * g
                 v_t = (self.beta_2 * v) + (1. - self.beta_2) * K.square(g)
                 p_t = p - lr_t * m_t / (K.sqrt(v_t) + self.epsilon)

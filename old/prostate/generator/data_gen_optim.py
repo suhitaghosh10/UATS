@@ -1,6 +1,8 @@
 import keras
 
 NPY = '.npy'
+
+
 class DataGenerator(keras.utils.Sequence):
     def __init__(self, imgs_path, gt_path, ensemble_path, supervised_flag_path, id_list, batch_size=2,
                  dim=(32, 168, 168)):

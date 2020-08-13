@@ -56,7 +56,7 @@ class TemporalCallback(Callback):
             remainder = self.num_un_labeled_train % self.patients_per_batch
 
             patients_in_last_batch = self.patients_per_batch if remainder == 0 else (
-                        self.patients_per_batch + remainder)
+                    self.patients_per_batch + remainder)
 
             for b_no in range(num_batches):
                 actual_batch_size = self.patients_per_batch if (

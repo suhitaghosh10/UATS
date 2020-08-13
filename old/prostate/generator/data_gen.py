@@ -1,6 +1,7 @@
 import keras
 import numpy as np
 
+
 class DataGenerator(keras.utils.Sequence):
 
     def __init__(self, img_array, unsupervised_target, supervised_label, supervised_flag, unsupervised_weight, id_list,
@@ -54,7 +55,6 @@ class DataGenerator(keras.utils.Sequence):
 
         x_t = [img, unsup_label, gt, flag, wt]
         y_t = [pz, cz, us, afs, bg]
-
 
         return x_t, y_t
 

@@ -2,11 +2,11 @@ from keras import backend as K
 from keras.callbacks import Callback
 from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, EarlyStopping, TensorBoard, CSVLogger
 
-from old.utils.preprocess_images import make_train_test_dataset
 from old.prostate import build_model
 from old.prostate.generator import DataGenerator
 from old.utils.AugmentationGenerator import *
 from old.utils.ops import ramp_up_weight, ramp_down_weight
+from old.utils.preprocess_images import make_train_test_dataset
 
 TB_LOG_DIR = './tensor_temporal_31'
 

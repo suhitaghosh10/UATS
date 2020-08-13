@@ -45,7 +45,6 @@ class weighted_model:
     def dice_loss(self, y_true, y_pred):
         return -self.dice_coef(y_true, y_pred)
 
-
     def downLayer(self, inputLayer, filterSize, i, bn=False, axis=4):
 
         conv = Conv3D(filterSize, (3, 3, 3), activation='relu', padding='same', name='conv' + str(i) + '_1')(inputLayer)

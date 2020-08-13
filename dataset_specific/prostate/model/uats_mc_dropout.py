@@ -94,7 +94,7 @@ class weighted_model:
     def unsup_dice_tb(self, input, class_wt=1.):
         unsupervised_gt = input[0, :, :, :, :]
 
-        #unsupervised_gt = unsupervised_gt / (1 -  (0.6** (self.epoch_ctr + 1)))
+        # unsupervised_gt = unsupervised_gt / (1 -  (0.6** (self.epoch_ctr + 1)))
 
         def unsup_dice_loss(y_true, y_pred, smooth=1., axis=(1, 2, 3)):
             y_true = unsupervised_gt
@@ -113,6 +113,7 @@ class weighted_model:
             avg_dice_coef = K.mean((2. * intersection + smooth) / ((c * y_pred_sum) + y_true_sum + smooth))
 
             return 1 - avg_dice_coef
+
         return unsup_dice_loss
 
     def dice_loss(self, y_true, y_pred, weight, smooth=1., axis=(1, 2, 3)):
@@ -402,44 +403,44 @@ class weighted_model:
 
         if (nb_gpus is None):
             p_model_normal.compile(optimizer=optimizer,
-                                 loss={'pz': self.semi_supervised_loss(pz, unsup_loss_class_wt=1),
-                                       'cz': self.semi_supervised_loss(cz, 1),
-                                       'us': self.semi_supervised_loss(us, 1),
-                                       'afs': self.semi_supervised_loss(afs, 1),
-                                       'bg': self.semi_supervised_loss(bg, 1)
-                                       }
-                                 ,
-                                 metrics={'pz': [self.dice_coef, self.unsup_dice_tb(pz, 1), self.dice_tb(pz, 1)],
-                                          'cz': [self.dice_coef, self.unsup_dice_tb(cz, 1), self.dice_tb(cz, 1)],
-                                          'us': [self.dice_coef, self.unsup_dice_tb(us, 1), self.dice_tb(us, 1)],
-                                          'afs': [self.dice_coef, self.unsup_dice_tb(afs, 1), self.dice_tb(afs, 1)],
-                                          'bg': [self.dice_coef, self.unsup_dice_tb(bg, 1), self.dice_tb(bg, 1)]
-                                          },
-                                 loss_weights={'pz': 1, 'cz': 1, 'us': 1, 'afs': 1, 'bg': 1}
-                                 )
+                                   loss={'pz': self.semi_supervised_loss(pz, unsup_loss_class_wt=1),
+                                         'cz': self.semi_supervised_loss(cz, 1),
+                                         'us': self.semi_supervised_loss(us, 1),
+                                         'afs': self.semi_supervised_loss(afs, 1),
+                                         'bg': self.semi_supervised_loss(bg, 1)
+                                         }
+                                   ,
+                                   metrics={'pz': [self.dice_coef, self.unsup_dice_tb(pz, 1), self.dice_tb(pz, 1)],
+                                            'cz': [self.dice_coef, self.unsup_dice_tb(cz, 1), self.dice_tb(cz, 1)],
+                                            'us': [self.dice_coef, self.unsup_dice_tb(us, 1), self.dice_tb(us, 1)],
+                                            'afs': [self.dice_coef, self.unsup_dice_tb(afs, 1), self.dice_tb(afs, 1)],
+                                            'bg': [self.dice_coef, self.unsup_dice_tb(bg, 1), self.dice_tb(bg, 1)]
+                                            },
+                                   loss_weights={'pz': 1, 'cz': 1, 'us': 1, 'afs': 1, 'bg': 1}
+                                   )
         else:
             with tf.device(gpu_id):
                 merged_model = multi_gpu_model(p_model_normal, gpus=nb_gpus)
 
                 p_model_normal.compile(optimizer=optimizer,
-                                     loss={'pz': self.semi_supervised_loss(pz, unsup_loss_class_wt=1),
-                                           'cz': self.semi_supervised_loss(cz, 1),
-                                           'us': self.semi_supervised_loss(us, 1),
-                                           'afs': self.semi_supervised_loss(afs, 1),
-                                           'bg': self.semi_supervised_loss(bg, 1)
-                                           }
-                                     ,
-                                     metrics={'pz': [self.dice_coef, self.unsup_dice_tb(pz, 1), self.dice_tb(pz, 1)],
-                                              'cz': [self.dice_coef, self.unsup_dice_tb(cz, 1), self.dice_tb(cz, 1)],
-                                              'us': [self.dice_coef, self.unsup_dice_tb(us, 1),
-                                                     self.dice_tb(us, 1)],
-                                              'afs': [self.dice_coef, self.unsup_dice_tb(afs, 1),
-                                                      self.dice_tb(afs, 1)],
-                                              'bg': [self.dice_coef, self.unsup_dice_tb(bg, 1), self.dice_tb(bg, 1)]
-                                              },
-                                     loss_weights={'pz': 1, 'cz': 1, 'us': 1, 'afs': 1, 'bg': 1}
-                                     )
+                                       loss={'pz': self.semi_supervised_loss(pz, unsup_loss_class_wt=1),
+                                             'cz': self.semi_supervised_loss(cz, 1),
+                                             'us': self.semi_supervised_loss(us, 1),
+                                             'afs': self.semi_supervised_loss(afs, 1),
+                                             'bg': self.semi_supervised_loss(bg, 1)
+                                             }
+                                       ,
+                                       metrics={'pz': [self.dice_coef, self.unsup_dice_tb(pz, 1), self.dice_tb(pz, 1)],
+                                                'cz': [self.dice_coef, self.unsup_dice_tb(cz, 1), self.dice_tb(cz, 1)],
+                                                'us': [self.dice_coef, self.unsup_dice_tb(us, 1),
+                                                       self.dice_tb(us, 1)],
+                                                'afs': [self.dice_coef, self.unsup_dice_tb(afs, 1),
+                                                        self.dice_tb(afs, 1)],
+                                                'bg': [self.dice_coef, self.unsup_dice_tb(bg, 1), self.dice_tb(bg, 1)]
+                                                },
+                                       loss_weights={'pz': 1, 'cz': 1, 'us': 1, 'afs': 1, 'bg': 1}
+                                       )
 
-        return  p_model_MC, p_model_normal
+        return p_model_MC, p_model_normal
     # return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg])
     # return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg, input_idx])

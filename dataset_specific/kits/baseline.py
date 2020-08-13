@@ -1,4 +1,5 @@
 import sys
+
 sys.path.append('../')
 
 import os
@@ -15,23 +16,16 @@ import SimpleITK as sitk
 data_path = '/data/suhita/temporal/kits/preprocessed_labeled_train'
 out_dir = '/data/suhita/temporal/kits/'
 
-
-
-
-
 learning_rate = 5e-5
 AUGMENTATION_NO = 5
 TRAIN_NUM = 50
-#PERC = 0.25
+# PERC = 0.25
 FOLD_NUM = 1
-
-
-
 
 NUM_CLASS = 1
 num_epoch = 1000
 batch_size = 2
-DIM = [152,152,56]
+DIM = [152, 152, 56]
 
 
 def remove_tumor_segmentation(arr):
@@ -39,15 +33,14 @@ def remove_tumor_segmentation(arr):
     return arr
 
 
-def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
-
+def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation=False):
     if augmentation:
         augm = '_augm'
     else:
         augm = ''
 
     NAME = '1_supervised_F_centered_BB_' + str(FOLD_NUM) + '_' + str(TRAIN_NUM) + '_' + str(
-        learning_rate) + '_Perc_' + str(perc)+augm
+        learning_rate) + '_Perc_' + str(perc) + augm
     CSV_NAME = out_dir + NAME + '.csv'
 
     TB_LOG_DIR = '/data/suhita/temporal/tb/kits/' + NAME + '_' + str(learning_rate) + '/'
@@ -55,7 +48,7 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
     TRAINED_MODEL_PATH = MODEL_NAME
 
     wm = weighted_model()
-    model = wm.build_model(img_shape=(DIM[0],DIM[1],DIM[2]), learning_rate=learning_rate)
+    model = wm.build_model(img_shape=(DIM[0], DIM[1], DIM[2]), learning_rate=learning_rate)
 
     print('-' * 30)
     print('Creating and compiling train...')
@@ -79,7 +72,8 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
                                            verbose=1,
                                            mode='min')
 
-    tensorboard = TensorBoard(log_dir=TB_LOG_DIR, write_graph=False, write_grads=False, histogram_freq=0, write_images=False)
+    tensorboard = TensorBoard(log_dir=TB_LOG_DIR, write_graph=False, write_grads=False, histogram_freq=0,
+                              write_images=False)
     es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=50)
 
     # datagen listmake_dataset
@@ -92,13 +86,12 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
     np.random.shuffle(train_fold)
     print(train_fold[0:10])
 
-    train_fold = train_fold[:int(nr_samples*perc)]
+    train_fold = train_fold[:int(nr_samples * perc)]
 
     train_id_list = []
     for i in range(train_fold.shape[0]):
         train_id_list.append(os.path.join(train_fold[i], 'img_left.npy'))
         train_id_list.append(os.path.join(train_fold[i], 'img_right.npy'))
-
 
     # del unsupervised_target, unsupervised_weight, supervised_flag, imgs
     # del supervised_flag
@@ -108,18 +101,16 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
     print('BATCH Size = ', batch_size)
 
     print('Callbacks: ', cb)
-    params = {'dim': (DIM[0],DIM[1],DIM[2]),
-              'batch_size': batch_size }
+    params = {'dim': (DIM[0], DIM[1], DIM[2]),
+              'batch_size': batch_size}
 
     print('-' * 30)
     print('Fitting train...')
     print('-' * 30)
 
-
-
     training_generator = train_gen(data_path,
                                    train_id_list,
-                                   augmentation = augmentation,
+                                   augmentation=augmentation,
                                    **params)
 
     val_fold = np.load('/data/suhita/temporal/kits/Folds/val_fold' + str(FOLD_NUM) + '.npy')
@@ -132,16 +123,14 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
     #                                val_id_list,
     #                                **params)
 
-    val_img_arr = np.zeros((val_fold.shape[0]*2, DIM[0],DIM[1],DIM[2],1), dtype = float)
-    val_GT_arr = np.zeros((val_fold.shape[0] * 2, DIM[0],DIM[1],DIM[2], 1), dtype=float)
+    val_img_arr = np.zeros((val_fold.shape[0] * 2, DIM[0], DIM[1], DIM[2], 1), dtype=float)
+    val_GT_arr = np.zeros((val_fold.shape[0] * 2, DIM[0], DIM[1], DIM[2], 1), dtype=float)
 
     for i in range(val_fold.shape[0]):
-        val_img_arr[i*2,:,:,:,0] = np.load(os.path.join(data_path, val_fold[i], 'img_left.npy'))
-        val_img_arr[i * 2 +1,:,:,:,0] = np.load(os.path.join(data_path, val_fold[i], 'img_right.npy'))
+        val_img_arr[i * 2, :, :, :, 0] = np.load(os.path.join(data_path, val_fold[i], 'img_left.npy'))
+        val_img_arr[i * 2 + 1, :, :, :, 0] = np.load(os.path.join(data_path, val_fold[i], 'img_right.npy'))
         val_GT_arr[i * 2, :, :, :, 0] = np.load(os.path.join(data_path, val_fold[i], 'segm_left.npy'))
         val_GT_arr[i * 2 + 1, :, :, :, 0] = np.load(os.path.join(data_path, val_fold[i], 'segm_right.npy'))
-
-
 
     if augmentation == False:
         augm_no = 1
@@ -151,11 +140,9 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
     steps = 2
 
     # get validation fold
-    #val_fold = np.load('Folds/val_fold'+str(FOLD_NUM)+'.npy')
+    # val_fold = np.load('Folds/val_fold'+str(FOLD_NUM)+'.npy')
     # val_x_arr = get_complete_array(data_path, val_fold, GT = False)
     # val_y_arr = get_complete_array(data_path, val_fold, dtype='int8', GT = True)
-
-
 
     history = model.fit_generator(generator=training_generator,
                                   steps_per_epoch=steps,
@@ -239,19 +226,18 @@ def predict(model_name, onlyEval=False):
 
     val_fold = np.load('/data/suhita/temporal/kits/Folds/val_fold' + str(FOLD_NUM) + '.npy')
 
-    img_arr = np.zeros((val_fold.shape[0]*2, DIM[0],DIM[1],DIM[2],1), dtype = float)
+    img_arr = np.zeros((val_fold.shape[0] * 2, DIM[0], DIM[1], DIM[2], 1), dtype=float)
     GT_arr = np.zeros((val_fold.shape[0] * 2, DIM[0], DIM[1], DIM[2], 1), dtype=float)
 
     for i in range(val_fold.shape[0]):
-        img_arr[i*2,:,:,:,0] = np.load(os.path.join(data_path, val_fold[i], 'img_left.npy'))
-        img_arr[i * 2 +1,:,:,:,0] = np.load(os.path.join(data_path, val_fold[i], 'img_right.npy'))
+        img_arr[i * 2, :, :, :, 0] = np.load(os.path.join(data_path, val_fold[i], 'img_left.npy'))
+        img_arr[i * 2 + 1, :, :, :, 0] = np.load(os.path.join(data_path, val_fold[i], 'img_right.npy'))
         GT_arr[i * 2, :, :, :, 0] = np.load(os.path.join(data_path, val_fold[i], 'segm_left.npy'))
         GT_arr[i * 2 + 1, :, :, :, 0] = np.load(os.path.join(data_path, val_fold[i], 'segm_right.npy'))
 
-
     print('load_weights')
     wm = weighted_model()
-    model = wm.build_model(img_shape=(DIM[0],DIM[1],DIM[2]), learning_rate=learning_rate)
+    model = wm.build_model(img_shape=(DIM[0], DIM[1], DIM[2]), learning_rate=learning_rate)
     model.load_weights(model_name)
 
     if onlyEval:
@@ -259,26 +245,26 @@ def predict(model_name, onlyEval=False):
         print(out_value)
     else:
         out = model.predict(img_arr, batch_size=2, verbose=1)
-        #np.save(os.path.join(out_dir, 'predicted.npy'), out)
+        # np.save(os.path.join(out_dir, 'predicted.npy'), out)
         for i in range(out.shape[0]):
-            segm = sitk.GetImageFromArray(out[i,:,:,:,0])
+            segm = sitk.GetImageFromArray(out[i, :, :, :, 0])
             utils.makeDirectory(os.path.join(pred_dir, val_fold[int(i / 2)]))
-            if i%2 ==0:
+            if i % 2 == 0:
                 img = sitk.ReadImage(os.path.join(data_path, val_fold[int(i / 2)], 'img_left.nrrd'))
                 segm.CopyInformation(img)
                 sitk.WriteImage(img, os.path.join(pred_dir, val_fold[int(i / 2)], 'img_left.nrrd'))
-                sitk.WriteImage(segm, os.path.join(pred_dir, val_fold[int(i/2)], 'segm_left.nrrd'))
+                sitk.WriteImage(segm, os.path.join(pred_dir, val_fold[int(i / 2)], 'segm_left.nrrd'))
 
             else:
                 img = sitk.ReadImage(os.path.join(data_path, val_fold[int(i / 2)], 'img_right.nrrd'))
                 segm.CopyInformation(img)
                 sitk.WriteImage(img, os.path.join(pred_dir, val_fold[int(i / 2)], 'img_right.nrrd'))
-                sitk.WriteImage(segm, os.path.join(pred_dir, val_fold[int(i/2)], 'segm_right.nrrd'))
+                sitk.WriteImage(segm, os.path.join(pred_dir, val_fold[int(i / 2)], 'segm_right.nrrd'))
 
         # single image evaluation
-        for i in range(0,val_fold.shape[0]*2):
-            out_eval = model.evaluate(img_arr[i:i+1], GT_arr[i:i+1], batch_size=1, verbose=0)
-            print(val_fold[int(i/2)],out_eval)
+        for i in range(0, val_fold.shape[0] * 2):
+            out_eval = model.evaluate(img_arr[i:i + 1], GT_arr[i:i + 1], batch_size=1, verbose=0)
+            print(val_fold[int(i / 2)], out_eval)
 
 
 def predict_test(model_name, onlyEval=False):
@@ -327,9 +313,8 @@ def predict_test(model_name, onlyEval=False):
             out_eval = model.evaluate(img_arr[i:i + 1], GT_arr[i:i + 1], batch_size=1, verbose=0)
             print(i, out_eval)
 
+
 if __name__ == '__main__':
-
-
     gpu = '/GPU:0'
     batch_size = batch_size
 
@@ -348,8 +333,6 @@ if __name__ == '__main__':
     assert np.mod(batch_size, nb_gpus) == 0, \
         'batch_size should be a multiple of the nr. of gpus. ' + \
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
-
-
 
     # perc = 0.25
     # train(None, None, perc=perc, augmented=True)

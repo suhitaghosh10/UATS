@@ -1,4 +1,5 @@
 import sys
+
 sys.path.append('../../')
 
 import os
@@ -17,18 +18,16 @@ data_path = '/home/anneke/data/skin/preprocessed/labelled/train/'
 out_dir = '/home/anneke/projects/zones_UATS/Temporal_Thesis/skin_2D/output/models/'
 fold_dir = '/home/anneke/projects/zones_UATS/Temporal_Thesis/skin_2D/Folds'
 
-
 learning_rate = 5e-5
 AUGMENTATION_NO = 5
 TRAIN_NUM = 1000
-#PERC = 0.25
-
+# PERC = 0.25
 
 
 NUM_CLASS = 1
 num_epoch = 1000
 batch_size = 8
-DIM = [192,256]
+DIM = [192, 256]
 N_CHANNELS = 3
 
 
@@ -37,8 +36,7 @@ def remove_tumor_segmentation(arr):
     return arr
 
 
-def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
-
+def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation=False):
     if augmentation:
         augm = '_augm'
     else:
@@ -53,7 +51,7 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
     TRAINED_MODEL_PATH = MODEL_NAME
 
     wm = weighted_model()
-    model = wm.build_model(img_shape=(DIM[0],DIM[1],N_CHANNELS), learning_rate=learning_rate)
+    model = wm.build_model(img_shape=(DIM[0], DIM[1], N_CHANNELS), learning_rate=learning_rate)
 
     print('-' * 30)
     print('Creating and compiling train...')
@@ -77,11 +75,12 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
                                            verbose=1,
                                            mode='min')
 
-    tensorboard = TensorBoard(log_dir=TB_LOG_DIR, write_graph=False, write_grads=False, histogram_freq=0, write_images=False)
+    tensorboard = TensorBoard(log_dir=TB_LOG_DIR, write_graph=False, write_grads=False, histogram_freq=0,
+                              write_images=False)
     es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=50, min_delta=0.0005)
 
     # datagen listmake_dataset
-    train_fold = np.load(os.path.join(fold_dir, 'train_fold'+str(FOLD_NUM)+'.npy'))
+    train_fold = np.load(os.path.join(fold_dir, 'train_fold' + str(FOLD_NUM) + '.npy'))
     print(train_fold[0:10])
     nr_samples = train_fold.shape[0]
 
@@ -89,12 +88,11 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
     np.random.shuffle(train_fold)
     print(train_fold[0:10])
 
-    train_fold = train_fold[:int(nr_samples*perc)]
+    train_fold = train_fold[:int(nr_samples * perc)]
 
     train_id_list = []
     for i in range(train_fold.shape[0]):
         train_id_list.append(os.path.join(train_fold[i]))
-
 
     # del unsupervised_target, unsupervised_weight, supervised_flag, imgs
     # del supervised_flag
@@ -104,7 +102,7 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
     print('BATCH Size = ', batch_size)
 
     print('Callbacks: ', cb)
-    params = {'dim': (DIM[0],DIM[1]),
+    params = {'dim': (DIM[0], DIM[1]),
               'batch_size': batch_size,
               'n_channels': 3}
 
@@ -112,15 +110,12 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
     print('Fitting train...')
     print('-' * 30)
 
-
-
     training_generator = train_gen(data_path,
                                    train_id_list,
-                                   augmentation = augmentation,
+                                   augmentation=augmentation,
                                    **params)
 
-
-    val_fold = np.load(os.path.join(fold_dir, 'val_fold'+str(FOLD_NUM)+'.npy'))
+    val_fold = np.load(os.path.join(fold_dir, 'val_fold' + str(FOLD_NUM) + '.npy'))
     # val_id_list = []
     # for i in range(val_fold.shape[0]):
     #     val_id_list.append(os.path.join(val_fold[i], 'img_left.npy'))
@@ -130,10 +125,9 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
     #                                val_id_list,
     #                                **params)
 
-    val_img_arr = np.zeros((val_fold.shape[0], DIM[0],DIM[1],N_CHANNELS), dtype = float)
+    val_img_arr = np.zeros((val_fold.shape[0], DIM[0], DIM[1], N_CHANNELS), dtype=float)
 
     val_GT_arr = np.zeros((val_fold.shape[0], DIM[0], DIM[1], 2), dtype=int)
-
 
     for i in range(val_fold.shape[0]):
         val_img_arr[i] = np.load(os.path.join(data_path, 'imgs', val_fold[i]))
@@ -147,7 +141,6 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
 
         # plt.imshow(X, cmap="gray")
 
-
     val_img_arr = val_img_arr / 255
 
     if augmentation == False:
@@ -159,11 +152,9 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
     # steps=2
 
     # get validation fold
-    #val_fold = np.load('Folds/val_fold'+str(FOLD_NUM)+'.npy')
+    # val_fold = np.load('Folds/val_fold'+str(FOLD_NUM)+'.npy')
     # val_x_arr = get_complete_array(data_path, val_fold, GT = False)
     # val_y_arr = get_complete_array(data_path, val_fold, dtype='int8', GT = True)
-
-
 
     history = model.fit_generator(generator=training_generator,
                                   steps_per_epoch=steps,
@@ -178,12 +169,10 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation = False):
     # train.save('temporal_max_ramp_final.h5')
 
 
-
-
 def predict(model_name, onlyEval=False):
     pred_dir = '/data/suhita/skin/predictions/'
 
-    val_fold = np.load(os.path.join(fold_dir,'val_fold' + str(FOLD_NUM) + '.npy'))
+    val_fold = np.load(os.path.join(fold_dir, 'val_fold' + str(FOLD_NUM) + '.npy'))
 
     img_arr = np.zeros((val_fold.shape[0], DIM[0], DIM[1], N_CHANNELS), dtype=float)
     GT_arr = np.zeros((val_fold.shape[0], DIM[0], DIM[1], 1), dtype=float)
@@ -192,7 +181,6 @@ def predict(model_name, onlyEval=False):
         img_arr[i] = np.load('/cache/suhita/skin/preprocessed/labelled/train/imgs/' + val_fold[i]) / 255
         temp = '/cache/suhita/skin/preprocessed/labelled/train/GT/' + val_fold[i]
         GT_arr[i] = np.load(temp.replace('.npy', '') + '_segmentation.npy') / 255
-
 
     print('load_weights')
     wm = weighted_model()
@@ -204,28 +192,26 @@ def predict(model_name, onlyEval=False):
         print(out_value)
     else:
         out = model.predict(img_arr, batch_size=2, verbose=1)
-        #np.save(os.path.join(out_dir, 'predicted.npy'), out)
+        # np.save(os.path.join(out_dir, 'predicted.npy'), out)
         for i in range(out.shape[0]):
-            segm = sitk.GetImageFromArray(out[i,:,:,:,0])
+            segm = sitk.GetImageFromArray(out[i, :, :, :, 0])
             utils.makeDirectory(os.path.join(pred_dir, val_fold[int(i / 2)]))
-            if i%2 ==0:
+            if i % 2 == 0:
                 img = sitk.ReadImage(os.path.join(data_path, val_fold[int(i / 2)], 'img_left.nrrd'))
                 segm.CopyInformation(img)
                 sitk.WriteImage(img, os.path.join(pred_dir, val_fold[int(i / 2)], 'img_left.nrrd'))
-                sitk.WriteImage(segm, os.path.join(pred_dir, val_fold[int(i/2)], 'segm_left.nrrd'))
+                sitk.WriteImage(segm, os.path.join(pred_dir, val_fold[int(i / 2)], 'segm_left.nrrd'))
 
             else:
                 img = sitk.ReadImage(os.path.join(data_path, val_fold[int(i / 2)], 'img_right.nrrd'))
                 segm.CopyInformation(img)
                 sitk.WriteImage(img, os.path.join(pred_dir, val_fold[int(i / 2)], 'img_right.nrrd'))
-                sitk.WriteImage(segm, os.path.join(pred_dir, val_fold[int(i/2)], 'segm_right.nrrd'))
+                sitk.WriteImage(segm, os.path.join(pred_dir, val_fold[int(i / 2)], 'segm_right.nrrd'))
 
         # single image evaluation
-        for i in range(0,val_fold.shape[0]*2):
-            out_eval = model.evaluate(img_arr[i:i+1], GT_arr[i:i+1], batch_size=1, verbose=0)
-            print(val_fold[int(i/2)],out_eval)
-
-
+        for i in range(0, val_fold.shape[0] * 2):
+            out_eval = model.evaluate(img_arr[i:i + 1], GT_arr[i:i + 1], batch_size=1, verbose=0)
+            print(val_fold[int(i / 2)], out_eval)
 
     # if eval:
     #     val_gt = val_gt.astype(np.uint8)
@@ -256,7 +242,7 @@ if __name__ == '__main__':
 
     gpu_devices = tf.config.experimental.list_physical_devices('GPU')
     tf.config.experimental.set_memory_growth(gpu_devices[0], True)
-    #tf.config.gpu.set_per_process_memory_growth(True)
+    # tf.config.gpu.set_per_process_memory_growth(True)
 
     # nb_gpus = len(GPU_ID.split(','))
     # assert np.mod(batch_size, nb_gpus) == 0, \
@@ -266,7 +252,6 @@ if __name__ == '__main__':
     # FOLD_NUM = 2
     # perc = 1.0
     # train(None, None, perc=perc, augmented=True)
-
 
     FOLD_NUM = 3
 
@@ -285,11 +270,6 @@ if __name__ == '__main__':
     perc = 1.0
     train(None, None, perc=perc, augmentation=True)
 
-
-
-
-
-
     # FOLD_NUM = 2
     #
     # perc = 0.05
@@ -306,7 +286,6 @@ if __name__ == '__main__':
 
     # perc = 0.5
     # train(None, None, perc=perc, augmented=True)
-
 
     # predict('/cache/suhita/skin/models/supervised_sfs32_F_1_1000_5e-05_Perc_1.0_augm.h5', onlyEval=True)
     #

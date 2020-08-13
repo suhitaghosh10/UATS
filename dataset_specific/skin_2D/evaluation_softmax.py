@@ -10,6 +10,7 @@ def jaccard(prediction, groundTruth):
     filter.Execute(prediction, groundTruth)
     return filter.GetJaccardCoefficient()
 
+
 def getDice(prediction, groundTruth):
     filter = sitk.LabelOverlapMeasuresImageFilter()
     filter.Execute(prediction, groundTruth)
@@ -143,7 +144,7 @@ def evaluateFiles_arr(img_path, prediction, connected_component=False, eval=True
             else:
                 dice = get_dice_from_array(pred_img_arr[:, :, 0], 1 - GT_label[:, :, 0])
                 jac = get_thresholded_jaccard(pred_img_arr[:, :, 0], 1 - GT_label[:, :, 0])
-                #jac = jac if jac > 0.64 else jac
+                # jac = jac if jac > 0.64 else jac
             dices[imgNumber] = dice
             jacs[imgNumber] = jac
             print(dice, jac)
@@ -155,7 +156,6 @@ def evaluateFiles_arr(img_path, prediction, connected_component=False, eval=True
             np.save(out_dir + '/imgs/' + test_dir[imgNumber],
                     np.load(os.path.join(img_path, 'imgs', test_dir[imgNumber])))
             np.save(out_dir + '/GT/' + test_dir[imgNumber], pred_img_arr)
-
 
     print('Dices')
     print(np.average(dices))
@@ -184,9 +184,6 @@ def evaluateFiles(GT_directory, pred_directory, csvName, lesion=False):
             [hausdorff, avgDist] = getBoundaryDistances(pred_img, GT_label)
 
             csvwriter.writerow([case, dice, avd, hausdorff, avgDist])
-
-
-
 
 
 def thresholdArray(array, threshold):
@@ -378,7 +375,6 @@ if __name__ == '__main__':
     # gpu = '/GPU:0'
     batch_size = 1
 
-
     # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
     os.environ["CUDA_VISIBLE_DEVICES"] = '0'
     # os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
@@ -398,7 +394,7 @@ if __name__ == '__main__':
     # model_dir = '/cache/suhita/skin/models/'
     # model_dir = '/data/suhita/temporal/skin/'
     data_path = '/cache/suhita/skin/preprocessed/labelled/test/'
-    #data_path = '/cache/suhita/skin/preprocessed/unlabelled/'
+    # data_path = '/cache/suhita/skin/preprocessed/unlabelled/'
     # NAME = 'supervised_sfs32_F_1_1000_5e-05_Perc_' + str(perc) + '_augm'
     # NAME = 'sm_skin_entropy_F'+str(FOLD_NUM)+'_Perct_Labelled_'+str(perc)
     perc = 1.0

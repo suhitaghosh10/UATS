@@ -1,5 +1,6 @@
 import keras
 import numpy as np
+
 NPY = '.npy'
 
 

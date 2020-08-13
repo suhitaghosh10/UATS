@@ -7,8 +7,8 @@ from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStoppi
 
 from dataset_specific.prostate.generator import DataGenerator as train_gen
 from dataset_specific.prostate.model import weighted_model
-from old.utils.preprocess_images import get_complete_array, get_array, save_array
 from old.utils.AugmentationGenerator import *
+from old.utils.preprocess_images import get_complete_array, get_array, save_array
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 
 # 294 Training 58 have gt
@@ -47,7 +47,7 @@ SAVE_WTS_AFTR_EPOCH = 0
 ramp_up_period = 50
 ramp_down_period = 50
 # weight_max = 40
-#weight_max = 30
+# weight_max = 30
 
 alpha = 0.6
 
@@ -133,8 +133,9 @@ def train(gpu_id, nb_gpus):
                 print('LR: alpha-', K.eval(model.optimizer.lr), K.eval(model.optimizer.beta_1))
             # print(K.eval(model.layers[43].trainable_weights[0]))
 '''
+
         def on_epoch_end(self, epoch, logs={}):
-            #print(time() - self.starttime)
+            # print(time() - self.starttime)
             sup_count = self.count
             pz_save, self.val_pz_dice_coef = self.shall_save(logs['val_pz_dice_coef'], self.val_pz_dice_coef)
             cz_save, self.val_cz_dice_coef = self.shall_save(logs['val_cz_dice_coef'], self.val_cz_dice_coef)
@@ -266,9 +267,9 @@ def train(gpu_id, nb_gpus):
                                    labelled_num=TRAIN_NUM)
 
     steps = num_train_data / batch_size
-    #steps =2
+    # steps =2
 
-    val_supervised_flag = np.ones((num_val_data, 32, 168, 168), dtype='int8') *3
+    val_supervised_flag = np.ones((num_val_data, 32, 168, 168), dtype='int8') * 3
     # val_x_arr = get_complete_array(VAL_IMGS_PATH)
     # val_y_arr = get_complete_array(VAL_GT_PATH, dtype='int8')
 

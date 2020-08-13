@@ -43,7 +43,6 @@ class weighted_model:
     def dice_loss(self, y_true, y_pred):
         return -self.dice_coef(y_true, y_pred)
 
-
     def downLayer(self, inputLayer, filterSize, i, bn=False, axis=4):
 
         conv = Conv2D(filterSize, (3, 3), activation='relu', padding='same', name='conv' + str(i) + '_1')(inputLayer)
@@ -126,10 +125,8 @@ class weighted_model:
 
         conv_out = Conv2D(1, (1, 1), activation='sigmoid', name='conv_final')(conv7)
 
-
-
         # optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
-        optimizer = Adam(lr=learning_rate) # TODO: settings of optimizer
+        optimizer = Adam(lr=learning_rate)  # TODO: settings of optimizer
         p_model = Model(input_img, conv_out)
         p_model.compile(optimizer=optimizer, loss=self.dice_loss)
 

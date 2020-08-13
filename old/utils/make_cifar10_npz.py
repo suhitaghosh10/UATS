@@ -52,7 +52,5 @@ all_images = np.array(all_image)
 all_labels = np.array(all_label)
 print(all_images.shape)
 
-
-
 np.savez(data_dir + '/' + 'cifar10.npz', train_x=all_image, train_y=all_label,
          test_x=all_image_test, test_y=all_label_test)

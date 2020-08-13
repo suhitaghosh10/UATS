@@ -9,13 +9,14 @@ rn.seed(1235)
 write_flag = False
 OUTPUT_DIR = 'D:\\Thesis\\kits\\'
 
-reference_size = [56,152,152]
-reference_spacing = [1.0,1.0,4.0]
+reference_size = [56, 152, 152]
+reference_spacing = [1.0, 1.0, 4.0]
 dimension = 3
 
 nrClasses = 1
 
-#gt_shape = [32, 168, 168, nrClasses]
+
+# gt_shape = [32, 168, 168, nrClasses]
 
 
 class AugmentTypes(Enum):
@@ -73,9 +74,10 @@ def resampleToReference(inputImg, referenceImg, interpolator, defaultValue):
 
     return outImage
 
+
 def augment_images_spatial(original_image, reference_image, augmentation_type, T0, T_aug, transformation_parameters,
                            interpolator=sitk.sitkLinear, default_intensity_value=0.0):
-    #interpolator = sitk.sitkNearestNeighbor
+    # interpolator = sitk.sitkNearestNeighbor
     if augmentation_type == AugmentTypes.FLIP_HORIZ.value:
         arr = sitk.GetArrayFromImage(original_image)
         arr = np.flip(arr, axis=2)
@@ -276,9 +278,9 @@ def get_augmentation_transform(img, reference_image, augmentation_type):
     return centered_transform, aug_transform, transformation_parameters_list
 
 
-def get_transformed_gt(orig_gt, ref_image, augmentation_type, centered_transform, aug_transform, transformation_parameters_list,
-                       distance_based_interpol = False):
-
+def get_transformed_gt(orig_gt, ref_image, augmentation_type, centered_transform, aug_transform,
+                       transformation_parameters_list,
+                       distance_based_interpol=False):
     gt_shape = [reference_size[2], reference_size[1], reference_size[0], nrClasses]
 
     if distance_based_interpol:
@@ -291,8 +293,6 @@ def get_transformed_gt(orig_gt, ref_image, augmentation_type, centered_transform
         for c in range(0, nrClasses):
             orig_img_gt = sitk.GetImageFromArray(orig_gt[:, :, :, c])
             orig_img_gt.SetSpacing(reference_spacing)
-
-
 
             gt_dist = sitk.SignedMaurerDistanceMap(orig_img_gt, insideIsPositive=True, squaredDistance=False,
                                                    useImageSpacing=True)
@@ -323,18 +323,17 @@ def get_transformed_gt(orig_gt, ref_image, augmentation_type, centered_transform
         orig_img_gt = sitk.GetImageFromArray(orig_gt)
         orig_img_gt.SetSpacing(reference_spacing)
         res_img_gt = augment_images_spatial(orig_img_gt, ref_image, augmentation_type, centered_transform,
-                                                aug_transform, transformation_parameters_list,
-                                                default_intensity_value=0,
-                                                interpolator=sitk.sitkNearestNeighbor)
-        #sitk.WriteImage(res_img_gt, 'res_GT.nrrd')
+                                            aug_transform, transformation_parameters_list,
+                                            default_intensity_value=0,
+                                            interpolator=sitk.sitkNearestNeighbor)
+        # sitk.WriteImage(res_img_gt, 'res_GT.nrrd')
         res_gt = np.zeros(gt_shape, dtype=np.uint8)
-        res_gt[:,:,:,0] = sitk.GetArrayFromImage(res_img_gt)
+        res_gt[:, :, :, 0] = sitk.GetArrayFromImage(res_img_gt)
 
     return res_gt
 
 
-
-def get_single_image_augmentation(augmentation_type, orig_image, orig_gt, img_no,  nrClasses = 1):
+def get_single_image_augmentation(augmentation_type, orig_image, orig_gt, img_no, nrClasses=1):
     out_img = np.zeros([reference_size[2], reference_size[1], reference_size[0], 1], dtype=np.float32)
 
     img = sitk.GetImageFromArray(orig_image)
@@ -402,13 +401,11 @@ def get_single_image_augmentation_with_ensemble(augmentation_type, orig_image, o
     return out_img, res_gt, ens_gt
 
 
-
-
 if __name__ == '__main__':
     # img_path = 'D:\Thesis\kits\\case_197\\img_left.npy'
-    #gt_path = '/home/suhita/zonals/temporal/sadv2/gt/'
+    # gt_path = '/home/suhita/zonals/temporal/sadv2/gt/'
     # gt_path = '/cache/suhita/data/fold1/train/gt/'
-    #ens_gt = '/data/suhita/temporal/sadv1/ens_gt/'
+    # ens_gt = '/data/suhita/temporal/sadv1/ens_gt/'
     img_no = 1
     img = np.load('D:\Thesis\kits\\case_197\\img_left.npy')
     gt = np.load('D:\Thesis\kits\\case_197\\segm_left.npy')
@@ -417,4 +414,4 @@ if __name__ == '__main__':
 
     out_img, out_gt, out_ens_gt = get_single_image_augmentation_with_ensemble(augmentation_type, img, gt, ens_gt,
                                                                               img_no)
-    #out_img, out_gt = get_single_image_augmentation(augmentation_type, img, gt, img_no)
+    # out_img, out_gt = get_single_image_augmentation(augmentation_type, img, gt, img_no)

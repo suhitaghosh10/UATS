@@ -35,7 +35,6 @@ batch_size = 2
 
 
 def train(gpu_id, nb_gpus, trained_model=None):
-
     wm = weighted_model()
     model = wm.build_model(learning_rate=learning_rate, gpu_id=gpu_id,
                            nb_gpus=nb_gpus, trained_model=trained_model)

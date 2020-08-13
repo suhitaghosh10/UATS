@@ -16,7 +16,6 @@ labelled_train_num = len(labelled_files_lst)
 perc = [0.1]
 print('fold', str(fold_num), 'perc', perc)
 
-
 for p in perc:
     un_labelled_path = '/cache/suhita/data/hippocampus/pred/'
     un_labelled_files_lst = os.listdir(un_labelled_path + '/imgs/')
@@ -41,9 +40,9 @@ for p in perc:
         # name = labelled_files_lst[i]
         print(i, counter)
         np.save(os.path.join(data_path, 'imgs', str(counter) + '.npy'),
-            np.expand_dims(np.load(os.path.join(labelled_imgs_path, i.replace('.nii.gz', '.npy'))), -1))
+                np.expand_dims(np.load(os.path.join(labelled_imgs_path, i.replace('.nii.gz', '.npy'))), -1))
         np.save(os.path.join(data_path, 'GT', str(counter) + '.npy'),
-            get_multi_class_arr(np.load(os.path.join(labelled_gt_path, i.replace('.nii.gz', '.npy'))), 3))
+                get_multi_class_arr(np.load(os.path.join(labelled_gt_path, i.replace('.nii.gz', '.npy'))), 3))
         counter = counter + 1
 
     print('remaining labelled')
@@ -61,8 +60,8 @@ for p in perc:
     for i in np.arange(len(un_labelled_files_lst)):
         print(i, counter)
         np.save(os.path.join(data_path, 'imgs', str(counter) + '.npy'),
-            np.load(os.path.join(un_labelled_path, 'imgs', str(i) + '.npy'))
-            )
+                np.load(os.path.join(un_labelled_path, 'imgs', str(i) + '.npy'))
+                )
         np.save(os.path.join(data_path, 'GT', str(counter) + '.npy'),
                 np.transpose(np.load(os.path.join(un_labelled_path, 'GT', str(i) + '.npy')), axes=(1, 2, 3, 0))
                 )

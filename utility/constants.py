@@ -1,4 +1,3 @@
-import numpy as np
 # do not change
 
 NPY = '.npy'
@@ -31,6 +30,7 @@ MODEL_SL_TEMPORAL = 'supervised_temporal'
 m_data_path = 'data_path'
 m_save_path = 'save_path'
 m_root_temp_path = 'temp_path'
+m_trained_model_path = 'trained_model'
 m_batch_size = 'batch_size'
 m_nr_channels = 'nr_channels'
 m_lr = 'lr'

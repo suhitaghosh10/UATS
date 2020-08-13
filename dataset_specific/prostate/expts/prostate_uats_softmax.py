@@ -16,10 +16,6 @@ parser.add_argument('-f', '--fold_num', type=int, default=1, help='Fold Number')
 parser.add_argument('-e', '--ens_folder_name', type=str, help='ensemble folder name')
 parser.add_argument('-d', '--ds', type=str, default=PROSTATE_DATASET_NAME, help='dataset name')
 
-
-
-
-
 config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True
 config.allow_soft_placement = True
@@ -31,7 +27,7 @@ try:
     # gpu_num = args.gpu_num
     gpu_num = '0'
     fold_num = 1
-    perc = 0.5
+    perc = 0.25
     temp_path = 'sadv1'
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_num
@@ -39,12 +35,12 @@ try:
     # Build Model
     wm = weighted_model()
     train(None, None,
-          dataset_name= args.ds,
+          dataset_name=args.ds,
           ens_folder_name=temp_path,
           labelled_perc=perc,
           fold_num=fold_num,
-          model_type= wm
-              )
+          model_type=wm
+          )
 
 finally:
     if os.path.exists(metadata[m_root_temp_path] + temp_path):

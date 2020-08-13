@@ -6,9 +6,9 @@ from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStoppi
 
 from dataset_specific.prostate.generator import DataGenerator
 from dataset_specific.prostate.model import weighted_model
-from old.utils.preprocess_images import get_complete_array, get_array, save_array
 from old.utils.AugmentationGenerator import *
 from old.utils.ops import ramp_down_weight
+from old.utils.preprocess_images import get_complete_array, get_array, save_array
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 
 # 294 Training 58 have gt
@@ -59,7 +59,6 @@ def train(gpu_id, nb_gpus):
 
     gen_lr_weight = ramp_down_weight(ramp_down_period)
 
-
     # prepare dataset
     print('-' * 30)
     print('Loading train data...')
@@ -83,7 +82,6 @@ def train(gpu_id, nb_gpus):
 
         def __init__(self, imgs_path, gt_path, ensemble_path, supervised_flag_path, train_idx_list):
 
-
             self.imgs_path = imgs_path
             self.gt_path = gt_path
             self.ensemble_path = ensemble_path
@@ -105,8 +103,6 @@ def train(gpu_id, nb_gpus):
 
         def on_batch_begin(self, batch, logs=None):
             pass
-
-
 
         def on_epoch_begin(self, epoch, logs=None):
             # tf.summary.scalar("labeled_pixels", np.count_nonzero(self.supervised_flag))
@@ -155,8 +151,6 @@ def train(gpu_id, nb_gpus):
                     ensemble_prediction = alpha * ensemble_prediction + (1 - alpha) * cur_pred
                     save_array(self.ensemble_path, ensemble_prediction, start, end)
                     del ensemble_prediction
-
-
 
                 if 'cur_pred' in locals(): del cur_pred
 
@@ -210,7 +204,7 @@ def train(gpu_id, nb_gpus):
                                        train_id_list)
 
     steps = num_train_data / batch_size
-    #steps =2
+    # steps =2
 
     val_supervised_flag = np.ones((num_val_data, 32, 168, 168), dtype='int8')
     val_x_arr = get_complete_array(VAL_IMGS_PATH)

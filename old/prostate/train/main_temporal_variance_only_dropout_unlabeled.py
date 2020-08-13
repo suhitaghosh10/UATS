@@ -4,11 +4,11 @@ from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import Callback
 from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, EarlyStopping, TensorBoard
 
-from old.utils.preprocess_images import make_dataset
 from old.prostate import weighted_model
 from old.prostate.generator import DataGenerator
 from old.utils.AugmentationGenerator import *
 from old.utils.ops import ramp_down_weight, ramp_up_weight
+from old.utils.preprocess_images import make_dataset
 
 TB_LOG_DIR = './tb/variance_mcdropout/5'
 UPDATE_WTS_AFTER_EPOCH = 20
@@ -87,7 +87,6 @@ def train(train_x, train_y, train_ux, train_ux_predicted, val_x, val_y, gpu_id, 
         def on_batch_end(self, batch, logs=None):
             pass
 
-
         def on_epoch_begin(self, epoch, logs=None):
 
             if epoch > num_epoch - ramp_down_period:
@@ -128,7 +127,7 @@ def train(train_x, train_y, train_ux, train_ux_predicted, val_x, val_y, gpu_id, 
                 self.unsupervised_target = self.ensemble_prediction / (1 - alpha ** (epoch + 1))
 
                 # update unsupervised weight
-                #for i in np.arange(0, ENSEMBLE_NO):
+                # for i in np.arange(0, ENSEMBLE_NO):
                 cur_epoch_model_pred = model_no_sm.predict(inp, batch_size=2)
                 max = np.amax(cur_epoch_model_pred)
                 min = np.clip(np.amin(cur_epoch_model_pred), a_max=100, a_min=-100)
@@ -143,11 +142,11 @@ def train(train_x, train_y, train_ux, train_ux_predicted, val_x, val_y, gpu_id, 
             np.random.shuffle(self.train_idx_list)
             np.random.shuffle(val_id_list)
             DataGenerator(imgs,
-                        self.unsupervised_target,
-                        supervised_label,
-                        supervised_flag,
-                        self.unsupervised_weight,
-                        self.train_idx_list)
+                          self.unsupervised_target,
+                          supervised_label,
+                          supervised_flag,
+                          self.unsupervised_weight,
+                          self.train_idx_list)
 
         def get_training_list(self):
             return self.train_idx_list
@@ -156,7 +155,7 @@ def train(train_x, train_y, train_ux, train_ux_predicted, val_x, val_y, gpu_id, 
     print('-' * 30)
     print('Creating callbacks...')
     print('-' * 30)
-    #csv_logger = CSVLogger('validation.csv', append=True, separator=';')
+    # csv_logger = CSVLogger('validation.csv', append=True, separator=';')
     model_checkpoint = ModelCheckpoint('./temporal_variance_mcdropout.h5', monitor='val_afs_loss', save_best_only=True,
                                        verbose=1,
                                        mode='min')

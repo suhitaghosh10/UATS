@@ -9,7 +9,6 @@ from utility.utils import get_uats_val_data, get_uats_data_generator
 
 
 def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_num, model_type, is_augmented=True):
-
     metadata = get_metadata(dataset_name)
     name = 'uats_softmax_F' + str(fold_num) + '_Perct_Labelled_' + str(labelled_perc)
 
@@ -19,19 +18,18 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
     model_name = os.path.join(metadata[m_save_path], 'model', dataset_name, name + H5)
     csv_name = os.path.join(metadata[m_save_path], 'csv', dataset_name, name + '.csv')
     ens_path = os.path.join(metadata[m_root_temp_path], ens_folder_name)
-    trained_model_path = os.path.join(metadata[m_save_path], dataset_name, 'supervised_F' + str(fold_num) + '_P' + str(
+    trained_model_path = os.path.join(metadata[m_trained_model_path], dataset_name, 'supervised_F' + str(fold_num) + '_P' + str(
         labelled_perc) + H5)
     dim = metadata[m_dim]
     bs = metadata[m_batch_size]
 
-    num_labeled_train = int(labelled_perc * metadata[m_labelled_train]) #actual labelled data
+    num_labeled_train = int(labelled_perc * metadata[m_labelled_train])  # actual labelled data
     num_ul = metadata[m_unlabelled_train]
     num_train_data = num_labeled_train + num_ul
 
     print("Labelled Images:", num_labeled_train)
-    print("Unlabeled Images:",  metadata[m_unlabelled_train])
+    print("Unlabeled Images:", metadata[m_unlabelled_train])
     print("Total Images:", num_train_data)
-
 
     print('-' * 30)
     print('Creating and compiling model...')
@@ -79,7 +77,8 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
     print('Fitting model...')
     print('-' * 30)
 
-    training_generator = get_uats_data_generator(dataset_name, data_path, ens_path, num_train_data, num_labeled_train, bs,
+    training_generator = get_uats_data_generator(dataset_name, data_path, ens_path, num_train_data, num_labeled_train,
+                                                 bs,
                                                  is_augmented)
 
     steps = (num_train_data * metadata[m_aug_num]) // bs

@@ -5,10 +5,10 @@ from keras.callbacks import Callback, ReduceLROnPlateau
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger
 
 from dataset_specific.prostate.model import weighted_model
-from old.utils.preprocess_images import get_complete_array, get_array, save_array
 from old.prostate.generator import DataGenerator as train_gen
 from old.utils.AugmentationGenerator import *
 from old.utils.ops import ramp_down_weight
+from old.utils.preprocess_images import get_complete_array, get_array, save_array
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 
 # 294 Training 58 have gt
@@ -137,7 +137,6 @@ def train(gpu_id, nb_gpus):
             afs_save, self.val_afs_dice_coef = self.shall_save(logs['val_afs_dice_coef'], self.val_afs_dice_coef)
             bg_save, self.val_bg_dice_coef = self.shall_save(logs['val_bg_dice_coef'], self.val_bg_dice_coef)
 
-
             if epoch >= 0:
 
                 patients_per_batch = IMGS_PER_ENS_BATCH
@@ -147,7 +146,7 @@ def train(gpu_id, nb_gpus):
 
                 for b_no in np.arange(num_batches):
                     actual_batch_size = patients_per_batch if (
-                                b_no <= num_batches - 1 and remainder == 0) else remainder
+                            b_no <= num_batches - 1 and remainder == 0) else remainder
                     start = (b_no * patients_per_batch) + num_labeled_train
                     end = (start + actual_batch_size)
                     imgs = get_array(self.imgs_path, start, end)
@@ -169,7 +168,6 @@ def train(gpu_id, nb_gpus):
                     cur_pred[:, :, :, :, 2] = model_out[2] if us_save else ensemble_prediction[:, :, :, :, 2]
                     cur_pred[:, :, :, :, 3] = model_out[3] if afs_save else ensemble_prediction[:, :, :, :, 3]
                     cur_pred[:, :, :, :, 4] = model_out[4] if bg_save else ensemble_prediction[:, :, :, :, 4]
-
 
                     del model_out
 

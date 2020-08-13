@@ -9,10 +9,10 @@ rn.seed(1235)
 write_flag = False
 OUTPUT_DIR = '/cache/suhita/'
 
-reference_size = [96,216,216]
-reference_spacing = [0.75,0.75,3]
+reference_size = [96, 216, 216]
+reference_spacing = [0.75, 0.75, 3]
 dimension = 3
-gt_shape = [216,216,96,1]
+gt_shape = [216, 216, 96, 1]
 zones_num = 1
 
 
@@ -71,9 +71,10 @@ def resampleToReference(inputImg, referenceImg, interpolator, defaultValue):
 
     return outImage
 
+
 def augment_images_spatial(original_image, reference_image, augmentation_type, T0, T_aug, transformation_parameters,
                            interpolator=sitk.sitkLinear, default_intensity_value=0.0):
-    #interpolator = sitk.sitkNearestNeighbor
+    # interpolator = sitk.sitkNearestNeighbor
     if augmentation_type == AugmentTypes.FLIP_HORIZ.value:
         arr = sitk.GetArrayFromImage(original_image)
         arr = np.flip(arr, axis=2)
@@ -284,16 +285,15 @@ def get_transformed_gt(orig_gt, augmentation_type, centered_transform, aug_trans
         orig_img_gt = sitk.GetImageFromArray(orig_gt[:, :, :, zone])
         orig_img_gt.SetSpacing(reference_spacing)
 
-
         write_image(orig_img_gt, os.path.join(OUTPUT_DIR, 'orig_gt' + str(zone) + '.nrrd'), orig_img_gt, is_image=True)
 
         gt_dist = sitk.SignedMaurerDistanceMap(orig_img_gt, insideIsPositive=True, squaredDistance=False,
                                                useImageSpacing=True)
 
         augment_images_spatial(orig_img_gt, orig_img_gt, augmentation_type, centered_transform,
-                                                aug_transform, transformation_parameters_list,
-                                                default_intensity_value=-3000,
-                                                interpolator=sitk.sitkLinear)
+                               aug_transform, transformation_parameters_list,
+                               default_intensity_value=-3000,
+                               interpolator=sitk.sitkLinear)
 
         gt_distances[:, :, :, zone] = sitk.GetArrayFromImage(resampled_dist)
 
@@ -310,6 +310,7 @@ def get_transformed_gt(orig_gt, augmentation_type, centered_transform, aug_trans
                     max_index = array.index(maxValue)
                     res_gt[z, y, x, max_index] = 1
     return res_gt
+
 
 #
 # def get_transformed_ens_gt(orig_gt, augmentation_type, centered_transform, aug_transform, transformation_parameters_list):
@@ -409,7 +410,7 @@ def get_transformed_ens_gt2(orig_gt, augmentation_type, centered_transform, aug_
                          gt_distances[z, y, x, 3], gt_distances[z, y, x, 4]]
                 maxValue = max(array)
                 if maxValue == -3000:
-                    #res_gt[z, y, x, 4] = 1
+                    # res_gt[z, y, x, 4] = 1
                     res_gt[z, y, x, 4] = 1
                 else:
                     max_index = array.index(maxValue)
@@ -511,8 +512,8 @@ def get_transformed_ens_gt2(orig_gt, augmentation_type, centered_transform, aug_
 
 
 def get_single_image_augmentation(augmentation_type, orig_image, orig_gt, img_no):
-    out_img = np.zeros([1, 216, 216, 96,1], dtype=np.float32)
-    out_gt = np.zeros([1, 216, 216, 96,1], dtype=np.uint8)
+    out_img = np.zeros([1, 216, 216, 96, 1], dtype=np.float32)
+    out_gt = np.zeros([1, 216, 216, 96, 1], dtype=np.uint8)
 
     img1 = sitk.GetImageFromArray(orig_image[:, :, :, 0])
     img1.SetSpacing(reference_spacing)
@@ -552,6 +553,7 @@ def get_single_image_augmentation(augmentation_type, orig_image, orig_gt, img_no
         augmentation_type).name + '.nrrd'), gt_ref)
     out_gt[0] = res_gt
     return out_img, out_gt
+
 
 #
 # def get_single_image_augmentation(augmentation_type, orig_image, orig_gt, img_no):
@@ -938,7 +940,7 @@ def get_mask(gt_arr_inp, write=False):
 
 if __name__ == '__main__':
     img_path = '/cache/suhita/data/fold1/train/imgs/'
-    #gt_path = '/home/suhita/zonals/temporal/sadv2/gt/'
+    # gt_path = '/home/suhita/zonals/temporal/sadv2/gt/'
     gt_path = '/cache/suhita/data/fold1/train/gt/'
     ens_gt = '/data/suhita/temporal/sadv1/ens_gt/'
     img_no = 1

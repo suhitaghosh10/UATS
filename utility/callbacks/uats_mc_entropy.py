@@ -3,6 +3,7 @@ from shutil import copyfile
 
 import numpy as np
 from keras.callbacks import Callback
+
 from utility.constants import ENS_GT, FLAG, GT, NPY, IMGS, ALPHA
 from utility.utils import makedir, shall_save, get_array, save_array
 
@@ -10,7 +11,8 @@ from utility.utils import makedir, shall_save, get_array, save_array
 class TemporalCallback(Callback):
 
     def __init__(self, dim, data_path, temp_path, save_path, num_train_data, num_labeled_train,
-                 patients_per_batch, pixel_perc_arr, val_metric_keys, nr_class, batch_size, mc_forward_pass_num, dataset_name, mc_model):
+                 patients_per_batch, pixel_perc_arr, val_metric_keys, nr_class, batch_size, mc_forward_pass_num,
+                 dataset_name, mc_model):
 
         self.data_path = data_path
         self.temp_path = temp_path
@@ -94,9 +96,9 @@ class TemporalCallback(Callback):
 
                 start = (b_no * self.patients_per_batch) + self.num_labeled_train
                 end = (start + actual_batch_size)
-                imgs = get_array(os.path.join(self.data_path , IMGS), start, end)
-                ensemble_prediction = get_array(os.path.join(self.temp_path , ENS_GT), start, end, dtype='float32')
-                supervised_flag = get_array(os.path.join(self.temp_path , FLAG), start, end, dtype='int64')
+                imgs = get_array(os.path.join(self.data_path, IMGS), start, end)
+                ensemble_prediction = get_array(os.path.join(self.temp_path, ENS_GT), start, end, dtype='float32')
+                supervised_flag = get_array(os.path.join(self.temp_path, FLAG), start, end, dtype='int64')
 
                 inp = [imgs, ensemble_prediction, supervised_flag]
                 del imgs, supervised_flag

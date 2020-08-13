@@ -11,6 +11,7 @@ from keras.utils import multi_gpu_model
 smooth = 1.
 consistency_wt = 1
 
+
 class weighted_model:
     alpha = 0.6
     epoch_ctr = K.variable(0, name='epoch_ctr')

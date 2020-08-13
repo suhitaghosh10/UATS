@@ -1,5 +1,7 @@
-from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
 import os
+
+from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
+
 from utility.callbacks.bai import TemporalCallback
 from utility.config import get_metadata
 from utility.constants import *
@@ -18,7 +20,7 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
     model_name = os.path.join(metadata[m_save_path], 'model', dataset_name, name + H5)
     csv_name = os.path.join(metadata[m_save_path], 'csv', dataset_name, name + '.csv')
     ens_path = os.path.join(metadata[m_root_temp_path], ens_folder_name)
-    trained_model_path = os.path.join(metadata[m_save_path], dataset_name, 'supervised_F' + str(fold_num) + '_P' + str(
+    trained_model_path = os.path.join(metadata[m_trained_model_path], dataset_name, 'supervised_F' + str(fold_num) + '_P' + str(
         labelled_perc) + H5)
     dim = metadata[m_dim]
     bs = metadata[m_batch_size]
@@ -58,7 +60,8 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
                               batch_size=1, write_images=False)
 
     tcb = TemporalCallback(dim, data_path, ens_path, metadata[m_save_path], num_train_data, num_labeled_train,
-                     metadata[m_patients_per_batch], metadata[m_nr_class], bs, metadata[m_update_epoch_num], dataset_name)
+                           metadata[m_patients_per_batch], metadata[m_nr_class], bs, metadata[m_update_epoch_num],
+                           dataset_name)
 
     lcb = model_type.LossCallback()
     es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=PATIENCE_EARLY_STOP, min_delta=DELTA)
@@ -70,8 +73,9 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
     print('Fitting model...')
     print('-' * 30)
 
-    training_generator = get_temporal_data_generator(dataset_name, data_path, ens_path, num_train_data, num_labeled_train, bs,
-                                                 is_augmented)
+    training_generator = get_temporal_data_generator(dataset_name, data_path, ens_path, num_train_data,
+                                                     num_labeled_train, bs,
+                                                     is_augmented)
 
     steps = (num_train_data * metadata[m_aug_num]) // bs
 

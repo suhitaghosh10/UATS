@@ -152,7 +152,6 @@ class weighted_model:
 
         return loss_func
 
-
     def downLayer(self, inputLayer, filterSize, i, bn=False):
         conv = Conv3D(filterSize, (3, 3, 3), activation='relu', padding='same', name='conv' + str(i) + '_1')(inputLayer)
         if bn:
@@ -166,7 +165,7 @@ class weighted_model:
 
     def upLayer(self, inputLayer, concatLayer, filterSize, i, bn=False, do=False):
         up = Conv3DTranspose(filterSize, (2, 2, 2), strides=(1, 2, 2), activation='relu', padding='same',
-                         name='up' + str(i))(inputLayer)
+                             name='up' + str(i))(inputLayer)
         # print( concatLayer.shape)
         up = concatenate([up, concatLayer])
         conv = Conv3D(int(filterSize / 2), (3, 3, 3), activation='relu', padding='same', name='conv' + str(i) + '_1')(
@@ -184,7 +183,7 @@ class weighted_model:
 
     def build_model(self, img_shape=(32, 168, 168), use_dice_cl=None, num_class=5, learning_rate=5e-5, gpu_id=None,
                     nb_gpus=None,
-                trained_model=None):
+                    trained_model=None):
         input_img = Input((*img_shape, 1), name='img_inp')
         unsupervised_label = Input((*img_shape, 5), name='unsup_label_inp')
         supervised_flag = Input(shape=(*img_shape, 1), name='flag_inp')
@@ -198,39 +197,39 @@ class weighted_model:
         conv2, conv2_b_m = self.downLayer(conv1, sfs * 2, 2, bn)
 
         conv3 = Conv3D(sfs * 4, (3, 3, 3), activation='relu', padding='same', kernel_initializer=kernel_init,
-                   name='conv' + str(3) + '_1')(conv2)
+                       name='conv' + str(3) + '_1')(conv2)
         if bn:
             conv3 = BatchNormalization()(conv3)
         conv3 = Conv3D(sfs * 8, (3, 3, 3), activation='relu', padding='same', kernel_initializer=kernel_init,
-                   name='conv' + str(3) + '_2')(conv3)
+                       name='conv' + str(3) + '_2')(conv3)
         if bn:
             conv3 = BatchNormalization()(conv3)
         pool3 = MaxPooling3D(pool_size=(2, 2, 2))(conv3)
-    # conv3, conv3_b_m = downLayer(conv2, sfs*4, 3, bn)
+        # conv3, conv3_b_m = downLayer(conv2, sfs*4, 3, bn)
 
         conv4 = Conv3D(sfs * 16, (3, 3, 3), activation='relu', padding='same', kernel_initializer=kernel_init,
-                   name='conv4_1')(pool3)
+                       name='conv4_1')(pool3)
         if bn:
             conv4 = BatchNormalization()(conv4)
         if do:
             conv4 = Dropout(0.5, seed=4, name='Dropout_' + str(4))(conv4)
         conv4 = Conv3D(sfs * 16, (3, 3, 3), activation='relu', padding='same', kernel_initializer=kernel_init,
-                   name='conv4_2')(conv4)
+                       name='conv4_2')(conv4)
         if bn:
             conv4 = BatchNormalization()(conv4)
 
-    # conv5 = upLayer(conv4, conv3_b_m, sfs*16, 5, bn, do)
+        # conv5 = upLayer(conv4, conv3_b_m, sfs*16, 5, bn, do)
         up1 = Conv3DTranspose(sfs * 16, (2, 2, 2), strides=(2, 2, 2), activation='relu', padding='same',
-                          name='up' + str(5))(conv4)
+                              name='up' + str(5))(conv4)
         up1 = concatenate([up1, conv3])
         conv5 = Conv3D(int(sfs * 8), (3, 3, 3), activation='relu', padding='same', kernel_initializer=kernel_init,
-                   name='conv' + str(5) + '_1')(up1)
+                       name='conv' + str(5) + '_1')(up1)
         if bn:
             conv5 = BatchNormalization()(conv5)
         if do:
             conv5 = Dropout(0.5, seed=5, name='Dropout_' + str(5))(conv5)
         conv5 = Conv3D(int(sfs * 8), (3, 3, 3), activation='relu', padding='same', kernel_initializer=kernel_init,
-                   name='conv' + str(5) + '_2')(conv5)
+                       name='conv' + str(5) + '_2')(conv5)
         if bn:
             conv5 = BatchNormalization()(conv5)
 
@@ -245,33 +244,33 @@ class weighted_model:
         afs_sm_out = Lambda(lambda x: x[:, :, :, :, 3], name='afs')(conv_out)
         bg_sm_out = Lambda(lambda x: x[:, :, :, :, 4], name='bg')(conv_out)
 
-
         pz_ensemble_pred = Lambda(lambda x: K.reshape(x[:, :, :, :, 0], tf.convert_to_tensor([-1, *img_shape, 1])),
-                              name='pzu')(
-        unsupervised_label)
+                                  name='pzu')(
+            unsupervised_label)
         cz_ensemble_pred = Lambda(lambda x: K.reshape(x[:, :, :, :, 1], tf.convert_to_tensor([-1, *img_shape, 1])),
-                              name='czu')(
-        unsupervised_label)
+                                  name='czu')(
+            unsupervised_label)
         us_ensemble_pred = Lambda(lambda x: K.reshape(x[:, :, :, :, 2], tf.convert_to_tensor([-1, *img_shape, 1])),
-                              name='usu')(
-        unsupervised_label)
+                                  name='usu')(
+            unsupervised_label)
         afs_ensemble_pred = Lambda(lambda x: K.reshape(x[:, :, :, :, 3], tf.convert_to_tensor([-1, *img_shape, 1])),
-                               name='afsu')(
-        unsupervised_label)
+                                   name='afsu')(
+            unsupervised_label)
         bg_ensemble_pred = Lambda(lambda x: K.reshape(x[:, :, :, :, 4], tf.convert_to_tensor([-1, *img_shape, 1])),
-                              name='bgu')(
-        unsupervised_label)
+                                  name='bgu')(
+            unsupervised_label)
 
         pz_wt = Lambda(lambda x: K.reshape(x[:, :, :, :, 0], tf.convert_to_tensor([-1, *img_shape, 1])), name='pz_wt')(
-        unsupervised_weight)
+            unsupervised_weight)
         cz_wt = Lambda(lambda x: K.reshape(x[:, :, :, :, 1], tf.convert_to_tensor([-1, *img_shape, 1])), name='cz_wt')(
-        unsupervised_weight)
+            unsupervised_weight)
         us_wt = Lambda(lambda x: K.reshape(x[:, :, :, :, 2], tf.convert_to_tensor([-1, *img_shape, 1])), name='us_wt')(
-        unsupervised_weight)
-        afs_wt = Lambda(lambda x: K.reshape(x[:, :, :, :, 3], tf.convert_to_tensor([-1, *img_shape, 1])), name='afs_wt')(
-        unsupervised_weight)
+            unsupervised_weight)
+        afs_wt = Lambda(lambda x: K.reshape(x[:, :, :, :, 3], tf.convert_to_tensor([-1, *img_shape, 1])),
+                        name='afs_wt')(
+            unsupervised_weight)
         bg_wt = Lambda(lambda x: K.reshape(x[:, :, :, :, 4], tf.convert_to_tensor([-1, *img_shape, 1])), name='bg_wt')(
-        unsupervised_weight)
+            unsupervised_weight)
 
         pz = concatenate([pz_ensemble_pred, supervised_flag, pz_wt], name='pz_c')
         cz = concatenate([cz_ensemble_pred, supervised_flag, cz_wt], name='cz_c')
@@ -279,16 +278,16 @@ class weighted_model:
         afs = concatenate([afs_ensemble_pred, supervised_flag, afs_wt], name='afs_c')
         bg = concatenate([bg_ensemble_pred, supervised_flag, bg_wt], name='bg_c')
 
-    # optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
+        # optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
         optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999)
 
         if (nb_gpus is None):
             p_model = Model([input_img, unsupervised_label, supervised_flag, unsupervised_weight],
-                        [pz_sm_out, cz_sm_out, us_sm_out, afs_sm_out, bg_sm_out])
+                            [pz_sm_out, cz_sm_out, us_sm_out, afs_sm_out, bg_sm_out])
             if trained_model is not None:
                 p_model.load_weights(trained_model)
 
-        # model_copy = Model([input_img, unsupervised_label, supervised_flag, unsupervised_weight],[pz_out, cz_out, us_out, afs_out, bg_out])
+            # model_copy = Model([input_img, unsupervised_label, supervised_flag, unsupervised_weight],[pz_out, cz_out, us_out, afs_out, bg_out])
 
             # intermediate_layer_model = Model(inputs=train.input,outputs=train.get_layer(layer_name).output)
 
@@ -308,13 +307,13 @@ class weighted_model:
         else:
             with tf.device(gpu_id):
                 model = Model([input_img, unsupervised_label, supervised_flag, unsupervised_weight],
-                          [pz_sm_out, cz_sm_out, us_sm_out, afs_sm_out, bg_sm_out])
+                              [pz_sm_out, cz_sm_out, us_sm_out, afs_sm_out, bg_sm_out])
                 if trained_model is not None:
                     model.load_weights(trained_model)
 
                 p_model = multi_gpu_model(model, gpus=nb_gpus)
 
-            #model_copy = Model([input_img, unsupervised_label, gt, supervised_flag, unsupervised_weight],[pz_out, cz_out, us_out, afs_out, bg_out])
+                # model_copy = Model([input_img, unsupervised_label, gt, supervised_flag, unsupervised_weight],[pz_out, cz_out, us_out, afs_out, bg_out])
 
                 # intermediate_layer_model = Model(inputs=train.input,outputs=train.get_layer(layer_name).output)
 

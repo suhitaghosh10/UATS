@@ -6,11 +6,11 @@ from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import Callback, ReduceLROnPlateau
 from keras.callbacks import ModelCheckpoint, TensorBoard
 
-from old.utils.preprocess_images import get_complete_array, get_array, save_array
 from old.prostate.generator.data_gen_optim import DataGenerator
 from old.prostate.model.prostate import weighted_model
 from old.utils.AugmentationGenerator import *
 from old.utils.ops import ramp_down_weight
+from old.utils.preprocess_images import get_complete_array, get_array, save_array
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 
 # 294 Training 58 have gt
@@ -32,7 +32,6 @@ ENS_GT_PATH = '/home/suhita/zonals/temporal/sad/ens_gt/'
 FLAG_PATH = '/home/suhita/zonals/temporal/sad/flag/'
 
 PERCENTAGE_OF_PIXELS = 5
-
 
 NUM_CLASS = 5
 num_epoch = 351
@@ -114,7 +113,6 @@ def train(gpu_id, nb_gpus):
                             np.zeros((32, 168, 168, 1)).astype('int8'))
             del unsupervised_target
 
-
         def on_batch_begin(self, batch, logs=None):
             pass
 
@@ -128,7 +126,6 @@ def train(gpu_id, nb_gpus):
 
             return flag_save, val_save
 
-
         def on_epoch_begin(self, epoch, logs=None):
             # tf.summary.scalar("labeled_pixels", np.count_nonzero(self.supervised_flag))
             if epoch > num_epoch - ramp_down_period:
@@ -137,14 +134,13 @@ def train(gpu_id, nb_gpus):
                 K.set_value(model.optimizer.beta_1, 0.4 * weight_down + 0.5)
                 print('LR: alpha-', K.eval(model.optimizer.lr), K.eval(model.optimizer.beta_1))
 
-
         def on_epoch_end(self, epoch, logs={}):
             sup_count = self.count
             # pz_save, self.val_pz_dice_coef = self.shall_save(logs['val_pz_dice_coef'], self.val_pz_dice_coef)
             # cz_save, self.val_cz_dice_coef = self.shall_save(logs['val_cz_dice_coef'], self.val_cz_dice_coef)
             # us_save, self.val_us_dice_coef = self.shall_save(logs['val_us_dice_coef'], self.val_us_dice_coef)
             # afs_save, self.val_afs_dice_coef = self.shall_save(logs['val_afs_dice_coef'], self.val_afs_dice_coef)
-            #bg_save, self.val_bg_dice_coef = self.shall_save(logs['val_bg_dice_coef'], self.val_bg_dice_coef)
+            # bg_save, self.val_bg_dice_coef = self.shall_save(logs['val_bg_dice_coef'], self.val_bg_dice_coef)
 
             if epoch <= 100:
                 THRESHOLD = 0.9
@@ -160,7 +156,7 @@ def train(gpu_id, nb_gpus):
 
                 for b_no in np.arange(num_batches):
                     actual_batch_size = patients_per_batch if (
-                                b_no <= num_batches - 1 and remainder == 0) else remainder
+                            b_no <= num_batches - 1 and remainder == 0) else remainder
                     start = (b_no * patients_per_batch) + num_labeled_train
                     end = (start + actual_batch_size)
                     imgs = get_array(self.imgs_path, start, end)
@@ -191,7 +187,6 @@ def train(gpu_id, nb_gpus):
                         logs['afs_dice_coef'] = K.eval(self.dice_coef(y_true[:,:,:,:,3], model_out[3][0:58, :, :, :]))
                         logs['bg_dice_coef'] = K.eval(self.dice_coef(y_true[:,:,:,:,4], model_out[4][0:58, :, :, :]))
                         '''
-
 
                     del model_out
 
@@ -226,7 +221,6 @@ def train(gpu_id, nb_gpus):
                 if 'cur_pred' in locals(): del cur_pred
 
                 # shuffle and init datagen again
-
 
     # callbacks
     print('-' * 30)
@@ -275,9 +269,8 @@ def train(gpu_id, nb_gpus):
                                        FLAG_PATH,
                                        train_id_list)
 
-
     steps = num_train_data / batch_size
-    #steps =2
+    # steps =2
 
     val_supervised_flag = np.ones((num_val_data, 32, 168, 168, 1), dtype='int8')
     val_x_arr = get_complete_array(VAL_IMGS_PATH)
@@ -349,7 +342,7 @@ if __name__ == '__main__':
         'Got batch_size %d, %d gpus' % (batch_size, nb_gpus)
 
     train(None, None)
-    #train(gpu, nb_gpus)
+    # train(gpu, nb_gpus)
     # val_x = np.load('/home/suhita/zonals/data/validation/valArray_imgs_fold1.npy')
     # val_y = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy').astype('int8')
 

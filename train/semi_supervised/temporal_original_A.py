@@ -1,5 +1,7 @@
-from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
 import os
+
+from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
+
 from utility.callbacks.temporal import TemporalCallback
 from utility.config import get_metadata
 from utility.constants import *
@@ -57,7 +59,7 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
                               batch_size=1, write_images=False)
 
     tcb = TemporalCallback(dim, data_path, ens_path, metadata[m_save_path], num_train_data, num_labeled_train,
-                     metadata[m_patients_per_batch], metadata[m_nr_class], bs, dataset_name)
+                           metadata[m_patients_per_batch], metadata[m_nr_class], bs, dataset_name)
     lcb = model_type.LossCallback()
     es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=PATIENCE_EARLY_STOP, min_delta=DELTA)
     cb = [model_checkpoint, tcb, tensorboard, lcb, csv_logger, es]
@@ -68,10 +70,11 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
     print('Fitting model...')
     print('-' * 30)
 
-    training_generator = get_temporal_data_generator(dataset_name, data_path, ens_path, num_train_data, num_labeled_train, bs,
-                                                 is_augmented)
+    training_generator = get_temporal_data_generator(dataset_name, data_path, ens_path, num_train_data,
+                                                     num_labeled_train, bs,
+                                                     is_augmented)
     steps = (num_train_data * metadata[m_aug_num]) // bs
-    #steps=2
+    # steps=2
 
     x_val, y_val = get_temporal_val_data(data_path, dim, metadata[m_nr_class], metadata[m_nr_channels])
 

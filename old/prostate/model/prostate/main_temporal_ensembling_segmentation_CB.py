@@ -2,11 +2,11 @@ from keras import backend as K
 from keras.callbacks import Callback
 from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, EarlyStopping, TensorBoard, CSVLogger
 
-from old.utils.preprocess_images import make_train_test_dataset
 from old.prostate import build_model
 from old.prostate.generator import DataGenerator
 from old.utils.AugmentationGenerator import *
 from old.utils.ops import ramp_up_weight, ramp_down_weight
+from old.utils.preprocess_images import make_train_test_dataset
 
 TB_LOG_DIR = './tb/cb/'
 
@@ -27,8 +27,6 @@ def train(train_x, train_y, val_x, val_y):
     alpha = 0.6
     EarlyStop = False
     LRScheduling = False
-
-
 
     # datagen list
     train_id_list = [str(i) for i in np.arange(0, train_x.shape[0])]
@@ -76,11 +74,10 @@ def train(train_x, train_y, val_x, val_y):
 
             # initial epoch
             self.ensemble_prediction = np.zeros((num_train_data, 32, 168, 168, num_class))
-            #self.cur_pred = np.zeros((num_train_data, 32, 168, 168, num_class))
+            # self.cur_pred = np.zeros((num_train_data, 32, 168, 168, num_class))
 
         def on_batch_begin(self, batch, logs=None):
             pass
-
 
         def on_batch_end(self, batch, logs=None):
 
@@ -197,12 +194,13 @@ def predict(val_x, val_y):
     nrChanels = 1
 
     name = 'augmented_x20_sfs16_dataGeneration_LR_'
-    #val_unsupervised_target = np.zeros((val_x.shape[0], 32, 168, 168, 5))
+    # val_unsupervised_target = np.zeros((val_x.shape[0], 32, 168, 168, 5))
     val_supervised_flag = np.ones((val_x.shape[0], 32, 168, 168, 1))
     val_unsupervised_weight = np.zeros((val_x.shape[0], 32, 168, 168, 5))
 
     x_val = [val_x, val_y, val_y, val_supervised_flag, val_unsupervised_weight]
-    y_val = [val_y[:, :, :, :, 0], val_y[:, :, :, :, 1], val_y[:, :, :, :, 2], val_y[:, :, :, :, 3], val_y[:, :, :, :, 4]]
+    y_val = [val_y[:, :, :, :, 0], val_y[:, :, :, :, 1], val_y[:, :, :, :, 2], val_y[:, :, :, :, 3],
+             val_y[:, :, :, :, 4]]
 
     print(name)
     model = build_model(num_class=5)
@@ -216,6 +214,7 @@ def predict(val_x, val_y):
 
     np.save(name + '.npy', out)
 
+
 if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = '1'
     # train
@@ -225,4 +224,4 @@ if __name__ == '__main__':
     val_y = np.load('/home/suhita/zonals/data/validation/valArray_GT_fold1.npy')
     train(train_x, train_y, val_x, val_y)
 
-    #predict(val_x, val_y)
+    # predict(val_x, val_y)
