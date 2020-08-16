@@ -4,12 +4,11 @@ import numpy as np
 
 class DataGenerator(keras.utils.Sequence):
 
-    def __init__(self, img_path, gt_path, id_list, batch_size=2, dim=(32, 168, 168), n_channels=1,
-                 n_classes=10, shuffle=True, rotation=True):
+    def __init__(self, path, id_list, batch_size, dim, n_channels, n_classes, shuffle=True, rotation=True):
         'Initialization'
         self.dim = dim
-        self.img_path = img_path
-        self.gt_path = gt_path
+        self.img_path = path+'/imgs/'
+        self.gt_path = path+'/gt/'
         self.batch_size = batch_size
         self.n_channels = n_channels
         self.n_classes = n_classes
@@ -34,10 +33,9 @@ class DataGenerator(keras.utils.Sequence):
 
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
-            aug_type = np.random.randint(0, 4)
 
-            X[i, :, :, :, :] = np.load(self.img_path + ID + '.npy')
-            aug_gt = np.load(self.gt_path + ID + '.npy')
+            X[i, :, :, :, :] = np.load(self.img_path + str(ID) + '.npy')
+            aug_gt = np.load(self.gt_path + str(ID) + '.npy')
 
             y1[i, :, :, :] = aug_gt[:, :, :, 0]
             y2[i, :, :, :] = aug_gt[:, :, :, 1]

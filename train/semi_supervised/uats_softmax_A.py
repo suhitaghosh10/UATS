@@ -15,7 +15,7 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
     data_path = os.path.join(metadata[m_data_path], 'fold_' + str(fold_num) + '_P' + str(labelled_perc), 'train')
     print('data directory:', data_path)
     tb_log_dir = os.path.join(metadata[m_save_path], 'tb', dataset_name, name + '_' + str(metadata[m_lr]) + '/')
-    model_name = os.path.join(metadata[m_save_path], 'model', dataset_name, name + H5)
+    model_name = os.path.join(metadata[m_save_path], 'model', 'uats', dataset_name, name + H5)
     csv_name = os.path.join(metadata[m_save_path], 'csv', dataset_name, name + '.csv')
     ens_path = os.path.join(metadata[m_root_temp_path], ens_folder_name)
     trained_model_path = os.path.join(metadata[m_trained_model_path], dataset_name, 'supervised_F' + str(fold_num) + '_P' + str(

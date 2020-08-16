@@ -27,8 +27,8 @@ try:
     # gpu_num = args.gpu_num
     gpu_num = '1'
     fold_num = 2
-    perc = 0.5
-    temp_path = 'sadv2'
+    perc = 0.50
+    temp_path = 'sadv223'
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_num
     metadata = get_metadata(args.ds)

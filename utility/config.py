@@ -6,6 +6,7 @@ _TEMP_PATH = '/data/suhita/temporal/prostate/output/'
 _SAVE_PATH = '/data/suhita/experiments/'
 _TRAINED_MODEL_PATH = '/data/suhita/experiments/model/supervised/'
 _UNLABELED_IMG_NUMPY = 'npy_img_unlabeled.npy'
+_PERC = [10, 10, 10, 10, 25],  # pz, tz, us, afs, bg
 _LR = 5e-5
 
 
@@ -23,7 +24,7 @@ def get_metadata(dataset_name):
                 m_patients_per_batch: 59,
                 m_update_epoch_num: 50,
                 m_mc_forward_pass: 10,
-                m_labelled_perc: [50, 50, 10, 10, 50],  # pz, tz, us, afs, bg
+                m_labelled_perc: _PERC,
 
                 # param
                 m_nr_class: 5,

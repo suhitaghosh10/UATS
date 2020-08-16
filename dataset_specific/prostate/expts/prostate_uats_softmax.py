@@ -27,7 +27,7 @@ try:
     # gpu_num = args.gpu_num
     gpu_num = '0'
     fold_num = 1
-    perc = 0.25
+    perc = 0.50
     temp_path = 'sadv1'
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_num

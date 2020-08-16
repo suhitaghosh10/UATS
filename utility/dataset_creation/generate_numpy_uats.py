@@ -6,7 +6,7 @@ from utility.prostate.evaluation import generate_predictions
 from utility.utils import makedir
 
 
-def generate_uats_dataset(dataset_name, fold_num, labelled_perc, ul_imgs_path, folds_root_path, supervised_model_path):
+def generate_uats_dataset(dataset_name, fold_num, labelled_perc, ul_imgs_path, folds_root_path, supervised_model_path, seed=1234):
     # fold_num = 1
     # perc = 0.1
     # dataset_name = PROSTATE_DATASET_NAME
@@ -20,7 +20,7 @@ def generate_uats_dataset(dataset_name, fold_num, labelled_perc, ul_imgs_path, f
     save_root_path = folds_root_path + dataset_name + '/'
     # generate predictions using suprvised model
     generate_predictions(supervised_model_path,
-                         'supervised_F' + str(fold_num) + '_P' + str(labelled_perc),
+                         dataset_name+'/supervised_F' + str(fold_num) + '_P' + str(labelled_perc),
                          unlabeled_imgs)
     unlabeled_imgs_gt = np.load(
         supervised_model_path + '/supervised_F' + str(fold_num) + '_P' + str(labelled_perc) + '.npy')
@@ -42,7 +42,7 @@ def generate_uats_dataset(dataset_name, fold_num, labelled_perc, ul_imgs_path, f
     makedir(save_root_path + 'fold_' + str(fold_num) + '_P' + str(labelled_perc) + '/val/gt/')
     num_labeled_train = int(labelled_perc * labelled_num)
     labelled_num_considrd = [str(i) for i in np.arange(labelled_num)]
-    np.random.seed(1234)
+    np.random.seed(seed)
     np.random.shuffle(labelled_num_considrd)
     labelled_num_considrd = labelled_num_considrd[0:num_labeled_train]
     counter = 0
