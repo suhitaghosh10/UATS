@@ -505,17 +505,17 @@ def postprocesAndEvaluateFiles(outDir, prediction, GT_array, csvName, eval=True,
 
         out_arr = np.zeros((prediction.shape[0], 32, 168, 168, 5))
         for i in range(0, prediction.shape[0]):
+        #for i in range(0, 5):
             print(i)
             array = removeIslands(prediction[i, :, :, :, :])
-            # np.save(outDir + 'predicted_' + str(i) + '.npy', array)
             print(array.shape)
             out_arr[i] = array
-        # print('preditction', prediction.shape)
-        # array = prediction[:, i, :, :, :]
-        np.save(outDir + model_name, out_arr.astype('int8'))
+        #npy_name = outDir + model_name
+        #np.save(npy_name, out_arr.astype('int8'))
 
     if eval:
         evaluateFiles_zones(GT_array, pred_directory=outDir, prediction_arr=outDir + model_name, csvName=csvName)
+    return out_arr.astype('int8')
 
 
 def predict_for_uats_mc(val_x_arr, val_y_arr, model, mc=False):
@@ -535,11 +535,6 @@ def predict_for_uats_mc(val_x_arr, val_y_arr, model, mc=False):
     output_arr[:, :, :, :, 4] = out[4]
     print(output_arr.shape)
 
-    # if mc:
-    #     print(model.evaluate(x_val, out[0:5], batch_size=1, verbose=1))
-    # else:
-    #     print(model.evaluate(x_val, out, batch_size=1, verbose=1))
-
     return output_arr
 
 
@@ -548,7 +543,7 @@ def generate_predictions(model_dir, model_name, ul_imgs):
     from dataset_specific.prostate.model.baseline import weighted_model
     wm = weighted_model()
     model = wm.build_model()
-    model.load_weights(model_dir + model_name + '.h5')
+    model.load_weights(os.path.join(model_dir , model_name + '.h5'))
     out = model.predict(ul_imgs, batch_size=1, verbose=1)
     output_arr = np.zeros((out[0].shape[0], 32, 168, 168, 5))
     output_arr[:, :, :, :, 0] = out[0]
@@ -558,7 +553,7 @@ def generate_predictions(model_dir, model_name, ul_imgs):
     output_arr[:, :, :, :, 4] = out[4]
     print(output_arr.shape)
 
-    postprocesAndEvaluateFiles(model_dir, output_arr, None, eval=False, csvName=csvName, prediction_arr_exists=False,
+    return postprocesAndEvaluateFiles(model_dir, output_arr, None, eval=False, csvName=csvName, prediction_arr_exists=False,
                                model_name=model_name)
 
 
@@ -603,7 +598,7 @@ def evaluate_supervised(model_dir, model_name, val_x, val_y, eval=True):
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = '3'
+    os.environ["CUDA_VISIBLE_DEVICES"] = ''
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 
     # evaluate_uats(model_dir='/data/suhita/experiments/model/uats/prostate/',
@@ -617,7 +612,7 @@ if __name__ == '__main__':
     #               )
 
     evaluate_supervised(model_dir='/data/suhita/experiments/model/supervised/prostate/',
-                   model_name='supervised_F1_P0.25',
+                   model_name='supervised_F2_P0.25',
                    val_x=np.load('/cache/suhita/data/prostate/final_test_array_imgs.npy'),
                    val_y=np.load('/cache/suhita/data/prostate/final_test_array_GT.npy').astype('int8')
                    )

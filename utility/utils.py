@@ -161,16 +161,12 @@ def get_supervised_data_generator(dataset_name, data_path, num_train, is_augment
         np.random.shuffle(train_id_list)
         print(train_id_list[0:10])
 
-        if is_augmented:
-            from dataset_specific.prostate.generator.baseline import DataGenerator as train_gen
-        else:
-            from dataset_specific.prostate.generator.baseline_A import DataGenerator as train_gen
+        from dataset_specific.prostate.generator.baseline_A import DataGenerator as train_gen
         return train_gen(data_path,
                          train_id_list,
                          batch_size=metadata[m_batch_size],
                          dim=metadata[m_dim],
-                         n_channels=metadata[m_nr_channels],
-                         n_classes=metadata[m_nr_class])
+                         is_augmented=is_augmented)
 
 
 def get_temporal_data_generator(dataset_name, data_path, ens_path, num_train, num_train_labelled, batch_size,

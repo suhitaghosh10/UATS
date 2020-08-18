@@ -2,8 +2,8 @@ import os
 import numpy as np
 from utility.config import get_metadata
 from utility.constants import *
-from utility.prostate.evaluation import generate_predictions
 from utility.utils import makedir
+from numpy.random import default_rng
 
 
 def generate_supervised_dataset(dataset_name, fold_num, labelled_perc, folds_root_path, seed=1234):
@@ -18,16 +18,19 @@ def generate_supervised_dataset(dataset_name, fold_num, labelled_perc, folds_roo
     makedir(save_root_path + 'fold_' + str(fold_num) + '_P' + str(labelled_perc) + '/val/imgs/', delete_existing=True)
     makedir(save_root_path + 'fold_' + str(fold_num) + '_P' + str(labelled_perc) + '/val/gt/', delete_existing=True)
     num_labeled_train = int(labelled_perc * labelled_num)
-    labelled_num_considrd = [str(i) for i in np.arange(labelled_num)]
     np.random.seed(seed)
-    np.random.shuffle(labelled_num_considrd)
-    labelled_num_considrd = labelled_num_considrd[0:num_labeled_train]
+
+
+    rng = default_rng()
+    labelled_num_considrd = rng.choice(labelled_num, size=num_labeled_train, replace=False)
+   # labelled_num_considrd = np.random.randint(0, labelled_num, size=num_labeled_train, dtype=np.int)
+
     counter = 0
     for i in labelled_num_considrd:
         np.save(save_root_path + 'fold_' + str(fold_num) + '_P' + str(labelled_perc) + '/train/imgs/' + str(counter),
-                np.load(os.path.join(supervised_fold_path, 'train', 'imgs', i + '.npy')))
+                np.load(os.path.join(supervised_fold_path, 'train', 'imgs', str(i) + '.npy')))
         np.save(save_root_path + 'fold_' + str(fold_num) + '_P' + str(labelled_perc) + '/train/gt/' + str(counter),
-                np.load(os.path.join(supervised_fold_path, 'train', 'gt', i + '.npy')))
+                np.load(os.path.join(supervised_fold_path, 'train', 'gt',str(i) + '.npy')))
         counter = counter + 1
         print(i, counter)
     print('copied labelled training images')

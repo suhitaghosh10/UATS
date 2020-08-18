@@ -6,13 +6,14 @@ from utility.constants import NPY
 
 
 class DataGenerator(keras.utils.Sequence):
-    def __init__(self, data_path, id_list, batch_size, dim):
+    def __init__(self, data_path, id_list, batch_size, dim, is_augmented=True):
         'Initialization'
         self.dim = dim
         self.data_path = data_path
         self.batch_size = batch_size
         self.id_list = id_list
         self.indexes = np.arange(len(self.id_list))
+        self.is_augmented = is_augmented
 
     def on_epoch_end(self):
         np.random.shuffle(self.indexes)
@@ -29,11 +30,15 @@ class DataGenerator(keras.utils.Sequence):
 
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
-            aug_type = np.random.randint(0, 5)
-            img[i, :, :, :, :], gt= get_single_image_augmentation(
+            if self.is_augmented:
+                aug_type = np.random.randint(0, 5)
+                img[i, :, :, :, :], gt= get_single_image_augmentation(
                 aug_type,
                 np.load(self.data_path + '/imgs/' + str(ID) + NPY),
                 np.load(self.data_path + '/gt/' + str(ID) + NPY))
+            else:
+                img[i, :, :, :, :] = np.load(self.data_path + '/imgs/' + str(ID) + NPY)
+                gt = np.load(self.data_path + '/gt/' + str(ID) + NPY)
 
             pz_gt[i] = gt[:, :, :, 0]
             cz_gt[i] = gt[:, :, :, 1]
@@ -41,7 +46,7 @@ class DataGenerator(keras.utils.Sequence):
             afs_gt[i] = gt[:, :, :, 3]
             bg_gt[i] = gt[:, :, :, 4]
 
-        x_t = [img]
+        x_t = img
         y_t = [pz_gt, cz_gt, us_gt, afs_gt, bg_gt]
         del gt, img
 
@@ -62,4 +67,4 @@ class DataGenerator(keras.utils.Sequence):
         # Generate data
         img, [pz_gt, cz_gt, us_gt, afs_gt, bg_gt] = self.__data_generation(list_IDs_temp)
 
-        return [img], [pz_gt, cz_gt, us_gt, afs_gt, bg_gt]
+        return img, [pz_gt, cz_gt, us_gt, afs_gt, bg_gt]
