@@ -9,7 +9,7 @@ ENS_GT = 'ens_gt'
 FLAG = 'flag'
 IMGS = 'imgs'
 GT = 'gt'
-PATIENCE_EARLY_STOP = 50
+PATIENCE_EARLY_STOP = 30
 DELTA = 0.0005
 NUM_EPOCH = 1000
 

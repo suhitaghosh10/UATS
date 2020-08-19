@@ -75,7 +75,7 @@ def getBoundaryDistances(prediction, groundTruth):
     return (hausdorff, mean)
 
 
-def evaluateFiles_zones(GT_array, pred_directory, prediction_arr, csvName):
+def evaluateFiles_zones(GT_array, prediction_arr, csvName):
     with open(csvName + '.csv', 'w') as csvfile:
         csvwriter = csv.writer(csvfile, delimiter=';', lineterminator='\n',
                                quotechar='|', quoting=csv.QUOTE_MINIMAL)
@@ -93,9 +93,9 @@ def evaluateFiles_zones(GT_array, pred_directory, prediction_arr, csvName):
             values = ['Case' + str(imgNumber)]
             temp_dice = []
             temp_mad = []
-            predictions = np.load(prediction_arr + '.npy')
+           # predictions = np.load(prediction_arr + '.npy')
             for zoneIndex in range(0, 5):
-                pred_arr = predictions[imgNumber, :, :, :, zoneIndex]
+                pred_arr = prediction_arr[imgNumber, :, :, :, zoneIndex]
                 pred_arr = thresholdArray(pred_arr, 0.5)
                 # pred_arr = pred_arr.astype(int)
                 # maxValue = np.max(pred_arr)
@@ -514,7 +514,7 @@ def postprocesAndEvaluateFiles(outDir, prediction, GT_array, csvName, eval=True,
         #np.save(npy_name, out_arr.astype('int8'))
 
     if eval:
-        evaluateFiles_zones(GT_array, pred_directory=outDir, prediction_arr=outDir + model_name, csvName=csvName)
+        evaluateFiles_zones(GT_array, prediction_arr=out_arr, csvName=csvName)
     return out_arr.astype('int8')
 
 
@@ -598,21 +598,21 @@ def evaluate_supervised(model_dir, model_name, val_x, val_y, eval=True):
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = ''
+    os.environ["CUDA_VISIBLE_DEVICES"] = '3'
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 
-    # evaluate_uats(model_dir='/data/suhita/experiments/model/uats/prostate/',
-    #               # model_dir='/data/suhita/prostate/',
-    #               model_name='uats_softmax_F2_Perct_Labelled_0.5.h5',
-    #               #model_name='uats_mc_entropy_F1_Perct_Labelled_1.0.h5',
-    #               val_x=np.load('/cache/suhita/data/prostate/final_test_array_imgs.npy'),
-    #               val_y=np.load('/cache/suhita/data/prostate/final_test_array_GT.npy').astype('int8'),
-    #               mc=True,
-    #
-    #               )
+    evaluate_uats(model_dir='/data/suhita/experiments/model/uats/prostate/',
+                  # model_dir='/data/suhita/prostate/',
+                  model_name='uats_softmax_F3_Perct_Labelled_0.5.h5',
+                  #model_name='uats_mc_entropy_F1_Perct_Labelled_1.0.h5',
+                  val_x=np.load('/cache/suhita/data/prostate/final_test_array_imgs.npy'),
+                  val_y=np.load('/cache/suhita/data/prostate/final_test_array_GT.npy').astype('int8'),
+                  mc=False,
 
-    evaluate_supervised(model_dir='/data/suhita/experiments/model/supervised/prostate/',
-                   model_name='supervised_F2_P0.25',
-                   val_x=np.load('/cache/suhita/data/prostate/final_test_array_imgs.npy'),
-                   val_y=np.load('/cache/suhita/data/prostate/final_test_array_GT.npy').astype('int8')
-                   )
+                  )
+
+    # evaluate_supervised(model_dir='/data/suhita/experiments/model/supervised/prostate/',
+    #                model_name='supervised_F1_P0.5',
+    #                val_x=np.load('/cache/suhita/data/prostate/final_test_array_imgs.npy'),
+    #                val_y=np.load('/cache/suhita/data/prostate/final_test_array_GT.npy').astype('int8')
+    #                )
