@@ -64,7 +64,7 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
                               batch_size=1, write_images=False)
 
     tcb = TemporalCallback(dim, data_path, ens_path, metadata[m_save_path], num_train_data, num_labeled_train,
-                           metadata[m_patients_per_batch], *metadata[m_labelled_perc], metadata[m_metric_keys],
+                           metadata[m_patients_per_batch], metadata[m_labelled_perc], metadata[m_metric_keys],
                            metadata[m_nr_class], bs, dataset_name)
 
     lcb = model_type.LossCallback()
@@ -81,7 +81,7 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
                                                  bs,
                                                  is_augmented)
 
-    steps = (metadata[m_labelled_train] * metadata[m_aug_num]) // bs
+    steps = ((metadata[m_labelled_train] + num_ul) * metadata[m_aug_num]) // bs
 
     x_val, y_val = get_uats_val_data(data_path, dim, metadata[m_nr_class], metadata[m_nr_channels])
 

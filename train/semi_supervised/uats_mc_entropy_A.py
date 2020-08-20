@@ -78,7 +78,7 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
                                                  bs,
                                                  is_augmented)
 
-    steps = (metadata[m_labelled_train] * metadata[m_aug_num]) // bs
+    steps = ((metadata[m_labelled_train] + num_ul) * metadata[m_aug_num]) // bs
 
     x_val, y_val = get_uats_val_data(data_path, dim, metadata[m_nr_class], metadata[m_nr_channels])
 

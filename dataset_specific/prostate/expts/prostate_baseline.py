@@ -4,7 +4,7 @@ import os
 import tensorflow as tf
 
 from dataset_specific.prostate.model.baseline import weighted_model
-from train.supervised.baseline_A import train
+from train.supervised.baseline import train
 from utility.config import get_metadata
 from utility.constants import *
 
@@ -25,8 +25,8 @@ try:
     # temp_path = args.temp_path
     # gpu_num = args.gpu_num
     gpu_num = '3'
-    fold_num = 1
-    perc = 0.5
+    fold_num = 4
+    perc = 1.0
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_num
     metadata = get_metadata(args.ds)

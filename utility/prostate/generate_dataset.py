@@ -4,6 +4,7 @@ from utility.config import get_metadata
 from utility.constants import *
 from utility.prostate.evaluation import generate_predictions
 from utility.utils import makedir
+from numpy.random import default_rng
 
 
 def generate_uats_dataset(dataset_name, fold_num, labelled_perc, ul_imgs_path, folds_root_path, supervised_model_path):
