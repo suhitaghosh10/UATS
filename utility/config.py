@@ -6,8 +6,8 @@ _TEMP_PATH = '/data/suhita/temporal/prostate/output/'
 _SAVE_PATH = '/data/suhita/experiments/'
 _TRAINED_MODEL_PATH = '/data/suhita/experiments/model/supervised/'
 _UNLABELED_IMG_NUMPY = 'npy_img_unlabeled.npy'
-_PERC = [10, 10, 10, 10, 25]  # pz, tz, us, afs, bg
-#_PERC = [50, 50, 10, 10, 50]
+_PERC = [10, 10, 10, 10, 25]  # pz, tz, us, afs, bg #for 0.1, 0.25, 0.5
+#_PERC = [50, 50, 10, 10, 50] # pz, tz, us, afs, bg #for only 1.0 experiments
 _LR = 5e-5
 
 
