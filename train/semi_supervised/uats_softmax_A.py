@@ -12,7 +12,7 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
     metadata = get_metadata(dataset_name)
     name = 'uats_softmax_F' + str(fold_num) + '_Perct_Labelled_' + str(labelled_perc)
 
-    data_path = os.path.join(metadata[m_data_path], 'fold_' + str(fold_num) + '_P' + str(labelled_perc), 'train')
+    data_path = os.path.join(metadata[m_data_path], dataset_name, 'fold_' + str(fold_num) + '_P' + str(labelled_perc), 'train')
     print('data directory:', data_path)
     tb_log_dir = os.path.join(metadata[m_save_path], 'tb', dataset_name, name + '_' + str(metadata[m_lr]) + '/')
     model_name = os.path.join(metadata[m_save_path], 'model', 'uats', dataset_name, name + H5)

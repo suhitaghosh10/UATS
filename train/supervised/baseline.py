@@ -11,7 +11,7 @@ def train(gpu_id, nb_gpus, dataset_name, labelled_perc, fold_num, model_type, is
     metadata = get_metadata(dataset_name)
     name = 'supervised_F' + str(fold_num) + '_P' + str(labelled_perc)
 
-    data_path = os.path.join(metadata[m_data_path], 'fold_' + str(fold_num) + '_P' + str(labelled_perc), 'train')
+    data_path = os.path.join(metadata[m_data_path], dataset_name, 'fold_' + str(fold_num) + '_P' + str(labelled_perc), 'train')
     print('data directory:', data_path)
     tb_log_dir = os.path.join(metadata[m_save_path], 'tb', dataset_name, name + '_' + str(metadata[m_lr]) + '/')
     model_name = os.path.join(metadata[m_trained_model_path], dataset_name, name + H5)
@@ -26,8 +26,8 @@ def train(gpu_id, nb_gpus, dataset_name, labelled_perc, fold_num, model_type, is
     print('-' * 30)
     print('Creating and compiling model...')
     print('-' * 30)
-
-    model = model_type.build_model(img_shape=(dim[0], dim[1], dim[2]),
+    inp_shape = dim if len(dim)==3 else (dim[0], dim[1], metadata[m_nr_channels])
+    model = model_type.build_model(img_shape=inp_shape,
                                    learning_rate=metadata[m_lr],
                                    gpu_id=gpu_id,
                                    nb_gpus=nb_gpus)

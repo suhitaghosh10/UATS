@@ -13,29 +13,6 @@ smooth = 1.
 
 class weighted_model:
 
-    def complex_loss(self, mask):
-
-        def weighted_binary_cross_entropy(y_true, y_pred):
-
-            loss_alpha = 0.7
-            dice_loss = -K.mean(self.dice_coef(y_true, y_pred))
-
-            size_of_A_intersect_B = K.sum(y_true * y_pred * mask)
-            size_of_A = K.sum(y_true * mask)
-            size_of_B = K.sum(y_pred * mask)
-            sign_B = tf.where(tf.greater(y_pred, 0), K.ones_like(mask), K.zeros_like(mask))
-            if tf.greater(size_of_A_intersect_B, 0) is not None:
-                c = K.sum(y_true * y_pred) / K.sum(y_true * sign_B)
-            else:
-                c = 1
-
-            cDC = -K.mean((2. * size_of_A_intersect_B) + smooth) / ((c * size_of_A) + size_of_B + smooth)
-            tf.summary.scalar("cdc_loss", (1 - loss_alpha) * cDC)
-            tf.summary.scalar("dc_loss", loss_alpha * dice_loss)
-            return (1 - loss_alpha) * cDC + loss_alpha * dice_loss
-
-        return weighted_binary_cross_entropy
-
     def dice_coef(self, y_true, y_pred):
         y_true_f = K.flatten(y_true)
         y_pred_f = K.flatten(y_pred)

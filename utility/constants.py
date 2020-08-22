@@ -15,6 +15,7 @@ NUM_EPOCH = 1000
 
 # dataset names
 PROSTATE_DATASET_NAME = 'prostate'
+SKIN_DATASET_NAME = 'skin'
 
 # model types
 MODEL_SSL_UATS_SM = 'uats_softmax'
@@ -27,7 +28,9 @@ MODEL_SL_BASELINE = 'baseline'
 MODEL_SL_TEMPORAL = 'supervised_temporal'
 
 # metadata
+m_raw_data_path = 'raw_data_path'
 m_data_path = 'data_path'
+m_folds_path = 'folds_numpy_path'
 m_save_path = 'save_path'
 m_root_temp_path = 'temp_path'
 m_trained_model_path = 'trained_model'

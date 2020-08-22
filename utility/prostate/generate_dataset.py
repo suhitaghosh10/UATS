@@ -5,12 +5,13 @@ from utility.constants import *
 from utility.prostate.evaluation import generate_predictions
 from utility.utils import makedir
 from numpy.random import default_rng
+from utility.config import get_metadata
 
+def generate_uats_dataset(dataset_name, fold_num, labelled_perc, ul_imgs_path, supervised_model_path):
 
-def generate_uats_dataset(dataset_name, fold_num, labelled_perc, ul_imgs_path, folds_root_path, supervised_model_path):
-
+    metadata = get_metadata(dataset_name)
     unlabeled_imgs = np.load(ul_imgs_path)
-    supervised_fold_path = os.path.join(folds_root_path , dataset_name , 'fold_' + str(fold_num)+'_P' + str(labelled_perc))
+    supervised_fold_path = os.path.join(metadata[m_data_path] , dataset_name , 'fold_' + str(fold_num)+'_P' + str(labelled_perc))
     labelled_num_considrd = len(os.listdir(os.path.join(supervised_fold_path, 'train', 'imgs')))
     counter = labelled_num_considrd
     # generate predictions using suprvised model
@@ -35,17 +36,18 @@ def generate_uats_dataset(dataset_name, fold_num, labelled_perc, ul_imgs_path, f
     print('copied unlabelled training images')
 
 
-def generate_supervised_dataset(dataset_name, fold_num, labelled_perc, folds_root_path, seed=1234):
+def generate_supervised_dataset(dataset_name, fold_num, labelled_perc, seed=1234):
 
     metadata = get_metadata(dataset_name)
-    supervised_fold_path = folds_root_path + dataset_name + '/fold_' + str(fold_num) + '/'
-    save_root_path = folds_root_path + dataset_name + '/'
+    folds_root_path = metadata[m_data_path]
+    save_root_path = os.path.join(metadata[m_data_path], dataset_name)
+    supervised_fold_path = os.path.join(save_root_path, 'fold_' + str(fold_num) + '_P' + str(labelled_perc))
     labelled_num = metadata[m_labelled_train]
     # training
-    makedir(save_root_path + 'fold_' + str(fold_num) + '_P' + str(labelled_perc) + '/train/imgs/', delete_existing=True)
-    makedir(save_root_path + 'fold_' + str(fold_num) + '_P' + str(labelled_perc) + '/train/gt/', delete_existing=True)
-    makedir(save_root_path + 'fold_' + str(fold_num) + '_P' + str(labelled_perc) + '/val/imgs/', delete_existing=True)
-    makedir(save_root_path + 'fold_' + str(fold_num) + '_P' + str(labelled_perc) + '/val/gt/', delete_existing=True)
+    makedir(os.path.join(supervised_fold_path, 'train', 'imgs'), delete_existing=True)
+    makedir(os.path.join(supervised_fold_path, 'train', 'gt'), delete_existing=True)
+    makedir(os.path.join(supervised_fold_path, 'val', 'imgs'), delete_existing=True)
+    makedir(os.path.join(supervised_fold_path, 'val', 'gt'), delete_existing=True)
     num_labeled_train = int(labelled_perc * labelled_num)
     np.random.seed(seed)
 

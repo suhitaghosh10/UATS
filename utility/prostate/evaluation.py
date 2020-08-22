@@ -603,7 +603,7 @@ if __name__ == '__main__':
 
     evaluate_uats(model_dir='/data/suhita/experiments/model/uats/prostate/',
                   # model_dir='/data/suhita/prostate/',
-                  model_name='uats_softmax_F4_Perct_Labelled_1.0.h5',
+                  model_name='uats_softmax_F2_Perct_Labelled_0.1.h5',
                   #model_name='uats_mc_entropy_F1_Perct_Labelled_1.0.h5',
                   val_x=np.load('/cache/suhita/data/prostate/final_test_array_imgs.npy'),
                   val_y=np.load('/cache/suhita/data/prostate/final_test_array_GT.npy').astype('int8'),
