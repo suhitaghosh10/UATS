@@ -86,6 +86,7 @@ def get_dice_from_array(arr1, arr2):
 
 def evaluateFiles_arr(img_path, imgs, prediction, GT_array, csvName, connected_component=False, eval=True,
                       out_dir=None):
+
     with open(csvName, 'w') as csvfile:
         csvwriter = csv.writer(csvfile, delimiter=';', lineterminator='\n',
                                quotechar='|', quoting=csv.QUOTE_MINIMAL)
@@ -563,7 +564,7 @@ def eval_for_supervised(model_dir, img_path, model_name, eval=True, out_dir=None
         img_arr = create_test_arrays(img_path, eval=eval)
         GT_arr = None
     DIM = img_arr.shape
-    from dataset_specific.skin_2D import weighted_model
+    from dataset_specific.skin_2D.model.baseline import weighted_model
     wm = weighted_model()
     model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=learning_rate)
     model.load_weights(os.path.join(model_dir, model_name + '.h5'))
@@ -575,6 +576,37 @@ def eval_for_supervised(model_dir, img_path, model_name, eval=True, out_dir=None
     evaluateFiles_arr(img_path=img_path, imgs=img_arr, prediction=prediction, GT_array=GT_arr, csvName=csvName,
                       connected_component=True,
                       out_dir=out_dir, eval=eval)
+
+def generate_predictions(model_dir, img_path, model_name, out_dir=None):
+    img_arr = create_test_arrays(img_path, eval=False)
+    DIM = img_arr.shape
+    from dataset_specific.skin_2D.model.baseline import weighted_model
+    wm = weighted_model()
+    model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=learning_rate)
+    model.load_weights(os.path.join(model_dir, model_name + '.h5'))
+    prediction = model.predict(img_arr, batch_size=1)
+    nrImgs = prediction.shape[0]
+    for imgNumber in range(0, nrImgs):
+        print(imgNumber)
+        prediction_skin = prediction[1]
+        pred_arr = prediction_skin[imgNumber]
+        pred_arr = thresholdArray(pred_arr, 0.5)
+        pred_img = sitk.GetImageFromArray(pred_arr)  # only foreground=skin for evaluation
+        pred_img = castImage(pred_img, sitk.sitkUInt8)
+
+        prediction_bg = prediction[0]
+        pred_arr_bg = prediction_bg[imgNumber]
+        pred_arr_bg = thresholdArray(pred_arr_bg, 0.5)
+
+        pred_img = getConnectedComponents(pred_img)
+        pred_img_arr = sitk.GetArrayFromImage(pred_img)
+        GT_out = np.zeros([pred_arr.shape[0], pred_arr.shape[1], 2])
+        GT_out[:, :, 0] = pred_arr_bg
+        GT_out[:, :, 1] = pred_arr
+
+        np.save(out_dir + '/imgs/' + str(imgNumber) + '.npy', imgs[imgNumber])
+        np.save(out_dir + '/GT/' + str(imgNumber) + '.npy', GT_out)
+
 
 
 if __name__ == '__main__':

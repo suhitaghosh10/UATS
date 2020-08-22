@@ -1,38 +1,8 @@
 import os
-
 import keras
 import numpy as np
 from keras.preprocessing.image import ImageDataGenerator
-
-
-def remove_tumor_segmentation(arr):
-    arr[arr > 1] = 1
-    return arr
-
-
-def augment_image(img, augmentation_type, datagen):
-    if augmentation_type == 0:  # rotation
-        delta = np.random.uniform(0, 180)
-        out = datagen.apply_transform(x=img, transform_parameters={'theta': delta})
-    if augmentation_type == 1:  # translation
-        [delta_x, delta_y] = [np.random.uniform(-15, 15), np.random.uniform(-10, 10)]  # in mm
-        out = datagen.apply_transform(x=img, transform_parameters={'tx': delta_x, 'ty': delta_y})
-
-    if augmentation_type == 2:  # scale
-        scale_factor = np.random.uniform(1.0, 1.2)
-        out = datagen.apply_transform(x=img, transform_parameters={'sx': scale_factor, 'sy': scale_factor})
-
-    if augmentation_type == 3:
-        out = img
-
-    if augmentation_type == 4:
-        out = datagen.apply_transform(x=img, transform_parameters={'flip_horizontal': True})
-
-    if augmentation_type == 5:
-        out = datagen.apply_transform(x=img, transform_parameters={'flip_vertical': True})
-
-    return out
-
+from utility.skin.preprocess import augment_image
 
 class DataGenerator(keras.utils.Sequence):
 
@@ -69,10 +39,6 @@ class DataGenerator(keras.utils.Sequence):
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
 
-            # Y[i, :, :, :, 0] = remove_tumor_segmentation(np.load(os.path.join(self.data_path, segm_file_name)))#[10:-10, 10:-10, 2:-2]
-
-            # sitk.WriteImage(sitk.GetImageFromArray(X[i, :, :, :, 0]), 'img.nrrd')
-            # sitk.WriteImage(sitk.GetImageFromArray(Y[i, :, :, :, 0]), 'segm.nrrd')
             x = np.load(os.path.join(self.data_path, 'imgs', str(ID) + '.npy'))
             y = np.load(os.path.join(self.data_path, 'GT', str(ID) + '.npy'))
             ens = np.load(os.path.join(self.ens_path, 'ens_gt', str(ID) + '.npy'))

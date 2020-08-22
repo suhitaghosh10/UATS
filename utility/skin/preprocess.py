@@ -3,9 +3,10 @@ import math
 
 import cv2
 import numpy as np
+import os
+import SimpleITK as sitk
 
-
-class Prep(object):
+class SkinPreprocess(object):
 
     def __init__(self, path):
         self.__img = cv2.imread(path, cv2.IMREAD_COLOR)
@@ -201,3 +202,72 @@ def getArrayOfGrayLevelsWithFreq(gray_img, lvldtype=np.uint8):
         for y in range(0, (gray_img.shape)[1], 1):
             aryoflst = __ins(aryoflst, gray_img[x, y], index=aryoflst.size)
     return aryoflst
+
+def augment_image(img, augmentation_type, datagen):
+    if augmentation_type == 0:  # rotation
+        delta = np.random.uniform(0, 180)
+        out = datagen.apply_transform(x=img, transform_parameters={'theta': delta})
+    if augmentation_type == 1:  # translation
+        [delta_x, delta_y] = [np.random.uniform(-15, 15), np.random.uniform(-10, 10)]  # in mm
+        out = datagen.apply_transform(x=img, transform_parameters={'tx': delta_x, 'ty': delta_y})
+
+    if augmentation_type == 2:  # scale
+        scale_factor = np.random.uniform(1.0, 1.2)
+        out = datagen.apply_transform(x=img, transform_parameters={'sx': scale_factor, 'sy': scale_factor})
+
+    if augmentation_type == 3:
+        out = img
+
+    if augmentation_type == 4:
+        out = datagen.apply_transform(x=img, transform_parameters={'flip_horizontal': True})
+
+    if augmentation_type == 5:
+        out = datagen.apply_transform(x=img, transform_parameters={'flip_vertical': True})
+
+    return out
+
+def thresholdArray(array, threshold):
+    # threshold image
+    array[array < threshold] = 0
+    array[array >= threshold] = 1
+    array = np.asarray(array, np.int16)
+
+    return array
+
+
+def castImage(img, type):
+    castFilter = sitk.CastImageFilter()
+    castFilter.SetOutputPixelType(type)  # sitk.sitkUInt8
+    out = castFilter.Execute(img)
+
+    return out
+
+def getConnectedComponents(predictionImage):
+    pred_img = castImage(predictionImage, sitk.sitkInt8)
+    pred_img_cc = getLargestConnectedComponents(pred_img)
+    pred_img_cc = castImage(pred_img_cc, sitk.sitkInt8)
+
+    # img_isl = sitk.Subtract(pred_img, pred_img_cc)
+
+    return pred_img_cc
+
+
+def getLargestConnectedComponents(img):
+    connectedFilter = sitk.ConnectedComponentImageFilter()
+    connectedComponents = connectedFilter.Execute(img)
+
+    labelStatistics = sitk.LabelShapeStatisticsImageFilter()
+    labelStatistics.Execute(connectedComponents)
+    nrLabels = labelStatistics.GetNumberOfLabels()
+
+    biggestLabelSize = 0
+    biggestLabelIndex = 1
+    for i in range(1, nrLabels + 1):
+        curr_size = labelStatistics.GetNumberOfPixels(i)
+        if curr_size > biggestLabelSize:
+            biggestLabelSize = curr_size
+            biggestLabelIndex = i
+
+    largestComponent = sitk.BinaryThreshold(connectedComponents, biggestLabelIndex, biggestLabelIndex)
+
+    return largestComponent

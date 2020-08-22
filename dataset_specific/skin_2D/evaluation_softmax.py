@@ -316,7 +316,7 @@ def eval_for_uats_softmax(model_dir, model_name, batch_size=1, out_dir=None, con
     img_arr, GT_arr = create_test_arrays(GT_dir)
     print('create end')
     DIM = img_arr.shape
-    from dataset_specific.skin_2D import weighted_model
+    from dataset_specific.skin_2D.model.uats_softmax import weighted_model
     wm = weighted_model()
     model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=learning_rate, gpu_id=None,
                            nb_gpus=None, trained_model=os.path.join(model_dir, model_name + '.h5'))[0]
@@ -338,7 +338,7 @@ def eval_for_uats_mc(model_dir, model_name, batch_size=1, out_dir=None, lesion=F
 
     print('create end')
     DIM = img_arr.shape
-    from dataset_specific.skin_2D import weighted_model
+    from dataset_specific.skin_2D.model.uats_entropy import weighted_model
     wm = weighted_model()
     model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=learning_rate, gpu_id=None,
                            nb_gpus=None, trained_model=os.path.join(model_dir, model_name + '.h5'))
@@ -360,7 +360,7 @@ def eval_for_supervised(model_dir, img_path, model_name, eval=True, out_dir=None
         img_arr = create_test_arrays(img_path, eval=eval)
         GT_arr = None
     DIM = img_arr.shape
-    from dataset_specific.skin_2D import weighted_model
+    from dataset_specific.skin_2D.model.baseline import weighted_model
     wm = weighted_model()
     model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=learning_rate)
     model.load_weights(os.path.join(model_dir, model_name + '.h5'))
@@ -369,6 +369,8 @@ def eval_for_supervised(model_dir, img_path, model_name, eval=True, out_dir=None
     # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
     evaluateFiles_arr(img_path=img_path, prediction=prediction, connected_component=connected_component,
                       out_dir=out_dir, eval=eval)
+
+
 
 
 if __name__ == '__main__':

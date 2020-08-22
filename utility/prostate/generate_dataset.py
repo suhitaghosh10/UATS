@@ -40,14 +40,14 @@ def generate_supervised_dataset(dataset_name, fold_num, labelled_perc, seed=1234
 
     metadata = get_metadata(dataset_name)
     folds_root_path = metadata[m_data_path]
-    save_root_path = os.path.join(metadata[m_data_path], dataset_name)
-    supervised_fold_path = os.path.join(save_root_path, 'fold_' + str(fold_num) + '_P' + str(labelled_perc))
+    save_root_path = os.path.join(folds_root_path, dataset_name,'fold_' + str(fold_num) + '_P' + str(labelled_perc))
+    supervised_fold_path = os.path.join(folds_root_path, dataset_name, 'fold_' + str(fold_num))
     labelled_num = metadata[m_labelled_train]
     # training
-    makedir(os.path.join(supervised_fold_path, 'train', 'imgs'), delete_existing=True)
-    makedir(os.path.join(supervised_fold_path, 'train', 'gt'), delete_existing=True)
-    makedir(os.path.join(supervised_fold_path, 'val', 'imgs'), delete_existing=True)
-    makedir(os.path.join(supervised_fold_path, 'val', 'gt'), delete_existing=True)
+    makedir(os.path.join(save_root_path, 'train', 'imgs'), delete_existing=True)
+    makedir(os.path.join(save_root_path, 'train', 'gt'), delete_existing=True)
+    makedir(os.path.join(save_root_path, 'val', 'imgs'), delete_existing=True)
+    makedir(os.path.join(save_root_path, 'val', 'gt'), delete_existing=True)
     num_labeled_train = int(labelled_perc * labelled_num)
     np.random.seed(seed)
 
@@ -58,18 +58,19 @@ def generate_supervised_dataset(dataset_name, fold_num, labelled_perc, seed=1234
 
     counter = 0
     for i in labelled_num_considrd:
-        np.save(save_root_path + 'fold_' + str(fold_num) + '_P' + str(labelled_perc) + '/train/imgs/' + str(counter),
+        np.save(os.path.join(save_root_path, 'train','imgs', str(counter)),
                 np.load(os.path.join(supervised_fold_path, 'train', 'imgs', str(i) + '.npy')))
-        np.save(save_root_path + 'fold_' + str(fold_num) + '_P' + str(labelled_perc) + '/train/gt/' + str(counter),
+        np.save(os.path.join(save_root_path, 'train','gt', str(counter)),
                 np.load(os.path.join(supervised_fold_path, 'train', 'gt',str(i) + '.npy')))
         counter = counter + 1
         print(i, counter)
     print('copied labelled training images')
 
+    counter=0
     for i in np.arange(metadata[m_labelled_val]):
-        np.save(save_root_path + 'fold_' + str(fold_num) + '_P' + str(labelled_perc) + '/val/imgs/' + str(i),
+        np.save(os.path.join(save_root_path, 'val', 'imgs', str(counter)),
                 np.load(os.path.join(supervised_fold_path, 'val', 'imgs', str(i) + '.npy')))
-        np.save(save_root_path + 'fold_' + str(fold_num) + '_P' + str(labelled_perc) + '/val/gt/' + str(i),
+        np.save(os.path.join(save_root_path, 'val', 'gt', str(counter)),
                 np.load(os.path.join(supervised_fold_path, 'val', 'gt', str(i) + '.npy')))
         print(i)
     print('copied labelled val images')

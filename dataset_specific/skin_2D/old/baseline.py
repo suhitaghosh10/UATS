@@ -7,11 +7,9 @@ import os
 import numpy as np
 from keras.callbacks import ModelCheckpoint, TensorBoard, EarlyStopping, CSVLogger
 
-from dataset_specific.skin_2D import DataGenerator as train_gen
-from dataset_specific.skin_2D import weighted_model
+from dataset_specific.skin_2D.generator.uats import DataGenerator as train_gen
+from dataset_specific.skin_2D.model.baseline import weighted_model
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
-from dataset_specific.kits import utils
-import SimpleITK as sitk
 
 data_path = '/cache/suhita/skin/preprocessed/labelled/train'
 out_dir = '/data/suhita/skin/models/'
@@ -165,61 +163,6 @@ def train(gpu_id, nb_gpus, trained_model=None, perc=1.0, augmentation=False):
 
     # workers=4)
     # train.save('temporal_max_ramp_final.h5')
-
-
-def predict(model_name, onlyEval=False):
-    pred_dir = '/data/suhita/skin/predictions/'
-
-    val_fold = np.load('/cache/suhita/skin/Folds/val_fold' + str(FOLD_NUM) + '.npy')
-
-    img_arr = np.zeros((val_fold.shape[0], DIM[0], DIM[1], N_CHANNELS), dtype=float)
-    GT_arr = np.zeros((val_fold.shape[0], DIM[0], DIM[1], 1), dtype=float)
-
-    for i in np.arange(len(val_fold)):
-        img_arr[i] = np.load('/cache/suhita/skin/preprocessed/labelled/train/imgs/' + val_fold[i]) / 255
-        temp = '/cache/suhita/skin/preprocessed/labelled/train/GT/' + val_fold[i]
-        GT_arr[i] = np.load(temp.replace('.npy', '') + '_segmentation.npy') / 255
-
-    print('load_weights')
-    wm = weighted_model()
-    model = wm.build_model(img_shape=(DIM[0], DIM[1], N_CHANNELS), learning_rate=learning_rate)
-    model.load_weights(model_name)
-
-    if onlyEval:
-        out_value = model.evaluate(img_arr, GT_arr, batch_size=1, verbose=0)
-        print(out_value)
-    else:
-        out = model.predict(img_arr, batch_size=2, verbose=1)
-        # np.save(os.path.join(out_dir, 'predicted.npy'), out)
-        for i in range(out.shape[0]):
-            segm = sitk.GetImageFromArray(out[i, :, :, :, 0])
-            utils.makeDirectory(os.path.join(pred_dir, val_fold[int(i / 2)]))
-            if i % 2 == 0:
-                img = sitk.ReadImage(os.path.join(data_path, val_fold[int(i / 2)], 'img_left.nrrd'))
-                segm.CopyInformation(img)
-                sitk.WriteImage(img, os.path.join(pred_dir, val_fold[int(i / 2)], 'img_left.nrrd'))
-                sitk.WriteImage(segm, os.path.join(pred_dir, val_fold[int(i / 2)], 'segm_left.nrrd'))
-
-            else:
-                img = sitk.ReadImage(os.path.join(data_path, val_fold[int(i / 2)], 'img_right.nrrd'))
-                segm.CopyInformation(img)
-                sitk.WriteImage(img, os.path.join(pred_dir, val_fold[int(i / 2)], 'img_right.nrrd'))
-                sitk.WriteImage(segm, os.path.join(pred_dir, val_fold[int(i / 2)], 'segm_right.nrrd'))
-
-        # single image evaluation
-        for i in range(0, val_fold.shape[0] * 2):
-            out_eval = model.evaluate(img_arr[i:i + 1], GT_arr[i:i + 1], batch_size=1, verbose=0)
-            print(val_fold[int(i / 2)], out_eval)
-
-    # if eval:
-    #     val_gt = val_gt.astype(np.uint8)
-    #     val_gt_list = [val_gt[:, :, :, :, 0], val_gt[:, :, :, :, 1], val_gt[:, :, :, :, 2], val_gt[:, :, :, :, 3],
-    #                    val_gt[:, :, :, :, 4]]
-    #     scores = model.evaluate([val_imgs], val_gt_list, batch_size=2, verbose=1)
-    #     length = len(model.metrics_names)
-    #     for i in range(6, 11):
-    #         print("%s: %.16f%%" % (model.metrics_names[i], scores[i]))
-
 
 if __name__ == '__main__':
     GPU_ID = '1'
