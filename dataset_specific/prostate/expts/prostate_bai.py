@@ -4,7 +4,7 @@ import os
 import tensorflow as tf
 
 from dataset_specific.prostate.model.bai import weighted_model
-from train.semi_supervised.bai_A import train
+from train.semi_supervised.bai import train
 from utility.config import get_metadata
 from utility.constants import *
 from utility.utils import cleanup

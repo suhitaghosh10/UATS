@@ -95,7 +95,7 @@ def generate_uats_dataset(dataset_name, fold_num, labelled_perc, ul_imgs_path, s
         GT_out[:, :, 0] = pred_arr_bg
         GT_out[:, :, 1] = pred_arr
 
-        np.save(os.path.join(supervised_fold_path, 'train', 'imgs', str(counter)) + '.npy', pred_img_arr)
+        np.save(os.path.join(supervised_fold_path, 'train', 'imgs', str(counter)) + '.npy', img_arr[imgNumber])
         np.save(os.path.join(supervised_fold_path, 'train', 'gt', str(counter)) + '.npy', GT_out)
         counter+=1
         print(i, counter)
@@ -103,8 +103,8 @@ def generate_uats_dataset(dataset_name, fold_num, labelled_perc, ul_imgs_path, s
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = '3'
+    os.environ["CUDA_VISIBLE_DEVICES"] = '2'
     generate_supervised_dataset(SKIN_DATASET_NAME, 1, 1.0, seed=1234)
     ul_path = '/cache/suhita/skin/preprocessed/unlabelled/imgs'
     generate_uats_dataset(SKIN_DATASET_NAME, 1, 1.0, ul_path,
-                          '/data/suhita/experiments/model/supervised/skin/softmax_supervised_sfs32_F_1_1000_5e-05_Perc_1.0_augm.h5')
+                          '/data/suhita/experiments/model/supervised/skin/supervised_F1_P1.0.h5')

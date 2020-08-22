@@ -3,9 +3,7 @@ import csv
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
-from utility.prostate.preprocess import *
-
-THRESHOLD = 0.5
+from dataset_specific.prostate.utils.preprocess import *
 
 
 def getDice(prediction, groundTruth):
@@ -77,34 +75,30 @@ def getBoundaryDistances(prediction, groundTruth):
     return (hausdorff, mean)
 
 
-def evaluateFiles_zones(GT_array, pred_directory, csvName):
+def evaluateFiles_zones(GT_array, prediction_arr, csvName):
     with open(csvName + '.csv', 'w') as csvfile:
         csvwriter = csv.writer(csvfile, delimiter=';', lineterminator='\n',
                                quotechar='|', quoting=csv.QUOTE_MINIMAL)
         csvwriter.writerow(
-            ['Case', 'PZ Dice', 'CZ Dice', 'US Dice', 'AFS Dice', 'BG Dice', 'PZ MeanDis', 'CZ MeanDis', 'US MeanDis',
-             'AFS MeanDis', 'BG MeanDis', 'PZ H', 'CZ H', 'US H', 'AFS H', 'BG H'])
+            ['Case', 'PZ Dice', 'CZ Dice', 'US Dice', 'AFS Dice', 'Bg Dice', 'PZ MeanDis', 'CZ MeanDis', 'US MeanDis',
+             'AFS MeanDis', 'Bg MeanDis'])
 
         nrImgs = GT_array.shape[0]
         dices = np.zeros((nrImgs, 5), dtype=np.float32)
         print(dices.shape)
         mad = np.zeros((nrImgs, 5), dtype=np.float32)
-        hdf = np.zeros((nrImgs, 5), dtype=np.float32)
-        # auc = np.zeros((nrImgs, 4), dtype=np.float32)
 
         for imgNumber in range(0, nrImgs):
             print('Case' + str(imgNumber))
             values = ['Case' + str(imgNumber)]
             temp_dice = []
             temp_mad = []
-            temp_hdf = []
-            # temp_auc = []
-
+           # predictions = np.load(prediction_arr + '.npy')
             for zoneIndex in range(0, 5):
-                pred_arr = np.load(pred_directory + 'predicted_' + str(imgNumber) + '.npy')[zoneIndex]
-                pred_arr = thresholdArray(pred_arr, THRESHOLD)
+                pred_arr = prediction_arr[imgNumber, :, :, :, zoneIndex]
+                pred_arr = thresholdArray(pred_arr, 0.5)
                 # pred_arr = pred_arr.astype(int)
-                maxValue = np.max(pred_arr)
+                # maxValue = np.max(pred_arr)
                 pred_img = sitk.GetImageFromArray(pred_arr)
 
                 GT_label = sitk.GetImageFromArray(GT_array[imgNumber, :, :, :, zoneIndex])
@@ -116,25 +110,16 @@ def evaluateFiles_zones(GT_array, pred_directory, csvName):
                 # sitk.WriteImage(pred_img, 'predImg.nrrd')
                 # sitk.WriteImage(GT_label, 'GT_label.nrrd')
 
-                dice = getDice(pred_img, GT_label)
+                dice = getDice(pred_img, GT_label) * 100
                 temp_dice.append(dice)
                 print(dice)
                 # avd = relativeAbsoluteVolumeDifference(pred_img, GT_label)
                 [hausdorff, avgDist] = getBoundaryDistances(pred_img, GT_label)
-                # hausdorff = hausdorff_distance(sitk.GetArrayFromImage(pred_img).reshape(168*168,32),sitk.GetArrayFromImage(GT_label).reshape(168*168,32), distance="haversine")
-                # print(hausdorff, avgDist )
                 temp_mad.append(avgDist)
-                temp_hdf.append(hausdorff)
                 # values.append(dice)
                 # values.append(avgDist)
-
-                # roc_auc = roc_auc_score(np.ravel(GT_array[imgNumber, :, :, :, zoneIndex]), np.ravel(pred_arr))
-                # temp_auc.append(roc_auc)
-
                 dices[imgNumber, zoneIndex] = dice
                 mad[imgNumber, zoneIndex] = avgDist
-                hdf[imgNumber, zoneIndex] = hausdorff
-                # auc[imgNumber, zoneIndex] = roc_auc
 
             values.append(temp_dice[0])
             values.append(temp_dice[1])
@@ -147,17 +132,6 @@ def evaluateFiles_zones(GT_array, pred_directory, csvName):
             values.append(temp_mad[2])
             values.append(temp_mad[3])
             values.append(temp_mad[4])
-
-            values.append(temp_hdf[0])
-            values.append(temp_hdf[1])
-            values.append(temp_hdf[2])
-            values.append(temp_hdf[3])
-            values.append(temp_hdf[4])
-
-            # values.append(temp_auc[0])
-            # values.append(temp_auc[1])
-            # values.append(temp_auc[2])
-            # values.append(temp_auc[3])
             # values.append(temp_mad)
             csvwriter.writerow(values)
 
@@ -169,10 +143,10 @@ def evaluateFiles_zones(GT_array, pred_directory, csvName):
         median = ['Median', np.median(dices[:, 0]), np.median(dices[:, 1]), np.median(dices[:, 2]),
                   np.median(dices[:, 3]), np.median(dices[:, 4]), np.median(mad[:, 0]), np.median(mad[:, 1]),
                   np.median(mad[:, 2]),
-                  np.median(mad[:, 3]), np.median(mad[:, 4])]
-        std = ['STD', np.std(dices[:, 0]), np.std(dices[:, 1]), np.std(dices[:, 2]), np.std(dices[:, 3]),
-               np.std(dices[:, 4]),
-               np.std(mad[:, 0]), np.std(mad[:, 1]), np.std(mad[:, 2]), np.std(mad[:, 3]), np.std(mad[:, 4])]
+                  np.median(mad[:, 3]), np.median(dices[:, 3])]
+        std = ['STD', np.std(dices[:, 0]), np.std(dices[:, 1]), np.std(dices[:, 2]),
+               np.std(dices[:, 3]), np.std(dices[:, 4]), np.std(mad[:, 0]), np.std(mad[:, 1]), np.std(mad[:, 2]),
+               np.std(mad[:, 3]), np.std(dices[:, 4])]
 
         csvwriter.writerow(average)
         csvwriter.writerow(median)
@@ -186,13 +160,6 @@ def evaluateFiles_zones(GT_array, pred_directory, csvName):
         print(np.average(dices[:, 4]))
 
         print('Mean Dist')
-        print(np.average(mad[:, 0]))
-        print(np.average(mad[:, 1]))
-        print(np.average(mad[:, 2]))
-        print(np.average(mad[:, 3]))
-        print(np.average(mad[:, 4]))
-
-        print('Hausdorff 95%')
         print(np.average(mad[:, 0]))
         print(np.average(mad[:, 1]))
         print(np.average(mad[:, 2]))
@@ -460,11 +427,11 @@ def getConnectedComponents(predictionImage):
 def removeIslands(predictedArray):
     pred = predictedArray
     print(pred.shape)
-    pred_pz = thresholdArray(pred[0, :, :, :], THRESHOLD)
-    pred_cz = thresholdArray(pred[1, :, :, :], THRESHOLD)
-    pred_us = thresholdArray(pred[2, :, :, :], THRESHOLD)
-    pred_afs = thresholdArray(pred[3, :, :, :], THRESHOLD)
-    pred_bg = thresholdArray(pred[4, :, :, :], THRESHOLD)
+    pred_pz = thresholdArray(pred[:, :, :, 0], 0.5)
+    pred_cz = thresholdArray(pred[:, :, :, 1], 0.5)
+    pred_us = thresholdArray(pred[:, :, :, 2], 0.5)
+    pred_afs = thresholdArray(pred[:, :, :, 3], 0.5)
+    pred_bg = thresholdArray(pred[:, :, :, 4], 0.5)
 
     pred_pz_img = sitk.GetImageFromArray(pred_pz)
     pred_cz_img = sitk.GetImageFromArray(pred_cz)
@@ -507,14 +474,12 @@ def removeIslands(predictedArray):
     array_afs = sitk.GetArrayFromImage(pred_afs_img_cc)
     array_bg = sitk.GetArrayFromImage(pred_bg_img_cc)
 
-    finalPrediction = np.zeros([5, 32, 168, 168])
-    finalPrediction[0] = array_pz
-    finalPrediction[1] = array_cz
-    finalPrediction[2] = array_us
-    finalPrediction[3] = array_afs
-    finalPrediction[4] = array_bg
-
-    array = np.zeros([1, 1, 1, 1])
+    finalPrediction = np.zeros([32, 168, 168, 5])
+    finalPrediction[:, :, :, 0] = array_pz
+    finalPrediction[:, :, :, 1] = array_cz
+    finalPrediction[:, :, :, 2] = array_us
+    finalPrediction[:, :, :, 3] = array_afs
+    finalPrediction[:, :, :, 4] = array_bg
 
     for x in range(0, pred_cz_img.GetSize()[0]):
         for y in range(0, pred_cz_img.GetSize()[1]):
@@ -527,45 +492,127 @@ def removeIslands(predictedArray):
                              afs_dis.GetPixel(x, y, z), bg_dis.GetPixel(x, y, z)]
                     maxValue = max(array)
                     max_index = array.index(maxValue)
-                    finalPrediction[max_index, z, y, x] = 1
+                    finalPrediction[z, y, x, max_index] = 1
 
     return finalPrediction
 
 
-def postprocesAndEvaluateFiles(name, GT_array, csvName, eval=True):
-    prediction = np.load(name + '.npy')
-    # prediction = np.transpose(prediction, (4, 0, 1, 2, 3))
-    # print(GT_array.shape)
-    print(prediction.shape)
+def postprocesAndEvaluateFiles(outDir, prediction, GT_array, csvName, eval=True, prediction_arr_exists=False,
+                               model_name=None):
+    if not prediction_arr_exists:
+        if not os.path.exists(outDir):
+            os.makedirs(outDir)
 
-    outDir = name[:-3] + '/'
-    if not os.path.exists(outDir):
-        os.makedirs(outDir)
-
-    out_arr = np.zeros((prediction.shape[1], 32, 168, 168, 5))
-    for i in range(0, prediction.shape[1]):
-        print(i)
-        array = removeIslands(prediction[:, i, :, :, :])
-        # np.save(outDir + 'predicted_' + str(i) + '.npy', array)
-        print(array.shape)
-        out_arr[i] = np.transpose(array, (1, 2, 3, 0))
-        # print('preditction', prediction.shape)
-        # array = prediction[:, i, :, :, :]
-    np.save(outDir + 'predicted_final_15', out_arr.astype('int8'))
+        out_arr = np.zeros((prediction.shape[0], 32, 168, 168, 5))
+        for i in range(0, prediction.shape[0]):
+        #for i in range(0, 5):
+            print(i)
+            array = removeIslands(prediction[i, :, :, :, :])
+            print(array.shape)
+            out_arr[i] = array
+        #npy_name = outDir + model_name
+        #np.save(npy_name, out_arr.astype('int8'))
 
     if eval:
-        evaluateFiles_zones(GT_array, pred_directory=outDir, csvName=csvName)
+        evaluateFiles_zones(GT_array, prediction_arr=out_arr, csvName=csvName)
+    return out_arr.astype('int8')
+
+
+def predict_for_uats_mc(val_x_arr, val_y_arr, model, mc=False):
+    val_supervised_flag = np.ones((val_x_arr.shape[0], 32, 168, 168), dtype='int8')
+
+    x_val = [val_x_arr, val_y_arr, val_supervised_flag]
+    print('load_weights')
+    # train.load_weights()
+    print('predict')
+    out = model.predict(x_val, batch_size=1, verbose=1)
+    output_arr = np.zeros((out[0].shape[0], 32, 168, 168, 5))
+
+    output_arr[:, :, :, :, 0] = out[0]
+    output_arr[:, :, :, :, 1] = out[1]
+    output_arr[:, :, :, :, 2] = out[2]
+    output_arr[:, :, :, :, 3] = out[3]
+    output_arr[:, :, :, :, 4] = out[4]
+    print(output_arr.shape)
+
+    return output_arr
+
+
+def generate_predictions(model_dir, model_name, ul_imgs):
+    csvName = model_dir + model_name + '.csv'
+    from dataset_specific.prostate.model.baseline import weighted_model
+    wm = weighted_model()
+    model = wm.build_model()
+    model.load_weights(os.path.join(model_dir , model_name + '.h5'))
+    out = model.predict(ul_imgs, batch_size=1, verbose=1)
+    output_arr = np.zeros((out[0].shape[0], 32, 168, 168, 5))
+    output_arr[:, :, :, :, 0] = out[0]
+    output_arr[:, :, :, :, 1] = out[1]
+    output_arr[:, :, :, :, 2] = out[2]
+    output_arr[:, :, :, :, 3] = out[3]
+    output_arr[:, :, :, :, 4] = out[4]
+    print(output_arr.shape)
+
+    return postprocesAndEvaluateFiles(model_dir, output_arr, None, eval=False, csvName=csvName, prediction_arr_exists=False,
+                               model_name=model_name)
+
+
+def evaluate_uats(model_dir, model_name, val_x, val_y, mc=False):
+    csvName = model_dir + model_name + '.csv'
+
+    if mc:
+        from dataset_specific.prostate.model.uats_mc_dropout import weighted_model
+        wm = weighted_model()
+        model = wm.build_model(trained_model=model_dir + model_name)[0]
+        model.load_weights(model_dir + model_name)
+        prediction_arr = predict_for_uats_mc(val_x, val_y, model, mc=True)
+
+    else:
+        from dataset_specific.prostate.model.uats_scaled import weighted_model
+        wm = weighted_model()
+        model = wm.build_model(trained_model=model_dir + model_name, temp=1.0)
+        model.load_weights(model_dir + model_name)
+        prediction_arr = predict_for_uats_mc(val_x, val_y, model, mc=False)
+
+    postprocesAndEvaluateFiles(model_dir, prediction_arr, val_y, eval=True, csvName=csvName,
+                               prediction_arr_exists=False, model_name=model_name)
+
+
+def evaluate_supervised(model_dir, model_name, val_x, val_y, eval=True):
+    csvName = model_dir + model_name + '.csv'
+
+    from dataset_specific.prostate.model.baseline import weighted_model
+    wm = weighted_model()
+    model = wm.build_model()
+    model.load_weights(model_dir + model_name + '.h5')
+    out = model.predict(val_x, batch_size=1, verbose=1)
+    output_arr = np.zeros((out[0].shape[0], 32, 168, 168, 5))
+    output_arr[:, :, :, :, 0] = out[0]
+    output_arr[:, :, :, :, 1] = out[1]
+    output_arr[:, :, :, :, 2] = out[2]
+    output_arr[:, :, :, :, 3] = out[3]
+    output_arr[:, :, :, :, 4] = out[4]
+    print(output_arr.shape)
+    postprocesAndEvaluateFiles(model_dir, output_arr, val_y, eval=eval, csvName=csvName,
+                               prediction_arr_exists=False, model_name=model_name)
 
 
 if __name__ == '__main__':
-    name = '/data/suhita/temporal/prostate/prostate_softmax_F1_Perct_Labelled_1.0'
-    GT_array_name = '/cache/suhita/data/prostate/final_test_array_GT.npy'
-    csvName = name
-    GT_array = None
+    os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 
-    if GT_array_name is not None:
-        GT_array = np.load(GT_array_name)
-    # GT_array = get_complete_array('/home/suhita/zonals/data/test_anneke/gt/')
+    # evaluate_uats(model_dir='/data/suhita/experiments/model/uats/prostate/',
+    #               # model_dir='/data/suhita/prostate/',
+    #               model_name='uats_softmax_F3_Perct_Labelled_0.5.h5',
+    #               #model_name='uats_mc_entropy_F1_Perct_Labelled_1.0.h5',
+    #               val_x=np.load('/cache/suhita/data/prostate/final_test_array_imgs.npy'),
+    #               val_y=np.load('/cache/suhita/data/prostate/final_test_array_GT.npy').astype('int8'),
+    #               mc=False,
+    #
+    #               )
 
-    # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
-    postprocesAndEvaluateFiles(name, GT_array, eval=True, csvName=csvName)
+    evaluate_supervised(model_dir='/data/suhita/experiments/model/supervised/prostate/',
+                   model_name='supervised_F2_P0.5',
+                   val_x=np.load('/cache/suhita/data/prostate/final_test_array_imgs.npy'),
+                   val_y=np.load('/cache/suhita/data/prostate/final_test_array_GT.npy').astype('int8')
+                   )

@@ -3,18 +3,18 @@ import os
 
 import tensorflow as tf
 
-from dataset_specific.prostate.model.temporal_original import weighted_model
-from train.semi_supervised.temporal_original import train
+from dataset_specific.skin_2D.model.uats_entropy import weighted_model
+from train.semi_supervised.uats_mc_entropy import train
 from utility.config import get_metadata
 from utility.constants import *
 from utility.utils import cleanup
 
 ## Parse arguments
 parser = argparse.ArgumentParser()
-parser.add_argument('-g', '--gpu_num', type=str, default='0', help='GPU Number')
+parser.add_argument('-g', '--gpu_num', type=str, default='2', help='GPU Number')
 parser.add_argument('-f', '--fold_num', type=int, default=1, help='Fold Number')
 parser.add_argument('-e', '--ens_folder_name', type=str, help='ensemble folder name')
-parser.add_argument('-d', '--ds', type=str, default=PROSTATE_DATASET_NAME, help='dataset name')
+parser.add_argument('-d', '--ds', type=str, default=SKIN_DATASET_NAME, help='dataset name')
 
 config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True
@@ -25,13 +25,13 @@ try:
     # perc = args.perc
     # temp_path = args.temp_path
     # gpu_num = args.gpu_num
-    gpu_num = '3'
+    gpu_num = '1'
     fold_num = 1
     perc = 1.0
-    temp_path = 'sadv4'
+    temp_path = 'sadv_1111'
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_num
-    metadata = get_metadata(args.ds, fold_num, perc)
+    metadata = get_metadata(args.ds)
     # Build Model
     wm = weighted_model()
     train(None, None,

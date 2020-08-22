@@ -87,8 +87,12 @@ def get_uats_val_data(data_path, dim, nr_class, nr_channels):
 
     x_val = [val_img_arr, val_GT_arr, val_supervised_flag]
     y_val = []
+
     for idx in range(nr_class):
-        y_val.append(val_GT_arr[:, :, :, :, idx])
+        if len(dim) == 3:
+            y_val.append(val_GT_arr[:, :, :, :, idx])
+        else:
+            y_val.append(val_GT_arr[:, :, :, idx])
     return x_val, y_val
 
 
@@ -131,7 +135,11 @@ def get_supervised_val_data(data_path, dim, nr_class, nr_channels):
     x_val = [val_img_arr]
     y_val = []
     for idx in range(nr_class):
-        y_val.append(val_GT_arr[:, :, :, :, idx])
+        if len(dim)==3:
+            y_val.append(val_GT_arr[:, :, :, :, idx])
+        else:
+            y_val.append(val_GT_arr[:, :, :, idx])
+
     return x_val, y_val
 
 
@@ -142,16 +150,26 @@ def get_uats_data_generator(dataset_name, data_path, ens_path, num_train, num_tr
         np.random.shuffle(train_id_list)
         print(train_id_list[0:10])
 
-        if is_augmented:
-            from dataset_specific.prostate.generator.uats_A import DataGenerator as train_gen
-        else:
-            from dataset_specific.prostate.generator.uats import DataGenerator as train_gen
+        from dataset_specific.prostate.generator.uats import DataGenerator as train_gen
         return train_gen(data_path,
                          ens_path,
                          train_id_list,
                          batch_size=batch_size,
-                         labelled_num=num_train_labelled)
+                         labelled_num=num_train_labelled,
+                         is_augmented=is_augmented)
 
+    elif dataset_name == SKIN_DATASET_NAME:
+        train_id_list = np.arange(num_train)
+        np.random.shuffle(train_id_list)
+        print(train_id_list[0:10])
+
+        from dataset_specific.skin_2D.generator.uats import DataGenerator as train_gen
+        return train_gen(data_path,
+                         ens_path,
+                         train_id_list,
+                         batch_size=batch_size,
+                         labelled_num=num_train_labelled,
+                         is_augmented=is_augmented)
 
 def get_supervised_data_generator(dataset_name, data_path, num_train, is_augmented=True):
     if dataset_name == PROSTATE_DATASET_NAME:
@@ -160,7 +178,20 @@ def get_supervised_data_generator(dataset_name, data_path, num_train, is_augment
         np.random.shuffle(train_id_list)
         print(train_id_list[0:10])
 
-        from dataset_specific.prostate.generator.baseline_A import DataGenerator as train_gen
+        from dataset_specific.prostate.generator.baseline import DataGenerator as train_gen
+        return train_gen(data_path,
+                         train_id_list,
+                         batch_size=metadata[m_batch_size],
+                         dim=metadata[m_dim],
+                         is_augmented=is_augmented)
+
+    elif dataset_name == SKIN_DATASET_NAME:
+        metadata = get_metadata(dataset_name)
+        train_id_list = np.arange(num_train)
+        np.random.shuffle(train_id_list)
+        print(train_id_list[0:10])
+
+        from dataset_specific.skin_2D.generator.baseline import DataGenerator as train_gen
         return train_gen(data_path,
                          train_id_list,
                          batch_size=metadata[m_batch_size],
@@ -178,7 +209,7 @@ def get_temporal_data_generator(dataset_name, data_path, ens_path, num_train, nu
         if is_augmented:
             from dataset_specific.prostate.generator.temporal import DataGenerator as train_gen
         else:
-            from dataset_specific.prostate.generator.temporal_A import DataGenerator as train_gen
+            from dataset_specific.prostate.generator.temporal import DataGenerator as train_gen
         return train_gen(data_path,
                          ens_path,
                          train_id_list,

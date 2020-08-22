@@ -6,7 +6,7 @@ from keras.layers import concatenate, Input, Conv2D, MaxPooling2D, Conv2DTranspo
 from keras.models import Model
 from keras.optimizers import Adam
 from keras.utils import multi_gpu_model
-
+from utility.weight_norm import AdamWithWeightnorm
 # from lib.segmentation.group_norm import GroupNormalization
 
 smooth = 1.
@@ -89,13 +89,13 @@ class weighted_model:
 
         def loss_func(y_true, y_pred):
 
-            supervised_flag = input[1, :, :, :, :]
+            supervised_flag = input[1, :, :, :]
             val_flag = False
-            if supervised_flag[0, 0, 0, 0] == 3:
+            if supervised_flag[0, 0, 0] == 3:
                 print('validation')
                 val_flag = True
 
-            unsupervised_gt = input[0, :, :, :, :]
+            unsupervised_gt = input[0, :, :, :]
             unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
             # for confident voxels (denoted by 2) change from 0 to 1 (unlabelled to labelled), but keep the background(0) as 0
             y_true_final = tf.where(tf.equal(supervised_flag, 2), unsupervised_gt, y_true)
@@ -117,7 +117,7 @@ class weighted_model:
 
         return loss_func
 
-    def c_dice_loss(self, y_true, y_pred, weight, smooth=1., axis=(1, 2, 3)):
+    def c_dice_loss(self, y_true, y_pred, weight, smooth=1., axis=(1, 2)):
 
         y_true = y_true * weight
         y_pred = y_pred * weight
@@ -136,11 +136,11 @@ class weighted_model:
 
     def unsup_dice_tb(self, input):
 
-        def unsup_dice_loss(y_true, y_pred, smooth=1., axis=(1, 2, 3), alpha=0.6):
-            supervised_flag = input[1, :, :, :, :]
+        def unsup_dice_loss(y_true, y_pred, smooth=1., axis=(1, 2), alpha=0.6):
+            supervised_flag = input[1, :, :, :]
             val_flag = False
 
-            unsupervised_gt = input[0, :, :, :, :]
+            unsupervised_gt = input[0, :, :, :]
             unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
             # for confident voxels (denoted by 2) change from 0 to 1 (unlabelled to labelled), but keep the background(0) as 0
             y_true_final = tf.where(tf.equal(supervised_flag, 2), unsupervised_gt, y_true)
@@ -174,9 +174,9 @@ class weighted_model:
         return unsup_dice_loss
 
     def dice_tb(self, input, class_wt=1., ):
-        def dice_loss(y_true, y_pred, smooth=1., axis=(1, 2, 3)):
-            supervised_flag = input[1, :, :, :, :]
-            unsupervised_gt = input[0, :, :, :, :]
+        def dice_loss(y_true, y_pred, smooth=1., axis=(1, 2)):
+            supervised_flag = input[1, :, :, :]
+            unsupervised_gt = input[0, :, :, :]
             alpha = 0.6
             unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
             y_true_final = tf.where(tf.equal(supervised_flag, 2), unsupervised_gt, y_true)
@@ -198,7 +198,7 @@ class weighted_model:
 
         return dice_loss
 
-    def unsup_c_dice_loss(self, y_true, y_pred, smooth=1., axis=(1, 2, 3)):
+    def unsup_c_dice_loss(self, y_true, y_pred, smooth=1., axis=(1, 2)):
 
         intersection = K.sum(y_true * y_pred, axis=axis)
         y_true_sum = K.sum(y_true, axis=axis)
@@ -216,11 +216,12 @@ class weighted_model:
 
     def build_model(self, img_shape=(32, 168, 168), learning_rate=5e-5, gpu_id=None,
                     nb_gpus=None,
-                    trained_model=None):
+                    trained_model=None,
+                    temp=1):
 
         input_img = Input(img_shape, name='img_inp')
-        unsupervised_label = Input((img_shape[0], img_shape[1], 1), name='unsup_label_inp')
-        supervised_flag = Input((img_shape[0], img_shape[1], 1), name='flag_inp')
+        unsupervised_label = Input((img_shape[0], img_shape[1], 2), name='unsup_label_inp')
+        supervised_flag = Input((img_shape[0], img_shape[1]), name='flag_inp')
 
         kernel_init = 'he_normal'
         sfs = 16  # start filter size
@@ -272,26 +273,25 @@ class weighted_model:
         bg_out = Lambda(lambda x: x[:, :, :, 0], name='bg')(conv_out)
         skin_out = Lambda(lambda x: x[:, :, :, 1], name='skin')(conv_out)
 
-        bg_ensemble_pred = Lambda(lambda x: x[:, :, :, :, 0], name='bgu')(
+        bg_ensemble_pred = Lambda(lambda x: x[:, :, :, 0], name='bgu')(
             unsupervised_label)
-        skin_ensemble_pred = Lambda(lambda x: x[:, :, :, :, 1], name='skinu')(
+        skin_ensemble_pred = Lambda(lambda x: x[:, :, :, 1], name='skinu')(
             unsupervised_label)
-
         bg = K.stack([bg_ensemble_pred, supervised_flag])
         skin = K.stack([skin_ensemble_pred, supervised_flag])
 
-        optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999)
+        optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
         if (nb_gpus is None):
             p_model = Model([input_img, unsupervised_label, supervised_flag],
                             [bg_out, skin_out])
             if trained_model is not None:
                 p_model.load_weights(trained_model)
             p_model.compile(optimizer=optimizer,
-                            loss={'bg': self.semi_supervised_loss(bg, unsup_loss_class_wt=1),
-                                  'skin': self.semi_supervised_loss(skin, 1)},
+                            loss={'bg': self.semi_supervised_loss(bg),
+                                  'skin': self.semi_supervised_loss(skin)},
                             metrics={
-                                'bg': [self.dice_coef, self.unsup_dice_tb(bg, 1), self.dice_tb(bg, 1)],
-                                'skin': [self.dice_coef, self.unsup_dice_tb(skin, 1), self.dice_tb(skin, 1)],
+                                'bg': [self.dice_coef, self.unsup_dice_tb(bg), self.dice_tb(bg)],
+                                'skin': [self.dice_coef, self.unsup_dice_tb(skin), self.dice_tb(skin)],
 
                             }
                             )

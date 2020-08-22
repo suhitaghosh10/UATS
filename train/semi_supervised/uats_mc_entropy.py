@@ -1,7 +1,7 @@
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
 
 from old.utils.AugmentationGenerator import *
-from utility.callbacks.uats_softmax import TemporalCallback
+from utility.callbacks.uats_mc_entropy import TemporalCallback
 from utility.config import get_metadata
 from utility.constants import *
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
@@ -10,7 +10,7 @@ from utility.utils import get_uats_val_data, get_uats_data_generator
 
 def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_num, model_type, is_augmented=True):
     metadata = get_metadata(dataset_name)
-    name = 'uats_softmax_F' + str(fold_num) + '_Perct_Labelled_' + str(labelled_perc)
+    name = 'uats_mc_entropy_F' + str(fold_num) + '_Perct_Labelled_' + str(labelled_perc)
 
     data_path = os.path.join(metadata[m_data_path], dataset_name, 'fold_' + str(fold_num) + '_P' + str(labelled_perc), 'train')
     print('data directory:', data_path)
@@ -21,8 +21,8 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
     trained_model_path = os.path.join(metadata[m_trained_model_path], dataset_name, 'supervised_F' + str(fold_num) + '_P' + str(
         labelled_perc) + H5)
     dim = metadata[m_dim]
+    inp_shape = dim if len(dim) == 3 else [dim[0], dim[1], metadata[m_nr_channels]]
     bs = metadata[m_batch_size]
-
     num_labeled_train = int(labelled_perc * metadata[m_labelled_train])  # actual labelled data
     num_ul = metadata[m_unlabelled_train]
     num_train_data = num_labeled_train + num_ul
@@ -34,14 +34,12 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
     print('-' * 30)
     print('Creating and compiling model...')
     print('-' * 30)
-
-    model = model_type.build_model(img_shape=(dim[0], dim[1], dim[2]),
-                                   learning_rate=metadata[m_lr],
-                                   gpu_id=gpu_id,
-                                   nb_gpus=nb_gpus,
-                                   trained_model=trained_model_path,
-                                   temp=1)
-    model.summary()
+    p_model_MC, normal_model = model_type.build_model(img_shape=inp_shape,
+                                                      learning_rate=metadata[m_lr],
+                                                      gpu_id=gpu_id,
+                                                      nb_gpus=nb_gpus,
+                                                      trained_model=trained_model_path)
+    normal_model.summary()
 
     # callbacks
     print('-' * 30)
@@ -65,7 +63,7 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
 
     tcb = TemporalCallback(dim, data_path, ens_path, metadata[m_save_path], num_train_data, num_labeled_train,
                            metadata[m_patients_per_batch], metadata[m_labelled_perc], metadata[m_metric_keys],
-                           metadata[m_nr_class], bs, dataset_name)
+                           metadata[m_nr_class], bs, metadata[m_mc_forward_pass], dataset_name, p_model_MC)
 
     lcb = model_type.LossCallback()
     es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=PATIENCE_EARLY_STOP, min_delta=DELTA)
@@ -85,10 +83,10 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
 
     x_val, y_val = get_uats_val_data(data_path, dim, metadata[m_nr_class], metadata[m_nr_channels])
 
-    history = model.fit_generator(generator=training_generator,
-                                  steps_per_epoch=steps,
-                                  validation_data=[x_val, y_val],
-                                  epochs=NUM_EPOCH,
-                                  callbacks=cb
-                                  )
+    history = normal_model.fit_generator(generator=training_generator,
+                                         steps_per_epoch=steps,
+                                         validation_data=[x_val, y_val],
+                                         epochs=NUM_EPOCH,
+                                         callbacks=cb
+                                         )
     return history

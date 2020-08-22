@@ -30,8 +30,12 @@ class TemporalCallback(Callback):
         self.batch_size = batch_size
         self.nr_dim = len(dim)
 
-        flag_1 = np.ones(shape=dim, dtype='int64')
-        flag_0 = np.zeros(shape=dim, dtype='int64')
+        if len(dim)==3:
+            flag_1 = np.ones(shape=dim, dtype='int64')
+            flag_0 = np.zeros(shape=dim, dtype='int64')
+        else:
+            flag_1 = np.ones(shape=(dim[0], dim[1]), dtype='int64')
+            flag_0 = np.zeros(shape=(dim[0], dim[1]), dtype='int64')
 
         makedir(self.temp_path)
         makedir(os.path.join(self.temp_path, ENS_GT))

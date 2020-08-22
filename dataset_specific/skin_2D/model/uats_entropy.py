@@ -257,7 +257,7 @@ class weighted_model:
                     trained_model=None):
         input_img = Input(img_shape, name='img_inp')
         unsupervised_label = Input((img_shape[0], img_shape[1], 2), name='unsup_label_inp')
-        supervised_flag = Input((img_shape[0], img_shape[1], 1), name='flag_inp')
+        supervised_flag = Input((img_shape[0], img_shape[1]), name='flag_inp')
 
         kernel_init = 'he_normal'
         sfs = 16  # start filter size
@@ -317,11 +317,11 @@ class weighted_model:
             unsupervised_label)
         skin_ensemble_pred = Lambda(lambda x: x[:, :, :, 1], name='skinu')(
             unsupervised_label)
-        supervised_flag_stk = Lambda(lambda x: x[:, :, :, 0], name='flag_stk')(
-            supervised_flag)
+        # supervised_flag_stk = Lambda(lambda x: x[:, :, :, 0], name='flag_stk')(
+        #     supervised_flag)
 
-        bg = K.stack([bg_ensemble_pred, supervised_flag_stk])
-        skin = K.stack([skin_ensemble_pred, supervised_flag_stk])
+        bg = K.stack([bg_ensemble_pred, supervised_flag])
+        skin = K.stack([skin_ensemble_pred, supervised_flag])
 
         optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999)
 
@@ -418,6 +418,6 @@ class weighted_model:
 
         ########################################################
 
-        return p_model, model_MC
+        return model_MC, p_model
     # return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg])
     # return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg, input_idx])

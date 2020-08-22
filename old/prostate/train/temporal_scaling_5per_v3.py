@@ -10,7 +10,7 @@ from old.utils.AugmentationGenerator import *
 from old.utils.ops import ramp_down_weight
 from old.utils.preprocess_images import get_complete_array, get_array, save_array, get_array_from_list
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
-from utility.prostate.utils import get_val_id_list
+from dataset_specific.prostate.utils.utils import get_val_id_list
 
 # 294 Training 58 have gt
 learning_rate = 5e-5

@@ -1,8 +1,7 @@
 import os
 import numpy as np
-from utility.config import get_metadata
 from utility.constants import *
-from utility.prostate.evaluation import generate_predictions
+from dataset_specific.prostate.utils.evaluation import generate_predictions
 from utility.utils import makedir
 from numpy.random import default_rng
 from utility.config import get_metadata
@@ -75,3 +74,21 @@ def generate_supervised_dataset(dataset_name, fold_num, labelled_perc, seed=1234
         print(i)
     print('copied labelled val images')
 
+if __name__ == '__main__':
+    os.environ["CUDA_VISIBLE_DEVICES"] = '2'
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+
+    ds = PROSTATE_DATASET_NAME
+    metadata = get_metadata(ds)
+    perc = 0.5
+    fold_num = 2
+    # generate_supervised_dataset(ds,
+    #                             fold_num=fold_num,
+    #                             labelled_perc=perc,
+    #                             seed=0)
+
+    generate_uats_dataset(ds,
+        fold_num=fold_num,
+        labelled_perc=perc,
+        ul_imgs_path='/cache/suhita/data/' + ds + '/npy_img_unlabeled.npy',
+        supervised_model_path=metadata[m_trained_model_path])

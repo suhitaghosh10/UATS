@@ -2,7 +2,7 @@ import csv
 
 from dataset_specific.hippocampus import get_multi_class_arr
 from dataset_specific.kits import makedir
-from utility.prostate.preprocess import *
+from dataset_specific.prostate.utils.preprocess import *
 
 THRESHOLD = 0.5
 

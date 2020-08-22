@@ -1,6 +1,6 @@
 import csv
 
-from utility.prostate.preprocess import *
+from dataset_specific.prostate.utils.preprocess import *
 
 THRESHOLD = 0.5
 

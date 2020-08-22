@@ -9,7 +9,7 @@ from old.utils.AugmentationGenerator import *
 from utility.callbacks.pseudo_save_best import TemporalCallback
 from utility.constants import *
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
-from utility.prostate.utils import get_uats_prostate_val_data
+from dataset_specific.prostate.utils.utils import get_uats_prostate_val_data
 from utility.utils import cleanup
 
 

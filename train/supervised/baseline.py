@@ -4,7 +4,7 @@ from old.utils.AugmentationGenerator import *
 from utility.config import get_metadata
 from utility.constants import *
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
-from utility.utils import get_supervised_val_data, get_supervised_data_generator
+from utility.utils import get_supervised_val_data, get_supervised_data_generator, makedir
 
 
 def train(gpu_id, nb_gpus, dataset_name, labelled_perc, fold_num, model_type, is_augmented=True):
@@ -37,6 +37,7 @@ def train(gpu_id, nb_gpus, dataset_name, labelled_perc, fold_num, model_type, is
     print('-' * 30)
     print('Creating callbacks...')
     print('-' * 30)
+    makedir(os.path.join(metadata[m_save_path], 'csv', dataset_name))
     csv_logger = CSVLogger(csv_name, append=True, separator=';')
     if nb_gpus is not None and nb_gpus > 1:
         model_checkpoint = ModelCheckpointParallel(model_name,

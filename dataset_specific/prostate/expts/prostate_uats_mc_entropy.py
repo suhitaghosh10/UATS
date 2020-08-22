@@ -4,7 +4,7 @@ import os
 import tensorflow as tf
 
 from dataset_specific.prostate.model.uats_mc_dropout import weighted_model
-from train.semi_supervised.uats_mc_entropy_A import train
+from train.semi_supervised.uats_mc_entropy import train
 from utility.config import get_metadata
 from utility.constants import *
 from utility.utils import cleanup

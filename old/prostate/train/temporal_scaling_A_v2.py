@@ -5,7 +5,7 @@ from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import Callback
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
 
-from dataset_specific.prostate.generator.uats_A import DataGenerator as train_gen
+from dataset_specific.prostate.generator.uats import DataGenerator as train_gen
 from dataset_specific.prostate.model import weighted_model
 from old.utils.AugmentationGenerator import *
 from old.utils.preprocess_images import get_complete_array, get_array, save_array

@@ -4,7 +4,7 @@ from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import Callback, ReduceLROnPlateau
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
 
-from dataset_specific.prostate.generator.uats_A import DataGenerator
+from dataset_specific.prostate.generator.uats import DataGenerator
 from dataset_specific.prostate.model import weighted_model
 from old.utils.AugmentationGenerator import *
 from old.utils.ops import ramp_down_weight
