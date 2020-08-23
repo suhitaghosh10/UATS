@@ -50,11 +50,12 @@ class DataGenerator(keras.utils.Sequence):
                 X[i, :, :, :] = augment_image(x, aug_type, self.datagen_img)
                 Y[i] = augment_image(y, aug_type, self.datagen_GT)
                 ENS[i] = augment_image(ens, aug_type, self.datagen_ens)
-                FLAG[i] = augment_image(flag, aug_type, self.datagen_flag)[:,:,0]
+                FLAG[i] = augment_image(flag, aug_type, self.datagen_flag)[:, :, 0]
             else:
                 X[i] = x
                 Y[i] = y
                 ENS[i] = ens
+                FLAG[i] = flag
 
         X_ARR = [X, ENS, FLAG]
 

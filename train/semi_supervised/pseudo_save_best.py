@@ -1,102 +1,94 @@
-import argparse
-
-import tensorflow as tf
+import os
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
-
-from dataset_specific.prostate.generator import DataGenerator as train_gen
-from dataset_specific.prostate.model.pseudo_save_best import weighted_model
-from old.utils.AugmentationGenerator import *
 from utility.callbacks.pseudo_save_best import TemporalCallback
+from utility.config import get_metadata
 from utility.constants import *
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
-from dataset_specific.prostate.utils.utils import get_uats_prostate_val_data
-from utility.utils import cleanup
+from utility.utils import get_temporal_val_data, get_temporal_data_generator, makedir
 
 
-def train(gpu_id, nb_gpus, temp_path, labelled_percentage, fold_num, name, lr=LR):
-    DATA_PATH = PROSTATE_DATA_ROOT + 'fold_' + str(fold_num) + '_P' + str(labelled_percentage) + '/train/'
-    TB_LOG_DIR = SAVE_PATH + '/tb/prostate/' + name + '_' + str(lr) + '/'
-    MODEL_NAME = SAVE_PATH + '/model/prostate/' + name + H5
-    CSV_NAME = SAVE_PATH + '/csv/prostate/' + name + '.csv'
-    TRAINED_MODEL_PATH = TRAINED_MODEL_ROOT_PATH + '/prostate/supervised_F' + str(fold_num) + '_P' + str(
-        labelled_percentage) + '.h5'
-    ens_path = os.path.join(TEMP_ROOT_PATH + temp_path)
+def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_num, model_type, is_augmented=True):
+    metadata = get_metadata(dataset_name)
+    name = 'pseudo_savebest_F' + str(fold_num) + '_Perct_Labelled_' + str(labelled_perc)
 
-    num_labeled_train = int(labelled_percentage * PROSTATE_LABELLED_TRAIN_NUM)
-    num_train_data = len(os.listdir(os.path.join(DATA_PATH, IMGS)))
-    num_un_labeled_train = num_train_data - num_labeled_train
+    data_path = os.path.join(metadata[m_data_path], dataset_name, 'fold_' + str(fold_num) + '_P' + str(labelled_perc), 'train')
+    print('data directory:', data_path)
+    tb_log_dir = os.path.join(metadata[m_save_path], 'tb', dataset_name, name + '_' + str(metadata[m_lr]) + '/')
+    model_name = os.path.join(metadata[m_save_path], 'model', 'pseudo_savebest', dataset_name, name + H5)
+    makedir(os.path.join(metadata[m_save_path], 'model', 'pseudo_savebest', dataset_name))
 
-    print('-' * 30)
-    print('Loading train data...')
-    print('-' * 30)
+    csv_name = os.path.join(metadata[m_save_path], 'csv', dataset_name, name + '.csv')
+    makedir(os.path.join(metadata[m_save_path], 'csv', dataset_name))
 
-    # Build Model
-    wm = weighted_model()
+    ens_path = os.path.join(metadata[m_root_temp_path], ens_folder_name)
+    trained_model_path = os.path.join(metadata[m_trained_model_path], dataset_name, 'supervised_F' + str(fold_num) + '_P' + str(
+        labelled_perc) + H5)
+    dim = metadata[m_dim]
+    inp_shape = dim if len(dim) == 3 else [dim[0], dim[1], metadata[m_nr_channels]]
+    bs = metadata[m_batch_size]
 
-    model = wm.build_model(img_shape=(PROSTATE_DIM[0], PROSTATE_DIM[1], PROSTATE_DIM[2]), learning_rate=lr,
-                           gpu_id=gpu_id,
-                           nb_gpus=nb_gpus, trained_model=TRAINED_MODEL_PATH, temp=1)
+    num_labeled_train = int(labelled_perc * metadata[m_labelled_train])  # actual labelled data
+    num_ul = metadata[m_unlabelled_train]
+    num_train_data = num_labeled_train + num_ul
 
-    print("Images Size:", num_train_data)
-    print("Unlabeled Size:", num_un_labeled_train)
+    print("Labelled Images:", num_labeled_train)
+    print("Unlabeled Images:", metadata[m_unlabelled_train])
+    print("Total Images:", num_train_data)
 
     print('-' * 30)
     print('Creating and compiling model...')
     print('-' * 30)
 
+    model = model_type.build_model(img_shape=inp_shape,
+                                   learning_rate=metadata[m_lr],
+                                   gpu_id=gpu_id,
+                                   nb_gpus=nb_gpus,
+                                   trained_model=trained_model_path,
+                                   temp=1)
     model.summary()
 
     # callbacks
     print('-' * 30)
     print('Creating callbacks...')
     print('-' * 30)
-    csv_logger = CSVLogger(CSV_NAME, append=True, separator=';')
-    # model_checkpoint = ModelCheckpoint(MODEL_NAME, monitor='val_loss', save_best_only=True,verbose=1, mode='min')
+    csv_logger = CSVLogger(csv_name, append=True, separator=';')
     if nb_gpus is not None and nb_gpus > 1:
-        model_checkpoint = ModelCheckpointParallel(MODEL_NAME,
+        model_checkpoint = ModelCheckpointParallel(model_name,
                                                    monitor='val_loss',
                                                    save_best_only=True,
                                                    verbose=1,
                                                    mode='min')
     else:
-        model_checkpoint = ModelCheckpoint(MODEL_NAME, monitor='val_loss',
+        model_checkpoint = ModelCheckpoint(model_name, monitor='val_loss',
                                            save_best_only=True,
                                            verbose=1,
                                            mode='min')
 
-    tensorboard = TensorBoard(log_dir=TB_LOG_DIR, write_graph=False, write_grads=False, histogram_freq=0,
+    tensorboard = TensorBoard(log_dir=tb_log_dir, write_graph=False, write_grads=False, histogram_freq=0,
                               batch_size=1, write_images=False)
 
-    train_id_list = np.arange(num_train_data)
-    np.random.shuffle(train_id_list)
+    tcb = TemporalCallback(dim, data_path, ens_path, metadata[m_save_path], num_train_data, num_labeled_train,
+                           metadata[m_patients_per_batch], metadata[m_labelled_perc], metadata[m_metric_keys],
+                           metadata[m_nr_class], bs, dataset_name)
 
-    print(train_id_list[0:10])
 
-    tcb = TemporalCallback(PROSTATE_DIM, DATA_PATH, ens_path, SAVE_PATH, num_train_data, num_labeled_train,
-                           PATIENTS_PER_BATCH, PROSTATE_VAL_METRIC_KEY_ARR, nr_class=5, batch_size=BATCH_SIZE,
-                           dataset_name=PROSTATE_DATASET)
-
+    lcb = model_type.LossCallback()
     es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=PATIENCE_EARLY_STOP, min_delta=DELTA)
-    cb = [model_checkpoint, tcb, tensorboard, csv_logger, es]
-
-    print('BATCH Size = ', BATCH_SIZE)
+    cb = [model_checkpoint, tcb, tensorboard, lcb, csv_logger, es]
 
     print('Callbacks: ', cb)
-    # params = {'dim': (32, 168, 168),'batch_size': batch_size}
 
     print('-' * 30)
     print('Fitting model...')
     print('-' * 30)
-    training_generator = train_gen(DATA_PATH,
-                                   ens_path,
-                                   train_id_list,
-                                   batch_size=BATCH_SIZE,
-                                   labelled_num=num_labeled_train)
 
-    steps = (num_train_data * AUGMENTATION_NO) / BATCH_SIZE
-    # steps = 2
+    training_generator = get_temporal_data_generator(dataset_name, data_path, ens_path, num_train_data, num_labeled_train,
+                                                 bs,
+                                                 is_augmented)
 
-    x_val, y_val = get_uats_prostate_val_data(DATA_PATH)
+    steps = ((metadata[m_labelled_train] + num_ul) * metadata[m_aug_num]) // bs
+
+    x_val, y_val = get_temporal_val_data(data_path, metadata[m_dim], metadata[m_nr_class], metadata[m_nr_channels])
 
     history = model.fit_generator(generator=training_generator,
                                   steps_per_epoch=steps,
@@ -104,32 +96,4 @@ def train(gpu_id, nb_gpus, temp_path, labelled_percentage, fold_num, name, lr=LR
                                   epochs=NUM_EPOCH,
                                   callbacks=cb
                                   )
-
-
-if __name__ == '__main__':
-
-    # Parse arguments
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-g', '--gpu_num', type=str, default='0', help='GPU Number')
-    parser.add_argument('-f', '--fold_num', type=int, default=1, help='Fold Number')
-    parser.add_argument('-p', '--perc', type=int, default=1.0, help='Labelled data percentage')
-    parser.add_argument('-t', '--temp_path', type=str, default='sadv1', help='temp path')
-    args = parser.parse_args()
-
-    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_num
-    config = tf.compat.v1.ConfigProto()
-    config.gpu_options.allow_growth = True
-    config.allow_soft_placement = True
-
-    try:
-        fold_num = args.fold_num
-        perc = args.perc
-        temp_path = args.temp_path
-        name = 'pseudo_savebest_F' + str(fold_num) + '_Perct_Labelled_' + str(perc)
-        train(None, None, temp_path=args.temp_path, labelled_percentage=perc, fold_num=fold_num, name=name, lr=LR)
-
-    finally:
-
-        if os.path.exists(TEMP_ROOT_PATH + temp_path):
-            cleanup(TEMP_ROOT_PATH + temp_path)
-        print('clean up done!')
+    return history

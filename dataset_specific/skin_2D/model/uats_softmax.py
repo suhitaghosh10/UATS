@@ -280,7 +280,8 @@ class weighted_model:
         bg = K.stack([bg_ensemble_pred, supervised_flag])
         skin = K.stack([skin_ensemble_pred, supervised_flag])
 
-        optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
+        #optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
+        optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999)
         if (nb_gpus is None):
             p_model = Model([input_img, unsupervised_label, supervised_flag],
                             [bg_out, skin_out])

@@ -318,12 +318,11 @@ def eval_for_uats_softmax(model_dir, model_name, batch_size=1, out_dir=None, con
     DIM = img_arr.shape
     from dataset_specific.skin_2D.model.uats_softmax import weighted_model
     wm = weighted_model()
-    model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=learning_rate, gpu_id=None,
-                           nb_gpus=None, trained_model=os.path.join(model_dir, model_name + '.h5'))[0]
+    model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=5e-04, gpu_id=None,
+                           nb_gpus=None, trained_model=os.path.join(model_dir, model_name + '.h5'))
     model.load_weights(os.path.join(model_dir, model_name + '.h5'))
-    val_supervised_flag = np.ones((DIM[0], DIM[1], DIM[2], 1), dtype='int8')
+    val_supervised_flag = np.ones((DIM[0], DIM[1], DIM[2]), dtype='int8')
     prediction = model.predict([img_arr, GT_arr, val_supervised_flag], batch_size=batch_size, verbose=1)
-    csvName = os.path.join(model_dir, 'evaluation', model_name + '.csv')
 
     # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
     evaluateFiles_arr(img_path='/cache/suhita/skin/preprocessed/labelled/test/', prediction=prediction,
@@ -374,19 +373,7 @@ def eval_for_supervised(model_dir, img_path, model_name, eval=True, out_dir=None
 
 
 if __name__ == '__main__':
-    # gpu = '/GPU:0'
-    batch_size = 1
-
-    # gpu = "GPU:0"  # gpu_id (default id is first of listed in parameters)
     os.environ["CUDA_VISIBLE_DEVICES"] = '0'
-    # os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
-    # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-
-    learning_rate = 5e-5
-    AUGMENTATION_NO = 5
-    TRAIN_NUM = 50
-
-    augm = 'augm'
     batch_size = 8
 
     ### for supervised of 0.1 images,
@@ -401,9 +388,9 @@ if __name__ == '__main__':
     # NAME = 'sm_skin_entropy_F'+str(FOLD_NUM)+'_Perct_Labelled_'+str(perc)
     perc = 1.0
     FOLD_NUM = 1
-    eval_for_uats_softmax('/data/suhita/temporal/skin',
-                          'sm_skin_sm_F' + str(FOLD_NUM) + '_Perct_Labelled_' + str(perc), batch_size=1,
-                          out_dir='/data/suhita/skin/ul_uats' + str(perc), connected_component=True)
+    eval_for_uats_softmax('/data/suhita/experiments/model/uats/skin/',
+                          'uats_softmax_F1_Perct_Labelled_1.0', batch_size=1,
+                          out_dir='/data/suhita/experiments/temp/', connected_component=True)
 
     # eval_for_uats_mc(
     #     '/data/suhita/skin/models/',

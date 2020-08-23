@@ -45,7 +45,7 @@ def get_metadata(dataset_name):
                             m_save_path: _SAVE_PATH,
                             m_root_temp_path: _TEMP_PATH,
                             m_trained_model_path: _TRAINED_MODEL_PATH,
-                            m_lr: 5e-5,
+                            m_lr: 1e-7,
                             m_batch_size: 8,
                             m_aug_num: 5,
                             m_patients_per_batch: 250,
