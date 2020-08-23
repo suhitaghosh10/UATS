@@ -110,8 +110,12 @@ class TemporalCallback(Callback):
                 del inp
 
                 for idx in range(self.nr_class):
-                    cur_pred[:, :, :, :, idx] = model_out[idx] if self.save_flag[idx] else ensemble_prediction[:, :, :,
+                    if len(self.dim)==3:
+                        cur_pred[:, :, :, :, idx] = model_out[idx] if self.save_flag[idx] else ensemble_prediction[:, :, :,
                                                                                            :, idx]
+                    else:
+                        cur_pred[:, :, :, idx] = model_out[idx] if self.save_flag[idx] else ensemble_prediction[:, :,
+                                                                                               :, idx]
 
                 del model_out
 
