@@ -25,10 +25,10 @@ try:
     # perc = args.perc
     # temp_path = args.temp_path
     # gpu_num = args.gpu_num
-    gpu_num = '1'
+    gpu_num = '0'
     fold_num = 1
     perc = 1.0
-    temp_path = 'sadv_1111'
+    temp_path = 'sadv_3111'
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_num
     metadata = get_metadata(args.ds)

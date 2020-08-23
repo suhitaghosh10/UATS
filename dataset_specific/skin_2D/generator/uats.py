@@ -2,7 +2,7 @@ import os
 import keras
 import numpy as np
 from keras.preprocessing.image import ImageDataGenerator
-from utility.skin.preprocess import augment_image
+from dataset_specific.skin_2D.utils.preprocess import augment_image
 
 class DataGenerator(keras.utils.Sequence):
 

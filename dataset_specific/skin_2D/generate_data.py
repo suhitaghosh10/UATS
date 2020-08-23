@@ -1,10 +1,9 @@
 import os
-from shutil import copyfile
 import numpy as np
 from utility.config import get_metadata
 from utility.constants import *
 from utility.utils import makedir
-from utility.skin.preprocess import thresholdArray, castImage, getLargestConnectedComponents, getConnectedComponents
+from dataset_specific.skin_2D.utils.preprocess import thresholdArray, castImage, getConnectedComponents
 import SimpleITK as sitk
 
 
@@ -103,8 +102,13 @@ def generate_uats_dataset(dataset_name, fold_num, labelled_perc, ul_imgs_path, s
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = '2'
-    generate_supervised_dataset(SKIN_DATASET_NAME, 1, 1.0, seed=1234)
+    os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+    model_path='/data/suhita/experiments/model/supervised/skin/'
     ul_path = '/cache/suhita/skin/preprocessed/unlabelled/imgs'
-    generate_uats_dataset(SKIN_DATASET_NAME, 1, 1.0, ul_path,
-                          '/data/suhita/experiments/model/supervised/skin/supervised_F1_P1.0.h5')
+
+    fold_num = 3
+    perc=1.0
+
+    generate_supervised_dataset(SKIN_DATASET_NAME, fold_num, perc, seed=1234)
+    generate_uats_dataset(SKIN_DATASET_NAME, fold_num, perc, ul_path,
+            model_path+'supervised_F'+str(fold_num)+'_P'+str(perc)+'.h5')

@@ -80,8 +80,8 @@ if __name__ == '__main__':
 
     ds = PROSTATE_DATASET_NAME
     metadata = get_metadata(ds)
-    perc = 0.5
-    fold_num = 2
+    perc = 0.1
+    fold_num = 3
     # generate_supervised_dataset(ds,
     #                             fold_num=fold_num,
     #                             labelled_perc=perc,

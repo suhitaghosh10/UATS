@@ -1,11 +1,10 @@
+import os
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
-
-from old.utils.AugmentationGenerator import *
 from utility.callbacks.uats_softmax import TemporalCallback
 from utility.config import get_metadata
 from utility.constants import *
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
-from utility.utils import get_uats_val_data, get_uats_data_generator
+from utility.utils import get_uats_val_data, get_uats_data_generator, makedir
 
 
 def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_num, model_type, is_augmented=True):
@@ -16,7 +15,11 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
     print('data directory:', data_path)
     tb_log_dir = os.path.join(metadata[m_save_path], 'tb', dataset_name, name + '_' + str(metadata[m_lr]) + '/')
     model_name = os.path.join(metadata[m_save_path], 'model', 'uats', dataset_name, name + H5)
+    makedir(os.path.join(metadata[m_save_path], 'model', 'uats', dataset_name))
+
     csv_name = os.path.join(metadata[m_save_path], 'csv', dataset_name, name + '.csv')
+    makedir(os.path.join(metadata[m_save_path], 'csv', dataset_name))
+
     ens_path = os.path.join(metadata[m_root_temp_path], ens_folder_name)
     trained_model_path = os.path.join(metadata[m_trained_model_path], dataset_name, 'supervised_F' + str(fold_num) + '_P' + str(
         labelled_perc) + H5)
