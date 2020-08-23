@@ -1,4 +1,4 @@
-# Temporal_Thesis
+# UATS
 Models:
 1) UATS - Softmax, Entropy, Variance, Temperature Scaling
 2) Temporal ensembling
