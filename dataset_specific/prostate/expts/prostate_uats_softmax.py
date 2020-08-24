@@ -13,7 +13,8 @@ from utility.utils import cleanup
 parser = argparse.ArgumentParser()
 parser.add_argument('-g', '--gpu_num', type=str, default='0', help='GPU Number')
 parser.add_argument('-f', '--fold_num', type=int, default=1, help='Fold Number')
-parser.add_argument('-e', '--ens_folder_name', type=str, help='ensemble folder name')
+parser.add_argument('-p', '--perc', type=float, default=1.0, help='Percentage of labelled data used') #0.1 0.25 0.5 1.0
+parser.add_argument('-t', '--temp_path', type=str, help='ensemble folder name')
 parser.add_argument('-d', '--ds', type=str, default=PROSTATE_DATASET_NAME, help='dataset name')
 
 config = tf.compat.v1.ConfigProto()
@@ -21,14 +22,13 @@ config.gpu_options.allow_growth = True
 config.allow_soft_placement = True
 
 try:
-    # fold_num = args.fold_num
-    # perc = args.perc
-    # temp_path = args.temp_path
-    # gpu_num = args.gpu_num
-    gpu_num = '3'
-    fold_num = 3
-    perc = 0.1
-    temp_path = 'sadv_5'
+    gpu_num = args.gpu_num
+    fold_num = args.fold_num
+    temp_path = args.temp_path
+    perc = args.perc
+    
+    
+   
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_num
     metadata = get_metadata(args.ds)
