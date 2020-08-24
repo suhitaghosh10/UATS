@@ -102,13 +102,13 @@ def generate_uats_dataset(dataset_name, fold_num, labelled_perc, ul_imgs_path, s
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+    os.environ["CUDA_VISIBLE_DEVICES"] = '2'
     model_path='/data/suhita/experiments/model/supervised/skin/'
     ul_path = '/cache/suhita/skin/preprocessed/unlabelled/imgs'
 
-    fold_num = 3
-    perc=1.0
+    fold_num = 1
+    perc=0.25
 
     generate_supervised_dataset(SKIN_DATASET_NAME, fold_num, perc, seed=1234)
-    generate_uats_dataset(SKIN_DATASET_NAME, fold_num, perc, ul_path,
-            model_path+'supervised_F'+str(fold_num)+'_P'+str(perc)+'.h5')
+    # generate_uats_dataset(SKIN_DATASET_NAME, fold_num, perc, ul_path,
+    #         model_path+'supervised_F'+str(fold_num)+'_P'+str(perc)+'.h5')

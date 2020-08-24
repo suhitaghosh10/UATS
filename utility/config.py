@@ -21,7 +21,7 @@ def get_metadata(dataset_name):
                 m_patients_per_batch: 59,
                 m_update_epoch_num: 50,
                 m_mc_forward_pass: 10,
-                m_labelled_perc: [10, 10, 10, 10, 25],  # pz, tz, us, afs, bg #for 0.1, 0.25, 0.5
+                m_labelled_perc: [50, 50, 10, 10, 50],  # pz, tz, us, afs, bg #for 0.1, 0.25, 0.5
 #_PERC = [50, 50, 10, 10, 50] # pz, tz, us, afs, bg #for only 1.0 experiments,
 
                 # param

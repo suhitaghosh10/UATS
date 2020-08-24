@@ -373,23 +373,13 @@ def eval_for_supervised(model_dir, img_path, model_name, eval=True, out_dir=None
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+    os.environ["CUDA_VISIBLE_DEVICES"] = '2'
     batch_size = 8
-
-    ### for supervised of 0.1 images,
-    # NAME = 'supervised_F_centered_BB_' + str(FOLD_NUM) + '_' + str(TRAIN_NUM) + '_' + str(
-    #     learning_rate) + '_Perc_' + str(PERC) + '_'+ augm
-
-    # model_dir = '/cache/suhita/skin/models/'
-    # model_dir = '/data/suhita/temporal/skin/'
     data_path = '/cache/suhita/skin/preprocessed/labelled/test/'
-    # data_path = '/cache/suhita/skin/preprocessed/unlabelled/'
-    # NAME = 'supervised_sfs32_F_1_1000_5e-05_Perc_' + str(perc) + '_augm'
-    # NAME = 'sm_skin_entropy_F'+str(FOLD_NUM)+'_Perct_Labelled_'+str(perc)
     perc = 1.0
     FOLD_NUM = 1
     eval_for_uats_softmax('/data/suhita/experiments/model/uats/skin/',
-                          'uats_softmax_F1_Perct_Labelled_1.0', batch_size=1,
+                          'uats_softmax_F2_Perct_Labelled_1.0', batch_size=1,
                           out_dir='/data/suhita/experiments/temp/', connected_component=True)
 
     # eval_for_uats_mc(
