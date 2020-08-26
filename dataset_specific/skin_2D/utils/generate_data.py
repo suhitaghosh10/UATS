@@ -58,7 +58,6 @@ def generate_supervised_dataset(dataset_name, fold_num, labelled_perc, seed=1234
 def generate_uats_dataset(dataset_name, fold_num, labelled_perc, ul_imgs_path, supervised_model_path):
 
     metadata = get_metadata(dataset_name)
-    #unlabeled_imgs = np.load(ul_imgs_path)
     dim = metadata[m_dim]
     nr_channels = metadata[m_nr_channels]
     supervised_fold_path = os.path.join(metadata[m_data_path] , dataset_name , 'fold_' + str(fold_num)+'_P' + str(labelled_perc))
@@ -89,7 +88,6 @@ def generate_uats_dataset(dataset_name, fold_num, labelled_perc, ul_imgs_path, s
         pred_arr_bg = thresholdArray(pred_arr_bg, 0.5)
 
         pred_img = getConnectedComponents(pred_img)
-        pred_img_arr = sitk.GetArrayFromImage(pred_img)
         GT_out = np.zeros([pred_arr.shape[0], pred_arr.shape[1], 2])
         GT_out[:, :, 0] = pred_arr_bg
         GT_out[:, :, 1] = pred_arr
@@ -106,9 +104,9 @@ if __name__ == '__main__':
     model_path='/data/suhita/experiments/model/supervised/skin/'
     ul_path = '/cache/suhita/skin/preprocessed/unlabelled/imgs'
 
-    fold_num = 1
-    perc=0.25
+    fold_num = 3
+    perc=0.5
 
-    generate_supervised_dataset(SKIN_DATASET_NAME, fold_num, perc, seed=1234)
-    # generate_uats_dataset(SKIN_DATASET_NAME, fold_num, perc, ul_path,
-    #         model_path+'supervised_F'+str(fold_num)+'_P'+str(perc)+'.h5')
+    #generate_supervised_dataset(SKIN_DATASET_NAME, fold_num, perc, seed=1234)
+    generate_uats_dataset(SKIN_DATASET_NAME, fold_num, perc, ul_path,
+            model_path+'supervised_F'+str(fold_num)+'_P'+str(perc)+'.h5')

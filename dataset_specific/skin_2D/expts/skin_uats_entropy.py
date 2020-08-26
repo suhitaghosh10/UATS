@@ -21,28 +21,20 @@ config.gpu_options.allow_growth = True
 config.allow_soft_placement = True
 
 try:
-    # fold_num = args.fold_num
-    # perc = args.perc
-    # temp_path = args.temp_path
-    # gpu_num = args.gpu_num
-    gpu_num = '1'
-    fold_num = 1
-    perc = 1.0
-    temp_path = 'sadv_1111'
     args = parser.parse_args()
-    os.environ["CUDA_VISIBLE_DEVICES"] = gpu_num
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_num
     metadata = get_metadata(args.ds)
     # Build Model
     wm = weighted_model()
     train(None, None,
           dataset_name=args.ds,
-          ens_folder_name=temp_path,
-          labelled_perc=perc,
-          fold_num=fold_num,
+          ens_folder_name=args.temp_path,
+          labelled_perc=args.perc,
+          fold_num=args.fold_num,
           model_type=wm
           )
 
 finally:
-    if os.path.exists(metadata[m_root_temp_path] + temp_path):
-        cleanup(metadata[m_root_temp_path] + temp_path)
+    if os.path.exists(metadata[m_root_temp_path] + args.temp_path):
+        cleanup(metadata[m_root_temp_path] + args.temp_path)
         print('clean up done!')

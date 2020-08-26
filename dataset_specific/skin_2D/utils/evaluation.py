@@ -16,69 +16,6 @@ def getDice(prediction, groundTruth):
     filter.Execute(prediction, groundTruth)
     return filter.GetDiceCoefficient()
 
-
-def relativeAbsoluteVolumeDifference(prediction, groundTruth):
-    # get number of pixels in segmentation
-    connectedFilter = sitk.ConnectedComponentImageFilter()
-    connectedComponents = connectedFilter.Execute(prediction)
-    labelFilter = sitk.LabelShapeStatisticsImageFilter()
-    labelFilter.Execute(connectedComponents)
-    x = labelFilter.GetNumberOfLabels()
-    if x == 0:
-        return 0.0
-    pixelsPrediction = labelFilter.GetNumberOfPixels(1)
-
-    connectedComponents = connectedFilter.Execute(groundTruth)
-    labelFilter = sitk.LabelShapeStatisticsImageFilter()
-    labelFilter.Execute(connectedComponents)
-    pixelsGT = labelFilter.GetNumberOfPixels(1)
-
-    # compute and return relative absolute Volume Difference
-    return (abs((pixelsPrediction / pixelsGT) - 1)) * 100
-
-
-def getBoundaryDistances(prediction, groundTruth):
-    # get surfaces
-    contourP = sitk.BinaryContour(prediction, fullyConnected=True)
-    maxFilter = sitk.MinimumMaximumImageFilter()
-    maxFilter.Execute(contourP)
-    x = maxFilter.GetMaximum()
-    if maxFilter.GetMaximum() == 0:
-        return (0.0, 0.0)
-    contourGT = sitk.BinaryContour(groundTruth, fullyConnected=True)
-
-    contourP_dist = sitk.DanielssonDistanceMap(contourP, inputIsBinary=True, squaredDistance=False,
-                                               useImageSpacing=True)
-    contourGT_dist = sitk.DanielssonDistanceMap(contourGT, inputIsBinary=True, squaredDistance=False,
-                                                useImageSpacing=True)
-
-    # image with directed distance from prediction contour to GT contour
-    contourP_masked = sitk.Mask(contourP_dist, contourGT)
-
-    # image with directed distance from GT contour to predicted contour
-    contourGT_masked = sitk.Mask(contourGT_dist, contourP)
-    # sitk.WriteImage(contourGT_masked, 'contourGT_masked.nrrd')
-    sitk.WriteImage(contourP_masked, 'contourP_masked.nrrd')
-
-    contourP_arr = sitk.GetArrayFromImage(contourP)
-    contourP_arr = contourP_arr.astype(np.bool)
-    contourP_arr_inv = np.invert(contourP_arr)
-    contourGT_arr = sitk.GetArrayFromImage(contourGT)
-    contourGT_arr = contourGT_arr.astype(np.bool)
-    contourGT_arr_inv = np.invert(contourGT_arr)
-
-    dist_PredtoGT = sitk.GetArrayFromImage(contourP_masked)
-    dist_PredtoGT = np.ma.masked_array(dist_PredtoGT, contourGT_arr_inv).compressed()
-
-    dist_GTtoPred = sitk.GetArrayFromImage(contourGT_masked)
-    dist_GTtoPred = np.ma.masked_array(dist_GTtoPred, contourP_arr_inv).compressed()
-
-    hausdorff = max(np.percentile(dist_PredtoGT, 95), np.percentile(dist_GTtoPred, 95))
-    distances = np.concatenate((dist_PredtoGT, dist_GTtoPred))
-    mean = distances.mean()
-    return (hausdorff, mean)
-
-
 def get_dice_from_array(arr1, arr2):
     y_true_f = arr1
     y_pred_f = arr2
@@ -163,29 +100,6 @@ def evaluateFiles_arr(img_path, prediction, connected_component=False, eval=True
     print(np.average(jacs))
 
 
-def evaluateFiles(GT_directory, pred_directory, csvName, lesion=False):
-    with open(csvName + '.csv', 'w') as csvfile:
-        csvwriter = csv.writer(csvfile, delimiter=';', lineterminator='\n',
-                               quotechar='|', quoting=csv.QUOTE_MINIMAL)
-        csvwriter.writerow(['Case', 'Dice', 'Average Volume Difference', '95-Hausdorff', 'Avg Hausdorff'])
-
-        cases = os.listdir(GT_directory)
-
-        for case in cases:
-            pred_img = sitk.ReadImage(pred_directory + case + '/predicted_CC.nrrd')
-            print(case[:-1])
-            GT_label = sitk.ReadImage(GT_directory + case + '/Segmentation-label_whole.nrrd')
-            GT_label = castImage(GT_label, sitk.sitkUInt8)
-            pred_img = resampleToReference(pred_img, GT_label, sitk.sitkNearestNeighbor, 0)
-            pred_img = castImage(pred_img, sitk.sitkUInt8)
-            dice = getDice(pred_img, GT_label)
-            print(dice)
-            avd = relativeAbsoluteVolumeDifference(pred_img, GT_label)
-            [hausdorff, avgDist] = getBoundaryDistances(pred_img, GT_label)
-
-            csvwriter.writerow([case, dice, avd, hausdorff, avgDist])
-
-
 def thresholdArray(array, threshold):
     # threshold image
     array[array < threshold] = 0
@@ -209,82 +123,6 @@ def getConnectedComponents(predictionImage):
     # img_isl = sitk.Subtract(pred_img, pred_img_cc)
 
     return pred_img_cc
-
-
-def removeIslands(predictedArray):
-    pred = predictedArray
-    print(pred.shape)
-    pred_pz = thresholdArray(pred[0, :, :, :], THRESHOLD)
-    pred_cz = thresholdArray(pred[1, :, :, :], THRESHOLD)
-    pred_us = thresholdArray(pred[2, :, :, :], THRESHOLD)
-    pred_afs = thresholdArray(pred[3, :, :, :], THRESHOLD)
-    pred_bg = thresholdArray(pred[4, :, :, :], THRESHOLD)
-
-    pred_pz_img = sitk.GetImageFromArray(pred_pz)
-    pred_cz_img = sitk.GetImageFromArray(pred_cz)
-    pred_us_img = sitk.GetImageFromArray(pred_us)
-    pred_afs_img = sitk.GetImageFromArray(pred_afs)
-    pred_bg_img = sitk.GetImageFromArray(pred_bg)
-    # pred_bg_img = utils.castImage(pred_bg, sitk.sitkInt8)
-
-    pred_pz_img_cc, pz_otherCC = getConnectedComponents(pred_pz_img)
-    pred_cz_img_cc, cz_otherCC = getConnectedComponents(pred_cz_img)
-    pred_us_img_cc, us_otherCC = getConnectedComponents(pred_us_img)
-    pred_afs_img_cc, afs_otherCC = getConnectedComponents(pred_afs_img)
-    pred_bg_img_cc, bg_otherCC = getConnectedComponents(pred_bg_img)
-
-    added_otherCC = sitk.Add(afs_otherCC, pz_otherCC)
-    added_otherCC = sitk.Add(added_otherCC, cz_otherCC)
-    added_otherCC = sitk.Add(added_otherCC, us_otherCC)
-    added_otherCC = sitk.Add(added_otherCC, bg_otherCC)
-
-    # sitk.WriteImage(added_otherCC, 'addedOtherCC.nrrd')
-    # sitk.WriteImage(pred_cz_img, 'pred_cz.nrrd')
-
-    pz_dis = sitk.SignedMaurerDistanceMap(pred_pz_img_cc, insideIsPositive=True, squaredDistance=False,
-                                          useImageSpacing=False)
-    cz_dis = sitk.SignedMaurerDistanceMap(pred_cz_img_cc, insideIsPositive=True, squaredDistance=False,
-                                          useImageSpacing=False)
-    us_dis = sitk.SignedMaurerDistanceMap(pred_us_img_cc, insideIsPositive=True, squaredDistance=False,
-                                          useImageSpacing=False)
-    afs_dis = sitk.SignedMaurerDistanceMap(pred_afs_img_cc, insideIsPositive=True, squaredDistance=False,
-                                           useImageSpacing=False)
-    bg_dis = sitk.SignedMaurerDistanceMap(pred_bg_img_cc, insideIsPositive=True, squaredDistance=False,
-                                          useImageSpacing=False)
-
-    # sitk.WriteImage(pred_cz_img_cc, 'pred_cz_cc.nrrd')
-    # sitk.WriteImage(cz_dis, 'cz_dis.nrrd')
-
-    array_pz = sitk.GetArrayFromImage(pred_pz_img_cc)
-    array_cz = sitk.GetArrayFromImage(pred_cz_img_cc)
-    array_us = sitk.GetArrayFromImage(pred_us_img_cc)
-    array_afs = sitk.GetArrayFromImage(pred_afs_img_cc)
-    array_bg = sitk.GetArrayFromImage(pred_bg_img_cc)
-
-    finalPrediction = np.zeros([5, 32, 168, 168])
-    finalPrediction[0] = array_pz
-    finalPrediction[1] = array_cz
-    finalPrediction[2] = array_us
-    finalPrediction[3] = array_afs
-    finalPrediction[4] = array_bg
-
-    array = np.zeros([1, 1, 1, 1])
-
-    for x in range(0, pred_cz_img.GetSize()[0]):
-        for y in range(0, pred_cz_img.GetSize()[1]):
-            for z in range(0, pred_cz_img.GetSize()[2]):
-
-                pos = [x, y, z]
-                if (added_otherCC[pos] > 0):
-                    # print(pz_dis.GetPixel(x,y,z),cz_dis.GetPixel(x,y,z),us_dis.GetPixel(x,y,z), afs_dis.GetPixel(x,y,z))
-                    array = [pz_dis.GetPixel(x, y, z), cz_dis.GetPixel(x, y, z), us_dis.GetPixel(x, y, z),
-                             afs_dis.GetPixel(x, y, z), bg_dis.GetPixel(x, y, z)]
-                    maxValue = max(array)
-                    max_index = array.index(maxValue)
-                    finalPrediction[max_index, z, y, x] = 1
-
-    return finalPrediction
-
 
 def create_test_arrays(test_dir, eval=True, save=False):
     cases = sorted(os.listdir(os.path.join(test_dir, 'imgs')))
@@ -310,7 +148,7 @@ def create_test_arrays(test_dir, eval=True, save=False):
         return img_arr
 
 
-def eval_for_uats_softmax(model_dir, model_name, batch_size=1, out_dir=None, connected_component=True):
+def eval_for_uats_softmax(model_dir, model_name, batch_size=1, out_dir=None):
     GT_dir = '/cache/suhita/skin/preprocessed/labelled/test/'
     print('create start')
     img_arr, GT_arr = create_test_arrays(GT_dir)
@@ -339,7 +177,7 @@ def eval_for_uats_mc(model_dir, model_name, batch_size=1, out_dir=None, lesion=F
     DIM = img_arr.shape
     from dataset_specific.skin_2D.model.uats_entropy import weighted_model
     wm = weighted_model()
-    model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=learning_rate, gpu_id=None,
+    model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=1e-07, gpu_id=None,
                            nb_gpus=None, trained_model=os.path.join(model_dir, model_name + '.h5'))
     model[0].load_weights(os.path.join(model_dir, model_name + '.h5'))
     val_supervised_flag = np.ones((DIM[0], DIM[1], DIM[2], 1), dtype='int8')
@@ -357,11 +195,10 @@ def eval_for_supervised(model_dir, img_path, model_name, eval=True, out_dir=None
         img_arr, GT_arr = create_test_arrays(img_path, eval=eval)
     else:
         img_arr = create_test_arrays(img_path, eval=eval)
-        GT_arr = None
     DIM = img_arr.shape
     from dataset_specific.skin_2D.model.baseline import weighted_model
     wm = weighted_model()
-    model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=learning_rate)
+    model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=1e-07)
     model.load_weights(os.path.join(model_dir, model_name + '.h5'))
     prediction = model.predict(img_arr, batch_size=1, verbose=1)
 
@@ -379,7 +216,7 @@ if __name__ == '__main__':
     perc = 1.0
     FOLD_NUM = 1
     eval_for_uats_softmax('/data/suhita/experiments/model/uats/skin/',
-                          'uats_softmax_F2_Perct_Labelled_1.0', batch_size=1,
+                          'uats_softmax_F1_Perct_Labelled_0.5', batch_size=1,
                           out_dir='/data/suhita/experiments/temp/', connected_component=True)
 
     # eval_for_uats_mc(
@@ -388,21 +225,6 @@ if __name__ == '__main__':
     #                        'sm_skin_sm_F3_Perct_Labelled_0.1',
     #                       batch_size=1, out_dir='/data/suhita/skin/eval/uats/', lesion=True, eval=True)
 
-    # eval_for_supervised('/data/suhita/skin/models/', data_path,
-    #                     'softmax_supervised_sfs32_F_2_1000_5e-05_Perc_' + str(perc) + '_augm', eval=True,
+    # eval_for_supervised('/data/suhita/experiments/model/supervised/skin/', data_path,
+    #                     'supervised_F1_P0.5', eval=True,
     #                     out_dir='/data/suhita/skin/ul/UL_' + str(perc), connected_component=True)
-# /data/suhita/temporal/skin/2_skin_softmax_F1_Perct_Labelled_1.0.h5
-
-# data_path = '/home/anneke/data/skin_less_hair/preprocessed/labelled/test/'
-# NAME = 'softmax_supervised_sfs32_F_'+str(FOLD_NUM)+'_1000_5e-05_Perc_' + str(perc) + '_augm'
-
-# from kits.utils import makedir
-# perc = [0.1]
-# for p in perc:
-#     makedir('/data/suhita/skin/ul/UL_' + str(p))
-#     # eval_for_supervised('/data/suhita/skin/models/', '/cache/suhita/skin/preprocessed/labelled/test/',
-#     #              'softmax_supervised_sfs32_F_'+str(FOLD_NUM)+'_1000_5e-05_Perc_' + str(p) + '_augm', eval=True,
-#     #              out_dir='/data/suhita/skin/ul/UL_' + str(p), connected_component=True)
-#     eval_for_supervised('/data/suhita/skin/models/', '/cache/suhita/skin/preprocessed/unlabelled/',
-#                          'softmax_supervised_sfs32_F_'+str(FOLD_NUM)+'_1000_5e-05_Perc_' + str(p) + '_augm', eval=False,
-#                          out_dir='/data/suhita/skin/ul/UL_' + str(p), connected_component=True)
