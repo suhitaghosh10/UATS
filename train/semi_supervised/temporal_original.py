@@ -11,7 +11,7 @@ from utility.utils import get_temporal_val_data, get_temporal_data_generator
 
 def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_num, model_type, is_augmented=True):
     global metadata
-    metadata = get_metadata(dataset_name, fold_num, labelled_perc)
+    metadata = get_metadata(dataset_name)
     name = 'temporal_F' + str(fold_num) + '_Perct_Labelled_' + str(labelled_perc)
 
     data_path = os.path.join(metadata[m_data_path], dataset_name, 'fold_' + str(fold_num) + '_P' + str(labelled_perc), 'train')
@@ -53,7 +53,7 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
                                            verbose=1,
                                            mode='min')
 
-    tensorboard = TensorBoard(log_dir=tb_log_dir, write_graph=False, write_grads=False, histogram_freq=0,
+    tensorboard = TensorBoard(log_dir=tb_log_dir, write_graph=False, write_grads=True, histogram_freq=2,
                               batch_size=1, write_images=False)
 
     tcb = TemporalCallback(dim, data_path, ens_path, metadata[m_save_path], num_train_data, num_labeled_train,
@@ -71,7 +71,7 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
     training_generator = get_temporal_data_generator(dataset_name, data_path, ens_path, num_train_data,
                                                      num_labeled_train, bs,
                                                      is_augmented)
-    steps = ((metadata[m_labelled_train] + num_ul) * metadata[m_aug_num]) // bs
+    steps = ((metadata[m_labelled_train] + metadata[m_unlabelled_train]) * metadata[m_aug_num]) // bs
     # steps=2
 
     x_val, y_val = get_temporal_val_data(data_path, dim, metadata[m_nr_class], metadata[m_nr_channels])
