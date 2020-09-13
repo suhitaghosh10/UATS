@@ -4,7 +4,7 @@ from utility.callbacks.pseudo_save_best import TemporalCallback
 from utility.config import get_metadata
 from utility.constants import *
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
-from utility.utils import get_temporal_val_data, get_temporal_data_generator, makedir
+from utility.utils import get_uats_val_data, get_uats_data_generator, makedir
 
 
 def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_num, model_type, is_augmented=True):
@@ -43,8 +43,7 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
                                    learning_rate=metadata[m_lr],
                                    gpu_id=gpu_id,
                                    nb_gpus=nb_gpus,
-                                   trained_model=trained_model_path,
-                                   temp=1)
+                                   trained_model=trained_model_path)
     model.summary()
 
     # callbacks
@@ -68,13 +67,11 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
                               batch_size=1, write_images=False)
 
     tcb = TemporalCallback(dim, data_path, ens_path, metadata[m_save_path], num_train_data, num_labeled_train,
-                           metadata[m_patients_per_batch], metadata[m_labelled_perc], metadata[m_metric_keys],
+                           metadata[m_patients_per_batch], metadata[m_metric_keys],
                            metadata[m_nr_class], bs, dataset_name)
 
-
-    lcb = model_type.LossCallback()
     es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=PATIENCE_EARLY_STOP, min_delta=DELTA)
-    cb = [model_checkpoint, tcb, tensorboard, lcb, csv_logger, es]
+    cb = [model_checkpoint, tcb, tensorboard, csv_logger, es]
 
     print('Callbacks: ', cb)
 
@@ -82,13 +79,13 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
     print('Fitting model...')
     print('-' * 30)
 
-    training_generator = get_temporal_data_generator(dataset_name, data_path, ens_path, num_train_data, num_labeled_train,
+    training_generator = get_uats_data_generator(dataset_name, data_path, ens_path, num_train_data, num_labeled_train,
                                                  bs,
                                                  is_augmented)
 
     steps = ((metadata[m_labelled_train] + num_ul) * metadata[m_aug_num]) // bs
 
-    x_val, y_val = get_temporal_val_data(data_path, metadata[m_dim], metadata[m_nr_class], metadata[m_nr_channels])
+    x_val, y_val = get_uats_val_data(data_path, metadata[m_dim], metadata[m_nr_class], metadata[m_nr_channels])
 
     history = model.fit_generator(generator=training_generator,
                                   steps_per_epoch=steps,

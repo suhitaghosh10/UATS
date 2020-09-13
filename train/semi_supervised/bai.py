@@ -11,7 +11,7 @@ from utility.utils import get_temporal_val_data, get_temporal_data_generator
 
 def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_num, model_type, is_augmented=True):
     global metadata
-    metadata = get_metadata(dataset_name, fold_num, labelled_perc)
+    metadata = get_metadata(dataset_name)
     name = 'bai_F' + str(fold_num) + '_Perct_Labelled_' + str(labelled_perc)
 
     data_path = os.path.join(metadata[m_data_path], dataset_name, 'fold_' + str(fold_num) + '_P' + str(labelled_perc), 'train')

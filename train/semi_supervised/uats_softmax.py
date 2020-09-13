@@ -5,11 +5,12 @@ from utility.config import get_metadata
 from utility.constants import *
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 from utility.utils import get_uats_val_data, get_uats_data_generator, makedir
+import tensorflow as tf
 
 
 def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_num, model_type, is_augmented=True):
     metadata = get_metadata(dataset_name)
-    name = 'uats_softmax_F' + str(fold_num) + '_Perct_Labelled_' + str(labelled_perc)
+    name = 'grad_uats_softmax_F' + str(fold_num) + '_Perct_Labelled_' + str(labelled_perc)
 
     data_path = os.path.join(metadata[m_data_path], dataset_name, 'fold_' + str(fold_num) + '_P' + str(labelled_perc), 'train')
     print('data directory:', data_path)
@@ -64,7 +65,7 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
                                            verbose=1,
                                            mode='min')
 
-    tensorboard = TensorBoard(log_dir=tb_log_dir, write_graph=False, write_grads=False, histogram_freq=0,
+    tensorboard = TensorBoard(log_dir=tb_log_dir, write_graph=False, write_grads=True, histogram_freq=2,
                               batch_size=1, write_images=False)
 
     tcb = TemporalCallback(dim, data_path, ens_path, metadata[m_save_path], num_train_data, num_labeled_train,

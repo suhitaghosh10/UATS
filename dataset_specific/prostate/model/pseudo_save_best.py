@@ -183,9 +183,7 @@ class weighted_model:
 
         return conv
 
-    def build_model(self, img_shape=(32, 168, 168), use_dice_cl=None, num_class=5, learning_rate=5e-5, gpu_id=None,
-                    nb_gpus=None,
-                    trained_model=None, temp=1.5):
+    def build_model(self, img_shape=(32, 168, 168), learning_rate=5e-5, gpu_id=None, nb_gpus=None, trained_model=None):
         input_img = Input((*img_shape, 1), name='img_inp')
         unsupervised_label = Input((*img_shape, 5), name='unsup_label_inp')
         supervised_flag = Input(shape=img_shape, name='flag_inp')
@@ -206,7 +204,6 @@ class weighted_model:
         if bn:
             conv3 = BatchNormalization()(conv3)
         pool3 = MaxPooling3D(pool_size=(2, 2, 2))(conv3)
-        # conv3, conv3_b_m = downLayer(conv2, sfs*4, 3, bn)
 
         conv4 = Conv3D(sfs * 16, (3, 3, 3), activation='relu', padding='same', kernel_initializer=kernel_init,
                        name='conv4_1')(pool3)
@@ -297,10 +294,6 @@ class weighted_model:
 
                 p_model = multi_gpu_model(model, gpus=nb_gpus)
 
-                # model_copy = Model([input_img, unsupervised_label, gt, supervised_flag, unsupervised_weight],[pz_out, cz_out, us_out, afs_out, bg_out])
-
-                # intermediate_layer_model = Model(inputs=train.input,outputs=train.get_layer(layer_name).output)
-
                 p_model.compile(optimizer=optimizer,
                                 loss={'pz': self.semi_supervised_loss(pz),
                                       'cz': self.semi_supervised_loss(cz),
@@ -319,5 +312,3 @@ class weighted_model:
                                 )
 
         return p_model
-    # return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg])
-    # return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg, input_idx])

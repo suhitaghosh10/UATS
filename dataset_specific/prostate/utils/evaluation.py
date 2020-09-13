@@ -110,7 +110,7 @@ def evaluateFiles_zones(GT_array, prediction_arr, csvName):
                 # sitk.WriteImage(pred_img, 'predImg.nrrd')
                 # sitk.WriteImage(GT_label, 'GT_label.nrrd')
 
-                dice = getDice(pred_img, GT_label) * 100
+                dice = getDice(pred_img, GT_label)
                 temp_dice.append(dice)
                 print(dice)
                 # avd = relativeAbsoluteVolumeDifference(pred_img, GT_label)
@@ -603,11 +603,12 @@ if __name__ == '__main__':
 
     evaluate_uats(model_dir='/data/suhita/experiments/model/uats/prostate/',
                   # model_dir='/data/suhita/prostate/',
-                  model_name='uats_mc_entropy_F4_Perct_Labelled_1.0.h5',
-                  #model_name='uats_mc_entropy_F1_Perct_Labelled_1.0.h5',
+                  #model_name='uats_softmax_no_consistency_F4_Perct_Labelled_1.0.h5',
+                 # model_name='uats_mc_entropy_F4_Perct_Labelled_1.0.h5',
+                  model_name='uats_softmax_no_confidence_F3_Perct_Labelled_1.0.h5',
                   val_x=np.load('/cache/suhita/data/prostate/final_test_array_imgs.npy'),
                   val_y=np.load('/cache/suhita/data/prostate/final_test_array_GT.npy').astype('int8'),
-                  mc=False,
+                  mc=True,
 
                   )
 

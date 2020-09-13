@@ -7,13 +7,14 @@ from utility.constants import NPY
 
 class DataGenerator(keras.utils.Sequence):
     def __init__(self, data_path, ensemble_path, id_list, batch_size=2,
-                 dim=(32, 168, 168), labelled_num=58):
+                 dim=(32, 168, 168), labelled_num=58, is_augmented=True):
         'Initialization'
         self.dim = dim
         self.data_path = data_path
         self.ensemble_path = ensemble_path
         self.batch_size = batch_size
         self.id_list = id_list
+        self.is_augmented = is_augmented
         self.indexes = np.arange(len(self.id_list))
         self.labelled_num = labelled_num
 
@@ -33,14 +34,19 @@ class DataGenerator(keras.utils.Sequence):
 
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
-            aug_type = np.random.randint(0, 5)
-            img[i, :, :, :, :], gt, ensemble_pred[i] = get_single_image_augmentation_with_only_ensemble(
-                aug_type,
-                np.load(self.data_path + '/imgs/' + str(ID) + NPY),
-                np.load(self.data_path + '/gt/' + str(ID) + NPY),
-                np.load(self.ensemble_path + '/ens_gt/' + str(ID) + NPY),
-                img_no=ID,
-                labelled_num=self.labelled_num)
+            if self.is_augmented:
+                aug_type = np.random.randint(0, 5)
+                img[i, :, :, :, :], gt, ensemble_pred[i] = get_single_image_augmentation_with_only_ensemble(
+                    aug_type,
+                    np.load(self.data_path + '/imgs/' + str(ID) + NPY),
+                    np.load(self.data_path + '/gt/' + str(ID) + NPY),
+                    np.load(self.ensemble_path + '/ens_gt/' + str(ID) + NPY),
+                    img_no=ID,
+                    labelled_num=self.labelled_num)
+            else:
+                img[i, :, :, :, :] = np.load(self.data_path + '/imgs/' + str(ID) + NPY)
+                gt = np.load(self.data_path + '/gt/' + str(ID) + NPY)
+                ensemble_pred[i] = np.load(self.ensemble_path + '/ens_gt/' + str(ID) + NPY)
 
             pz_gt[i] = gt[:, :, :, 0]
             cz_gt[i] = gt[:, :, :, 1]

@@ -196,8 +196,8 @@ class weighted_model:
 
         return conv
 
-    def build_model(self, img_shape=(32, 168, 168), use_dice_cl=None, num_class=5, learning_rate=5e-5, gpu_id=None,
-                    nb_gpus=None,
+    def build_model(self, img_shape=(32, 168, 168), use_dice_cl=None, num_class=5, learning_rate=5e-5, gpu_id="/GPU:0",
+                    nb_gpus=2,
                     trained_model=None, temp=1.5):
         input_img = Input((*img_shape, 1), name='img_inp')
         unsupervised_label = Input((*img_shape, 5), name='unsup_label_inp')

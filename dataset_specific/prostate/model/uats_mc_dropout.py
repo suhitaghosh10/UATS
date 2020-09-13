@@ -4,11 +4,11 @@ from keras.callbacks import Callback
 from keras.layers import concatenate, Input, Conv3D, MaxPooling3D, Conv3DTranspose, Lambda, \
     BatchNormalization, Dropout
 from keras.models import Model
-from keras.optimizers import Adam
+#from keras.optimizers import Adam
 from keras.utils import multi_gpu_model
 
 
-# from lib.segmentation.weight_norm import AdamWithWeightnorm
+from utility.weight_norm import AdamWithWeightnorm as Adam
 
 
 class weighted_model:
