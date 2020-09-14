@@ -9,7 +9,7 @@ from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 from utility.utils import get_temporal_val_data, get_temporal_data_generator
 
 
-def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_num, model_type, is_augmented=True):
+def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_num, model_type, is_augmented=True, early_stop=True):
     global metadata
     metadata = get_metadata(dataset_name)
     name = 'temporal_F' + str(fold_num) + '_Perct_Labelled_' + str(labelled_perc)
@@ -59,8 +59,10 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
     tcb = TemporalCallback(dim, data_path, ens_path, metadata[m_save_path], num_train_data, num_labeled_train,
                            metadata[m_patients_per_batch], metadata[m_nr_class], bs, dataset_name)
     lcb = model_type.LossCallback()
-    es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=PATIENCE_EARLY_STOP, min_delta=DELTA)
-    cb = [model_checkpoint, tcb, tensorboard, lcb, csv_logger, es]
+    cb = [model_checkpoint, tcb, tensorboard, lcb, csv_logger]
+    if early_stop:
+        es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=PATIENCE_EARLY_STOP, min_delta=DELTA)
+        cb.append(es)
 
     print('Callbacks: ', cb)
 

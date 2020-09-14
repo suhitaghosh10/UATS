@@ -8,9 +8,9 @@ from utility.utils import get_uats_val_data, get_uats_data_generator, makedir
 import tensorflow as tf
 
 
-def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_num, model_type, is_augmented=True):
+def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_num, model_type, is_augmented=True, early_stop=True):
     metadata = get_metadata(dataset_name)
-    name = 'grad_uats_softmax_F' + str(fold_num) + '_Perct_Labelled_' + str(labelled_perc)
+    name = 'uats_softmax_F' + str(fold_num) + '_Perct_Labelled_' + str(labelled_perc)
 
     data_path = os.path.join(metadata[m_data_path], dataset_name, 'fold_' + str(fold_num) + '_P' + str(labelled_perc), 'train')
     print('data directory:', data_path)
@@ -73,8 +73,10 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
                            metadata[m_nr_class], bs, dataset_name)
 
     lcb = model_type.LossCallback()
-    es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=PATIENCE_EARLY_STOP, min_delta=DELTA)
-    cb = [model_checkpoint, tcb, tensorboard, lcb, csv_logger, es]
+    cb = [model_checkpoint, tcb, tensorboard, lcb, csv_logger]
+    if early_stop:
+        es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=PATIENCE_EARLY_STOP, min_delta=DELTA)
+        cb.append(es)
 
     print('Callbacks: ', cb)
 

@@ -7,7 +7,7 @@ from utility.parallel_gpu_checkpoint import ModelCheckpointParallel
 from utility.utils import get_uats_val_data, get_uats_data_generator, makedir
 
 
-def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_num, model_type, is_augmented=True):
+def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_num, model_type, is_augmented=True, early_stop=True):
     metadata = get_metadata(dataset_name)
     name = 'pseudo_savebest_F' + str(fold_num) + '_Perct_Labelled_' + str(labelled_perc)
 
@@ -70,8 +70,10 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
                            metadata[m_patients_per_batch], metadata[m_metric_keys],
                            metadata[m_nr_class], bs, dataset_name)
 
-    es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=PATIENCE_EARLY_STOP, min_delta=DELTA)
-    cb = [model_checkpoint, tcb, tensorboard, csv_logger, es]
+    cb = [model_checkpoint, tcb, tensorboard, csv_logger]
+    if early_stop:
+        es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=PATIENCE_EARLY_STOP, min_delta=DELTA)
+        cb.append(es)
 
     print('Callbacks: ', cb)
 
