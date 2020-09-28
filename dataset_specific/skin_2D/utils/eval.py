@@ -216,8 +216,8 @@ if __name__ == '__main__':
     perc = 1.0
     FOLD_NUM = 1
     eval_for_uats_softmax('/data/suhita/experiments/model/uats/skin/',
-                          'uats_softmax_F1_Perct_Labelled_0.5', batch_size=1,
-                          out_dir='/data/suhita/experiments/temp/', connected_component=True)
+                          'uats_softmax_F3_Perct_Labelled_1.0', batch_size=1,
+                          out_dir='/data/suhita/experiments/temp/')
 
     # eval_for_uats_mc(
     #     '/data/suhita/skin/models/',
