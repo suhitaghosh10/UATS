@@ -1,6 +1,6 @@
 # Uncertainty-Aware Temporal Self-Learning (UATS)
 
-This repository contains the source code of *Uncertainty-Aware Temporal Self-Learning (UATS): Semi-SupervisedLearning for Segmentation of the Prostate and Beyond*; submitted in *Artificial Intelligence in Medicine Paper*.
+This repository contains the source code of the paper *Uncertainty-Aware Temporal Self-Learning (UATS): Semi-SupervisedLearning for Segmentation of the Prostate and Beyond*, submitted in *Artificial Intelligence in Medicine Paper*.
 
 ## Highlights:
 - A deep semi-supervised method named uncertainty-aware temporal self-learning (UATS) was proposed for medical segmentation.
@@ -13,7 +13,7 @@ This repository contains the source code of *Uncertainty-Aware Temporal Self-Lea
 
 ## Training:
 1. pip install -r requirements.txt
-2. Make experiment and dataset related changes in the file *utility/config.py*
-3. The UATS model could be trained: python dataset_specific/prostate/expts/uats_softmax.py
+2. Experiment and dataset related changes to be made in the file: *utility/config.py*
+3. The UATS model could be trained: python dataset_specific/prostate/expts/prostate_uats_softmax.py
 
 
