@@ -2,6 +2,8 @@
 
 This repository contains the source code of the paper *Uncertainty-Aware Temporal Self-Learning (UATS): Semi-SupervisedLearning for Segmentation of the Prostate and Beyond*, submitted in *Artificial Intelligence in Medicine Paper*.
 
+![Concept of our method. For details we refer to our paper at .....](concept.PNG)
+
 ## Highlights:
 - A deep semi-supervised method named uncertainty-aware temporal self-learning (UATS) was proposed for segmentation.
 - UATS leverages performance gains from temporal ensembling [(Laine and Aila)](https://arxiv.org/abs/1610.02242) and uncertainty-guided self-learning.
