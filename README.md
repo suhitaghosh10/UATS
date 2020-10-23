@@ -12,6 +12,8 @@ This repository contains the source code of *Uncertainty-Aware Temporal Self-Lea
   - [Medical Decathlon Challenge Task 04 (Hippocampus Segmentation)](http://medicaldecathlon.com/)
 
 ## Training:
-pip install -r requirements.txt
-Make experiment and dataset related changes in the file *utility/config.py*
+1. pip install -r requirements.txt
+2. Make experiment and dataset related changes in the file *utility/config.py*
+3. The UATS model could be trained: python dataset_specific/prostate/expts/uats_softmax.py
+
 
