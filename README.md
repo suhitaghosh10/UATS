@@ -13,4 +13,5 @@ This repository contains the source code of *Uncertainty-Aware Temporal Self-Lea
 
 ## Training:
 pip install -r requirements.txt
-python 
+Make experiment and dataset related changes in the file *utility/config.py*
+
