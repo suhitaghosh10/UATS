@@ -21,14 +21,11 @@ config.gpu_options.allow_growth = True
 config.allow_soft_placement = True
 
 try:
-    # fold_num = args.fold_num
-    # perc = args.perc
-    # temp_path = args.temp_path
-    # gpu_num = args.gpu_num
-    gpu_num = '3'
-    fold_num = 1
-    perc = 1.0
-    temp_path = 'sadv4'
+    fold_num = args.fold_num
+    perc = args.perc
+    temp_path = args.temp_path
+    gpu_num = args.gpu_num
+    
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_num
     metadata = get_metadata(args.ds, fold_num, perc)
