@@ -1,6 +1,5 @@
 from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
-
-from old.utils.AugmentationGenerator import *
+import os
 from utility.config import get_metadata
 from utility.constants import *
 from utility.parallel_gpu_checkpoint import ModelCheckpointParallel

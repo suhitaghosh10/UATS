@@ -1,8 +1,6 @@
 import argparse
 import os
-
 import tensorflow as tf
-
 from dataset_specific.hippocampus.model.baseline import weighted_model
 from train.supervised.baseline import train
 from utility.config import get_metadata

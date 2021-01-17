@@ -1,7 +1,6 @@
-import numpy as np
+
 import os
 import shutil
-
 import SimpleITK as sitk
 import numpy as np
 
