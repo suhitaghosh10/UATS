@@ -21,17 +21,14 @@ config.gpu_options.allow_growth = True
 config.allow_soft_placement = True
 
 try:
-    # fold_num = args.fold_num
-    # perc = args.perc
-    # temp_path = args.temp_path
-    # gpu_num = args.gpu_num
-    gpu_num = '2'
-    fold_num = 1
-    perc = 1.0
-    temp_path = 'sadv4'
     args = parser.parse_args()
+    fold_num = args.fold_num
+    perc = args.perc
+    temp_path = args.temp_path
+    gpu_num = args.gpu_num
+
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_num
-    metadata = get_metadata(args.ds)
+    metadata = get_metadata(args.ds, fold_num, perc)
     # Build Model
     wm = weighted_model()
     train(None, None,
@@ -39,8 +36,7 @@ try:
           ens_folder_name=temp_path,
           labelled_perc=perc,
           fold_num=fold_num,
-          model_type=wm,
-          early_stop=False
+          model_type=wm
           )
 
 finally:
