@@ -1,7 +1,6 @@
 import csv
-
-from dataset_specific.hippocampus import get_multi_class_arr
-from dataset_specific.kits import makedir
+from utility.utils import makedir
+from dataset_specific.hippocampus.utils import get_multi_class_arr
 from dataset_specific.prostate.utils.preprocess import *
 
 THRESHOLD = 0.5
@@ -104,8 +103,9 @@ def evaluateFiles_arr(prediction, img_arr, GT_arr, csvName, connected_component=
             else:
                 prediction_temp = np.asarray(prediction)[:, imgNumber, :, :, :]
             if not eval:
-                np.save(save_dir + '/imgs/' + str(imgNumber) + '.npy', img_arr[imgNumber])
-                np.save(save_dir + '/GT/' + str(imgNumber) + '.npy', prediction_temp)
+                #np.save(save_dir + '/imgs/' + str(imgNumber) + '.npy', img_arr[imgNumber])
+                #np.save(save_dir + '/GT/' + str(imgNumber) + '.npy', GT_arr[imgNumber])
+                np.save(save_dir + '/baseline/' + str(imgNumber) + '.npy', prediction_temp)
 
             values = ['Case' + str(imgNumber)]
             print('Case' + str(int(imgNumber)))
@@ -293,7 +293,7 @@ def eval_for_uats_softmax(imgs_path, gt_path, model_dir, model_name, batch_size=
     img_arr, GT_arr = create_test_arrays(imgs_path, gt_path, n_classes=3)
     DIM = img_arr.shape
     print(DIM)
-    from dataset_specific.hippocampus import weighted_model
+    from dataset_specific.hippocampus.model.softmax import weighted_model
     wm = weighted_model()
     model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=5e-5, gpu_id=None,
                            nb_gpus=None)
@@ -308,7 +308,7 @@ def eval_for_uats_softmax(imgs_path, gt_path, model_dir, model_name, batch_size=
     # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
     evaluateFiles_arr(prediction=prediction, img_arr=img_arr, GT_arr=GT_arr, csvName=csvName,
                       connected_component=connected_component,
-                      save_dir=out_dir, eval=True)
+                      save_dir=out_dir, eval=False)
 
 
 def eval_for_uats_entropy(imgs_path, gt_path, model_dir, model_name, batch_size=1, out_dir=None,
@@ -316,7 +316,7 @@ def eval_for_uats_entropy(imgs_path, gt_path, model_dir, model_name, batch_size=
     img_arr, GT_arr = create_test_arrays(imgs_path, gt_path, n_classes=3)
     DIM = img_arr.shape
     print(DIM)
-    from dataset_specific.hippocampus import weighted_model
+    from dataset_specific.hippocampus.baseline import weighted_model
     wm = weighted_model()
     model = wm.build_model(img_shape=(DIM[1], DIM[2], DIM[3]), learning_rate=5e-5, gpu_id=None,
                            nb_gpus=None, trained_model=os.path.join(model_dir, model_name + '.h5'))[0]
@@ -336,7 +336,6 @@ def eval_for_uats_entropy(imgs_path, gt_path, model_dir, model_name, batch_size=
 
 
 if __name__ == '__main__':
-    from dataset_specific.hippocampus import weighted_model
 
     os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
@@ -348,14 +347,14 @@ if __name__ == '__main__':
 
     # for PERC in PERCENTAGE:
 
-    model_dir = '/data/suhita/hippocampus/output/models/'
+    model_dir = '/data/suhita/hippocampus/models/'
     GT_dir_imgs = '/cache/suhita/hippocampus/preprocessed/labelled/test'
     GT_dir_labels = '/cache/suhita/hippocampus/preprocessed/labelled-GT/test'
     unlabelled_dir = '/cache/suhita/hippocampus/preprocessed/unlabelled/imgs/'
 
-    eval_for_uats_softmax(GT_dir_imgs, GT_dir_labels, '/data/suhita/temporal/hippocampus/',
-                          'hippocampus_softmax_F1_Perct_Labelled_1.0', batch_size=1,
-                          out_dir='/data/suhita/hippocampus/models/uats', connected_component=True)
+    eval_for_uats_softmax(GT_dir_imgs, GT_dir_labels, '/data/suhita/hippocampus/models/',
+                          'supervised_F_3_150_4e-05_Perc_0.5_augm', batch_size=1,
+                          out_dir='/data/suhita/hippocampus/models/', connected_component=False)
 
     # eval_for_uats_entropy(GT_dir_imgs, GT_dir_labels, '/data/suhita/temporal/hippocampus/',
     #                       'hippocampus_T_20_mc_F1_Perct_Labelled_0.1', batch_size=1,

@@ -8,9 +8,6 @@ from keras.optimizers import Adam
 from keras.utils import multi_gpu_model
 
 
-# from lib.segmentation.weight_norm import AdamWithWeightnorm
-
-
 class weighted_model:
     alpha = 0.6
     epoch_ctr = K.variable(0, name='epoch_ctr')

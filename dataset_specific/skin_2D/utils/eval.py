@@ -65,39 +65,36 @@ def evaluateFiles_arr(img_path, prediction, connected_component=False, eval=True
             os.makedirs(out_dir + '/imgs')
         if not os.path.exists(out_dir + '/GT'):
             os.makedirs(out_dir + '/GT')
+        if not os.path.exists(out_dir + '/uats'):
+            os.makedirs(out_dir + '/supervised')
 
         pred_img_arr = np.stack((sitk.GetArrayFromImage(pred_bg_img), sitk.GetArrayFromImage(pred_lesion_img)), -1)
         # np.save(out_dir + '/imgs/' + str(imgNumber) + '.npy',
         #         np.load(os.path.join(img_path, 'imgs', test_dir[imgNumber])) / 255)
-        # np.save(out_dir + '/GT/' + str(imgNumber) + '.npy', pred_img_arr)
-        if eval:
-            # lesion
-            GT_label = np.load(
-                os.path.join(img_path, 'GT', test_dir[imgNumber].replace('.npy', '_segmentation.npy'))) / 255
-            if lesion:
-                dice = get_dice_from_array(pred_img_arr[:, :, 1], GT_label[:, :, 0])
-                jac = get_thresholded_jaccard(pred_img_arr[:, :, 1], GT_label[:, :, 0])
-                # jac = jac if jac > 0.64 else jac
-            else:
-                dice = get_dice_from_array(pred_img_arr[:, :, 0], 1 - GT_label[:, :, 0])
-                jac = get_thresholded_jaccard(pred_img_arr[:, :, 0], 1 - GT_label[:, :, 0])
-                # jac = jac if jac > 0.64 else jac
-            dices[imgNumber] = dice
-            jacs[imgNumber] = jac
-            print(dice, jac)
-            np.save(out_dir + '/imgs/' + test_dir[imgNumber],
-                    np.load(os.path.join(img_path, 'imgs', test_dir[imgNumber])))
-            np.save(out_dir + '/GT/' + test_dir[imgNumber], pred_img_arr)
-
-        else:
-            np.save(out_dir + '/imgs/' + test_dir[imgNumber],
-                    np.load(os.path.join(img_path, 'imgs', test_dir[imgNumber])))
-            np.save(out_dir + '/GT/' + test_dir[imgNumber], pred_img_arr)
-
-    print('Dices')
-    print(np.average(dices))
-    print('Jaccard')
-    print(np.average(jacs))
+        # GT_label = np.load(
+        #     os.path.join(img_path, 'GT', test_dir[imgNumber].replace('.npy', '_segmentation.npy'))) / 255
+        # np.save(out_dir + '/GT/' + str(imgNumber) + '.npy', GT_label[:, :, 0])
+        np.save(out_dir + '/supervised/' + str(imgNumber) + '.npy', pred_img_arr[:, :, 1])
+    #     if eval:
+    #         # lesion
+    #
+    #         if lesion:
+    #             dice = get_dice_from_array(pred_img_arr[:, :, 1], GT_label[:, :, 0])
+    #             jac = get_thresholded_jaccard(pred_img_arr[:, :, 1], GT_label[:, :, 0])
+    #             # jac = jac if jac > 0.64 else jac
+    #         else:
+    #             dice = get_dice_from_array(pred_img_arr[:, :, 0], 1 - GT_label[:, :, 0])
+    #             jac = get_thresholded_jaccard(pred_img_arr[:, :, 0], 1 - GT_label[:, :, 0])
+    #             # jac = jac if jac > 0.64 else jac
+    #         dices[imgNumber] = dice
+    #         jacs[imgNumber] = jac
+    #         print(dice, jac)
+    #
+    #
+    # print('Dices')
+    # print(np.average(dices))
+    # print('Jaccard')
+    # print(np.average(jacs))
 
 
 def thresholdArray(array, threshold):
@@ -162,8 +159,8 @@ def eval_for_uats_softmax(model_dir, model_name, batch_size=1, out_dir=None):
     val_supervised_flag = np.ones((DIM[0], DIM[1], DIM[2]), dtype='int8')
     prediction = model.predict([img_arr, GT_arr, val_supervised_flag], batch_size=batch_size, verbose=1)
 
-    # weights epochs LR gpu_id dist orient prediction LRDecay earlyStop
-    evaluateFiles_arr(img_path='/cache/suhita/skin/preprocessed/labelled/test/', prediction=prediction,
+    evaluateFiles_arr(img_path='/cache/suhita/skin/preprocessed/labelled/test/',
+                                 prediction=prediction,
                       connected_component=True,
                       out_dir=out_dir, eval=True)
 
@@ -215,9 +212,9 @@ if __name__ == '__main__':
     data_path = '/cache/suhita/skin/preprocessed/labelled/test/'
     perc = 1.0
     FOLD_NUM = 1
-    eval_for_uats_softmax('/data/suhita/experiments/model/uats/skin/',
-                          'uats_softmax_F3_Perct_Labelled_1.0', batch_size=1,
-                          out_dir='/data/suhita/experiments/temp/')
+    # eval_for_uats_softmax('/data/suhita/experiments/model/uats/skin/',
+    #                       'sm_skin_sm_F2_Perct_Labelled_0.1', batch_size=1,
+    #                       out_dir='/data/suhita/experiments/temp/')
 
     # eval_for_uats_mc(
     #     '/data/suhita/skin/models/',
@@ -225,6 +222,7 @@ if __name__ == '__main__':
     #                        'sm_skin_sm_F3_Perct_Labelled_0.1',
     #                       batch_size=1, out_dir='/data/suhita/skin/eval/uats/', lesion=True, eval=True)
 
-    # eval_for_supervised('/data/suhita/experiments/model/supervised/skin/', data_path,
-    #                     'supervised_F1_P0.5', eval=True,
-    #                     out_dir='/data/suhita/skin/ul/UL_' + str(perc), connected_component=True)
+    eval_for_supervised('/data/suhita/experiments/model/supervised/skin',
+                        data_path,
+                        'softmax_supervised_sfs32_F_2_1000_5e-05_Perc_0.1_augm', eval=True,
+                        out_dir='/data/suhita/experiments/temp/', connected_component=True)

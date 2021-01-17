@@ -171,6 +171,18 @@ def get_uats_data_generator(dataset_name, data_path, ens_path, num_train, num_tr
                          labelled_num=num_train_labelled,
                          is_augmented=is_augmented)
 
+    elif dataset_name == HIPPOCAMPUS_DATASET_NAME:
+        train_id_list = np.arange(num_train)
+        np.random.shuffle(train_id_list)
+        print(train_id_list[0:10])
+        from dataset_specific.hippocampus.generator.uats import DataGenerator as train_gen
+        return train_gen(data_path,
+                         ens_path,
+                         train_id_list,
+                         labelled_num=num_train_labelled,
+                         batch_size=batch_size,
+                         is_augmented=is_augmented)
+
 def get_supervised_data_generator(dataset_name, data_path, num_train, is_augmented=True):
     if dataset_name == PROSTATE_DATASET_NAME:
         metadata = get_metadata(dataset_name)
@@ -192,6 +204,19 @@ def get_supervised_data_generator(dataset_name, data_path, num_train, is_augment
         print(train_id_list[0:10])
 
         from dataset_specific.skin_2D.generator.baseline import DataGenerator as train_gen
+        return train_gen(data_path,
+                         train_id_list,
+                         batch_size=metadata[m_batch_size],
+                         dim=metadata[m_dim],
+                         is_augmented=is_augmented)
+
+    elif dataset_name == HIPPOCAMPUS_DATASET_NAME:
+        metadata = get_metadata(dataset_name)
+        train_id_list = np.arange(num_train)
+        np.random.shuffle(train_id_list)
+        print(train_id_list[0:10])
+
+        from dataset_specific.hippocampus.generator.baseline import DataGenerator as train_gen
         return train_gen(data_path,
                          train_id_list,
                          batch_size=metadata[m_batch_size],

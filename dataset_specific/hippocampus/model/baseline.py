@@ -4,11 +4,7 @@ from keras.layers import concatenate, Input, Conv3D, MaxPooling3D, Conv3DTranspo
     Dropout, BatchNormalization
 from keras.models import Model
 from keras.optimizers import Adam
-
-# from lib.segmentation.group_norm import GroupNormalization
-
 smooth = 1.
-
 
 class weighted_model:
 
@@ -44,7 +40,7 @@ class weighted_model:
     def dice_loss(self, y_true, y_pred):
         return -self.dice_coef(y_true, y_pred)
 
-    def downLayer(self, inputLayer, filterSize, i, bn=False, axis=4):
+    def downLayer(self, inputLayer, filterSize, i, bn=False):
 
         conv = Conv3D(filterSize, (3, 3, 3), activation='relu', padding='same', name='conv' + str(i) + '_1')(inputLayer)
         if bn:

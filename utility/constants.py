@@ -11,11 +11,12 @@ IMGS = 'imgs'
 GT = 'gt'
 PATIENCE_EARLY_STOP = 30
 DELTA = 0.0005
-NUM_EPOCH = 1000
+NUM_EPOCH = 300
 
 # dataset names
 PROSTATE_DATASET_NAME = 'prostate'
 SKIN_DATASET_NAME = 'skin'
+HIPPOCAMPUS_DATASET_NAME = 'hippocampus'
 
 # model types
 MODEL_SSL_UATS_SM = 'uats_softmax'

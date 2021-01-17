@@ -1,8 +1,6 @@
 import os
-
 import numpy as np
-
-from dataset_specific.hippocampus import get_multi_class_arr
+from dataset_specific.hippocampus.utils.utils import get_multi_class_arr
 from dataset_specific.kits import utils
 
 root_path = '/cache/suhita/hippocampus/'
@@ -47,7 +45,7 @@ for p in perc:
 
     print('remaining labelled')
     for i in remaining_labelled:
-    # name = labelled_files_lst[i]
+     name = labelled_files_lst[i]
     print(i, counter)
     np.save(os.path.join(data_path, 'imgs', str(counter) + '.npy'),
             np.expand_dims(np.load(os.path.join(labelled_imgs_path, i.replace('.nii.gz', '.npy'))), -1))

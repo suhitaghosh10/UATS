@@ -4,11 +4,12 @@ from keras.callbacks import Callback
 from keras.layers import concatenate, Input, Conv2D, MaxPooling2D, Conv2DTranspose, Lambda, \
     BatchNormalization, Dropout
 from keras.models import Model
-from keras.optimizers import Adam
+#from keras.optimizers import Adam
 from keras.utils import multi_gpu_model
 
 
 # from lib.segmentation.weight_norm import AdamWithWeightnorm
+from utility.weight_norm import AdamWithWeightnorm
 
 
 class weighted_model:
@@ -323,7 +324,7 @@ class weighted_model:
         bg = K.stack([bg_ensemble_pred, supervised_flag])
         skin = K.stack([skin_ensemble_pred, supervised_flag])
 
-        optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999)
+        optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
 
         if (nb_gpus is None):
             p_model = Model([input_img, unsupervised_label, supervised_flag],

@@ -3,8 +3,8 @@ import os
 
 import tensorflow as tf
 
-from dataset_specific.prostate.model.bai import weighted_model
-from train.semi_supervised.bai import train
+from dataset_specific.prostate.model.pseudo_save_best import weighted_model
+from train.semi_supervised.pseudo_save_best import train
 from utility.config import get_metadata
 from utility.constants import *
 from utility.utils import cleanup
@@ -25,10 +25,10 @@ try:
     # perc = args.perc
     # temp_path = args.temp_path
     # gpu_num = args.gpu_num
-    gpu_num = '0'
+    gpu_num = '1'
     fold_num = 1
     perc = 1.0
-    temp_path = 'sadv477'
+    temp_path = 'sadv428833'
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_num
     metadata = get_metadata(args.ds)

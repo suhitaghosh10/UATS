@@ -77,7 +77,7 @@ class weighted_model:
         if bn:
             conv = BatchNormalization()(conv)
         if do:
-            conv = Dropout(0.5, seed=3, name='Dropout_' + str(i))(conv)
+            conv = Dropout(0.5, seed=3, name='Dropout_' + str(i))(conv, training=True)
         conv = Conv2D(int(filterSize / 2), (3, 3), activation='relu', padding='same', name='conv' + str(i) + '_2')(
             conv)
         if bn:
@@ -245,7 +245,7 @@ class weighted_model:
         if bn:
             conv4 = BatchNormalization()(conv4)
         if do:
-            conv4 = Dropout(0.5, seed=4, name='Dropout_' + str(4))(conv4)
+            conv4 = Dropout(0.5, seed=4, name='Dropout_' + str(4))(conv4, training=True)
         conv4 = Conv2D(sfs * 16, (3, 3), activation='relu', padding='same', kernel_initializer=kernel_init,
                        name='conv4_2')(conv4)
         if bn:
@@ -260,7 +260,7 @@ class weighted_model:
         if bn:
             conv5 = BatchNormalization()(conv5)
         if do:
-            conv5 = Dropout(0.5, seed=5, name='Dropout_' + str(5))(conv5)
+            conv5 = Dropout(0.5, seed=5, name='Dropout_' + str(5))(conv5, training=True)
         conv5 = Conv2D(int(sfs * 8), (3, 3), activation='relu', padding='same', kernel_initializer=kernel_init,
                        name='conv' + str(5) + '_2')(conv5)
         if bn:
@@ -280,8 +280,8 @@ class weighted_model:
         bg = K.stack([bg_ensemble_pred, supervised_flag])
         skin = K.stack([skin_ensemble_pred, supervised_flag])
 
-        #optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
-        optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999)
+        optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
+        #optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999)
         if (nb_gpus is None):
             p_model = Model([input_img, unsupervised_label, supervised_flag],
                             [bg_out, skin_out])

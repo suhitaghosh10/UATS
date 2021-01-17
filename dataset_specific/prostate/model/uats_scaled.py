@@ -3,11 +3,11 @@ from keras import backend as K
 from keras.callbacks import Callback
 from keras.layers import concatenate, Input, Conv3D, MaxPooling3D, Conv3DTranspose, Lambda, \
     BatchNormalization, Dropout, Activation
-from keras.optimizers import Adam
+#from keras.optimizers import Adam
 from keras.models import Model
 from keras.utils import multi_gpu_model
 
-#from utility.weight_norm import AdamWithWeightnorm
+from utility.weight_norm import AdamWithWeightnorm
 
 
 class weighted_model:
@@ -226,7 +226,7 @@ class weighted_model:
         if bn:
             conv = BatchNormalization()(conv)
         if do:
-            conv = Dropout(0.5, seed=3, name='Dropout_' + str(i))(conv)
+            conv = Dropout(0.5, seed=3, name='Dropout_' + str(i))(conv, training=True)
         conv = Conv3D(int(filterSize / 2), (3, 3, 3), activation='relu', padding='same', name='conv' + str(i) + '_2')(
             conv)
         if bn:
@@ -236,7 +236,7 @@ class weighted_model:
 
     def build_model(self, img_shape=(32, 168, 168), learning_rate=5e-5, gpu_id=None,
                     nb_gpus=None,
-                    trained_model=None, temp=None):
+                    trained_model=None, temp=1.0):
         input_img = Input((*img_shape, 1), name='img_inp')
         unsupervised_label = Input((*img_shape, 5), name='unsup_label_inp')
         supervised_flag = Input(shape=img_shape, name='flag_inp')
@@ -264,7 +264,7 @@ class weighted_model:
         if bn:
             conv4 = BatchNormalization()(conv4)
         if do:
-            conv4 = Dropout(0.5, seed=4, name='Dropout_' + str(4))(conv4)
+            conv4 = Dropout(0.5, seed=4, name='Dropout_' + str(4))(conv4, training=True)
         conv4 = Conv3D(sfs * 16, (3, 3, 3), activation='relu', padding='same', kernel_initializer=kernel_init,
                        name='conv4_2')(conv4)
         if bn:
@@ -279,7 +279,7 @@ class weighted_model:
         if bn:
             conv5 = BatchNormalization()(conv5)
         if do:
-            conv5 = Dropout(0.5, seed=5, name='Dropout_' + str(5))(conv5)
+            conv5 = Dropout(0.5, seed=5, name='Dropout_' + str(5))(conv5, training=True)
         conv5 = Conv3D(int(sfs * 8), (3, 3, 3), activation='relu', padding='same', kernel_initializer=kernel_init,
                        name='conv' + str(5) + '_2')(conv5)
         if bn:
@@ -315,7 +315,8 @@ class weighted_model:
         afs = K.stack([afs_ensemble_pred, supervised_flag])
         bg = K.stack([bg_ensemble_pred, supervised_flag])
 
-        optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999)
+
+        optimizer = AdamWithWeightnorm(lr=learning_rate, beta_1=0.9, beta_2=0.999)
         # optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999)
 
         if (nb_gpus is None):

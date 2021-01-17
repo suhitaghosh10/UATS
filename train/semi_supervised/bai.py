@@ -56,7 +56,7 @@ def train(gpu_id, nb_gpus, dataset_name, ens_folder_name, labelled_perc, fold_nu
                                            verbose=1,
                                            mode='min')
 
-    tensorboard = TensorBoard(log_dir=tb_log_dir, write_graph=False, write_grads=True, histogram_freq=2,
+    tensorboard = TensorBoard(log_dir=tb_log_dir, write_graph=False, write_grads=False, histogram_freq=0,
                               batch_size=1, write_images=False)
 
     tcb = TemporalCallback(dim, data_path, ens_path, metadata[m_save_path], num_train_data, num_labeled_train,
