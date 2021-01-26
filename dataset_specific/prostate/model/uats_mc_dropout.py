@@ -420,7 +420,7 @@ class weighted_model:
                                    )
         else:
             with tf.device(gpu_id):
-                merged_model = multi_gpu_model(p_model_normal, gpus=nb_gpus)
+                p_model_normal = multi_gpu_model(p_model_normal, gpus=nb_gpus)
 
                 p_model_normal.compile(optimizer=optimizer,
                                        loss={'pz': self.semi_supervised_loss(pz, unsup_loss_class_wt=1),

@@ -21,8 +21,8 @@ def get_metadata(dataset_name):
                 m_patients_per_batch: 59,
                 m_update_epoch_num: 50,
                 m_mc_forward_pass: 10,
-                m_labelled_perc: [25, 50, 25, 25, 25],  # pz, tz, us, afs, bg #for 0.1, 0.25, 0.5
-#_PERC = [50, 50, 10, 10, 50] # pz, tz, us, afs, bg #for only 1.0 experiments,
+                m_labelled_perc: [50, 50, 10, 10, 50],
+#_PERC = [25, 50, 25, 25, 25] # pz, tz, us, afs, bg #for only <1.0 experiments,
 
                 # param
                 m_nr_class: 5,
@@ -75,7 +75,7 @@ def get_metadata(dataset_name):
                             m_lr: 4e-5,
                             m_batch_size: 4,
                             m_aug_num: 5,
-                            m_patients_per_batch: num_un_labeled_train // 3,
+                            m_patients_per_batch: 130 // 3,
                             m_update_epoch_num: 50,
                             m_mc_forward_pass: 10,
                             m_labelled_perc: [50, 50, 50],
@@ -84,9 +84,9 @@ def get_metadata(dataset_name):
                             m_nr_class: 3,
                             m_nr_channels: 1,
                             m_dim: [48, 64, 48],
-                            m_labelled_train: TODO,
-                            m_labelled_val: TODO,
-                            m_unlabelled_train: TODO,
+                            m_labelled_train: 158,
+                            m_labelled_val: 52,
+                            m_unlabelled_train: 130,
                             m_metric_keys: ['val_bg_dice_coef', 'val_z1_dice_coef', 'val_z2_dice_coef']
 
                             }

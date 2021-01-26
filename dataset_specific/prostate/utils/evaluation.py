@@ -601,20 +601,21 @@ if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = ''
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 
-    # evaluate_uats(model_dir='/data/suhita/experiments/model/supervised/prostate/',
-    #               # model_dir='/data/suhita/prostate/',
-    #               #model_name='uats_softmax_no_consistency_F4_Perct_Labelled_1.0.h5',
-    #              model_name='supervised_F2_P0.5.h5',
-    #               #model_name='uats_softmax_F2_Perct_Labelled_1.0.h5',
-    #               val_x=np.load('/cache/suhita/data/prostate/final_test_array_imgs.npy'),
-    #               val_y=np.load('/cache/suhita/data/prostate/final_test_array_GT.npy').astype('int8'),
-    #               mc=True,
-    #
-    #               )
+    evaluate_uats(model_dir='/data/suhita/experiments/model/uats/prostate/',
+                  # model_dir='/data/suhita/prostate/',
+                  #model_name='uats_softmax_no_consistency_F4_Perct_Labelled_1.0.h5',
+                 model_name='uats_mc_entropy_F1_Perct_Labelled_1.0.h5',
 
-    arr = evaluate_supervised(model_dir='/data/suhita/experiments/model/prostate/',
-                   model_name='supervised_F2_P1.0',
-                   val_x=np.load('/cache/suhita/data/prostate/final_test_array_imgs.npy'),
-                   val_y=np.load('/cache/suhita/data/prostate/final_test_array_GT.npy').astype('int8')
-                   )
-    np.save('/data/suhita/experiments/model/prostate/supervised2.npy', arr)
+                  #model_name='uats_softmax_F2_Perct_Labelled_1.0.h5',
+                  val_x=np.load('/cache/suhita/data/prostate/final_test_array_imgs.npy'),
+                  val_y=np.load('/cache/suhita/data/prostate/final_test_array_GT.npy').astype('int8'),
+                  mc=True,
+
+                  )
+
+    # arr = evaluate_supervised(model_dir='/data/suhita/experiments/model/prostate/',
+    #                model_name='supervised_F2_P1.0',
+    #                val_x=np.load('/cache/suhita/data/prostate/final_test_array_imgs.npy'),
+    #                val_y=np.load('/cache/suhita/data/prostate/final_test_array_GT.npy').astype('int8')
+    #                )
+    # np.save('/data/suhita/experiments/model/prostate/supervised2.npy', arr)
