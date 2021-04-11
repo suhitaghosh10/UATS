@@ -442,5 +442,3 @@ class weighted_model:
                                        )
 
         return p_model_MC, p_model_normal
-    # return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg])
-    # return Model([input_img, supervised_label, supervised_flag, unsupervised_weight], [pz, cz, us, afs, bg, input_idx])
