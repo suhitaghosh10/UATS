@@ -9,7 +9,7 @@ This repository contains the source code of the paper *Uncertainty-Aware Tempora
 - UATS leverages performance gains from temporal ensembling [(Laine and Aila)](https://arxiv.org/abs/1610.02242) and uncertainty-guided self-learning.
 - UATS surpasses fully supervised performance on prostate zone segmentation and achieves human observer results quality.
 - Further experiments demonstrate its generalizability on the following benchmark biomedical datasets:
-  - [Prostate Zone Segmentation](http://www.var.ovgu.de/isbi2019/)
+  - [Prostate Zones Segmentation](http://www.var.ovgu.de/isbi2019/)
   - [ISIC2018 Skin Lesion Segmentation challenge](https://challenge2018.isic-archive.com/)
   - [Medical Decathlon Challenge Task 04 (Hippocampus Segmentation)](http://medicaldecathlon.com/)
 
