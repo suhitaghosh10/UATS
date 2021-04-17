@@ -1,4 +1,4 @@
-import os
+ import os
 import numpy as np
 import tensorflow.keras.backend as K
 from utility.config import get_metadata
@@ -49,23 +49,6 @@ def save_array(path, arr, start, end):
     for idx in np.arange(start, end):
         arr_idx = idx - start
         np.save(os.path.join(path, str(idx) + NPY), arr[arr_idx])
-
-
-# def get_val_data(data_path):
-#     val_fold = os.listdir(data_path[:-7] + VAL_IMGS_PATH)
-#     num_val_data = len(val_fold)
-#     val_supervised_flag = np.ones((num_val_data, PROSTATE_DIM[0], PROSTATE_DIM[1], PROSTATE_DIM[2]), dtype='int8')
-#     val_img_arr = np.zeros((num_val_data, PROSTATE_DIM[0], PROSTATE_DIM[1], PROSTATE_DIM[2], 1), dtype=float)
-#     val_GT_arr = np.zeros((num_val_data, PROSTATE_DIM[0], PROSTATE_DIM[1], PROSTATE_DIM[2], PROSTATE_NR_CLASS),
-#                           dtype=float)
-#     for i in np.arange(num_val_data):
-#         val_img_arr[i] = np.load(data_path[:-7] + VAL_IMGS_PATH + str(i) + NPY)
-#         val_GT_arr[i] = np.load(data_path[:-7] + VAL_GT_PATH + str(i) + NPY)
-#     x_val = [val_img_arr, val_GT_arr, val_supervised_flag]
-#     y_val = [val_GT_arr[:, :, :, :, 0], val_GT_arr[:, :, :, :, 1],
-#              val_GT_arr[:, :, :, :, 2], val_GT_arr[:, :, :, :, 3],
-#              val_GT_arr[:, :, :, :, 4]]
-#     return x_val, y_val
 
 
 def get_uats_val_data(data_path, dim, nr_class, nr_channels):
