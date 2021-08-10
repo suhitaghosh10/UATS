@@ -164,9 +164,9 @@ class TemporalCallback(Callback):
                 entropy_zone[mask] = 0
                 entropy_zone = np.where(entropy_zone > 0, np.ones_like(entropy_zone) * 2,
                                         np.zeros_like(entropy_zone))
-                flag = np.reshape(max_pred_ravel,
+                flag = np.reshape(entropy_zone,
                                   (actual_batch_size, self.dim[0], self.dim[1])) if self.nr_dim == 2 else \
-                    np.reshape(max_pred_ravel, (actual_batch_size, self.dim[0], self.dim[1], self.dim[2]))
+                    np.reshape(entropy_zone, (actual_batch_size, self.dim[0], self.dim[1], self.dim[2]))
                 del entropy_zone, indices
 
                 save_array(os.path.join(self.temp_path, FLAG), flag, start, end)
