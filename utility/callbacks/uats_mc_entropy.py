@@ -140,19 +140,19 @@ class TemporalCallback(Callback):
                         entropy = entropy + (mc_pred[:, :, :, :, z] / self.mc_forward_pass_num) * np.log(
                             (mc_pred[:, :, :, :, z] / self.mc_forward_pass_num) + 1e-5)
                 entropy = -entropy
-                del mc_pred, inp, model_out
+                del mc_pred, inp, model_out, cur_pred
 
-                argmax_pred_ravel = np.ravel(np.argmin(cur_pred, axis=-1))
-                max_pred_ravel = np.ravel(np.max(cur_pred, axis=-1))
+                argmax_pred_ravel = np.ravel(np.argmin(entropy, axis=-1))
+                max_pred_ravel = np.ravel(np.min(entropy, axis=-1))
 
                 indices = None
-                del cur_pred
-                for zone in np.arange(4):
-                    entropy_zone = np.ravel(entropy[:, :, :, :])
+                entropy_zone = np.ravel(entropy[:, :, :, :])
+                for zone in range(self.nr_class):
                     final_max_ravel = np.where(argmax_pred_ravel == zone, np.zeros_like(entropy_zone),
                                                entropy_zone)
-                    zone_indices = np.argpartition(final_max_ravel, -self.confident_pixels_no_per_batch[zone])[
-                                   -self.confident_pixels_no_per_batch[zone]:]
+                    # here we select the most confident pixels by entropy. therefore, we select the least 'self.confident_pixels_no_per_batch' number of values
+                    zone_indices = np.argpartition(final_max_ravel, self.confident_pixels_no_per_batch[zone])[
+                                   :self.confident_pixels_no_per_batch[zone]+1]
                     if zone == 0:
                         indices = zone_indices
                     else:
