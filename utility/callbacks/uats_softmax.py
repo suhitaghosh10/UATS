@@ -123,22 +123,29 @@ class TemporalCallback(Callback):
                 ensemble_prediction = ALPHA * ensemble_prediction + (1 - ALPHA) * cur_pred
                 save_array(os.path.join(self.temp_path, ENS_GT), ensemble_prediction, start, end)
                 del ensemble_prediction
-
+                # get predicted class indices
                 argmax_pred_ravel = np.ravel(np.argmax(cur_pred, axis=-1))
+                # get probability of the predictions of the predicted class
                 max_pred_ravel = np.ravel(np.max(cur_pred, axis=-1))
                 indices = None
                 del cur_pred
+                # for each class select the most confident pixels
                 for zone in np.arange(self.nr_class):
-                    final_max_ravel = np.where(argmax_pred_ravel == zone, np.zeros_like(max_pred_ravel),
-                                               max_pred_ravel)
+                    # only considering for the class 'zone'. therefore make prediction probability of other classes zero
+                    final_max_ravel = np.where(argmax_pred_ravel == zone, max_pred_ravel, np.zeros_like(max_pred_ravel))
+                    # sorting and selecting the 'self.confident_pixels_no_per_batch' most confident pixels
                     zone_indices = np.argpartition(final_max_ravel, -self.confident_pixels_no_per_batch[zone])[
                                    -self.confident_pixels_no_per_batch[zone]:]
+                    # collect the indices for the selected confident pixels
                     indices = zone_indices if zone == 0 else np.unique(np.concatenate((zone_indices, indices)))
 
+                # create mask for the selected confident pixels
                 mask = np.ones(max_pred_ravel.shape, dtype=bool)
                 mask[indices] = False
 
+                # wherever mask value is True, assign 0, signifying the non-selected pixels
                 max_pred_ravel[mask] = 0
+                # assign flag value 2, signifying the confident pixels for the unlabeled data
                 max_pred_ravel = np.where(max_pred_ravel > 0, np.ones_like(max_pred_ravel) * 2,
                                           np.zeros_like(max_pred_ravel))
 
