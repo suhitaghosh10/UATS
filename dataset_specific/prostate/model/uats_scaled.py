@@ -184,7 +184,8 @@ class weighted_model:
                 val_flag = True
 
             unsupervised_gt = input[0, :, :, :, :]
-            unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
+            #bias correction not needed if using pretrained model
+            #unsupervised_gt = unsupervised_gt / (1 - alpha ** (self.epoch_ctr + 1))
             # for confident voxels (denoted by 2) change from 0 to 1 (unlabelled to labelled), but keep the background(0) as 0
             y_true_final = tf.where(tf.equal(supervised_flag, 2), unsupervised_gt, y_true)
             # reset flag
