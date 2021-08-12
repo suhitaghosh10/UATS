@@ -150,8 +150,7 @@ class TemporalCallback(Callback):
                 for zone in range(self.nr_class):
                     final_max_ravel = np.where(argmax_pred_ravel == zone, entropy_zone, np.zeros_like(entropy_zone))
                     # here we select the most confident pixels by entropy. therefore, we select the least 'self.confident_pixels_no_per_batch' number of values
-                    zone_indices = np.argpartition(final_max_ravel, self.confident_pixels_no_per_batch[zone])[
-                                   :self.confident_pixels_no_per_batch[zone] + 1]
+                    zone_indices = np.argpartition(final_max_ravel, self.confident_pixels_no_per_batch[zone])[:self.confident_pixels_no_per_batch[zone]]
                     if zone == 0:
                         indices = zone_indices
                     else:
